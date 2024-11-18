@@ -1,0 +1,124 @@
+{
+  "restaurants": [
+    {
+      "id": 1,
+      "name": "AKA",
+      "location": "Bangkok",
+      "image": "/images/restaurant-images/aka.png",
+      "description": "Japanese Yakiniku Buffet",
+      "categories": ["Buffet","Yakiniku"]
+      
+    },
+    {
+      "id": 2,
+      "name": "FirePlace",
+      "location": "Bangkok",
+      "image": "/images/restaurant-images/fireplace.jpg",
+      "description": "Premium steaks cooked to perfection.",
+      "categories": ["Steak House","Fine Dinning"]
+    },
+    {
+      "id": 3,
+      "name": "Ministery of Crabs",
+      "location": "Bangkok",
+      "image": "/images/restaurant-images/moc.jpg",
+      "description": "A dining experience of fresh seafoods.",
+      "categories": ["Buffet","Yakiniku"]
+    },
+    {
+      "id": 4,
+      "name": "Cruise Dinner Bliss",
+      "location": "Phuket",
+      "image": "/images/restaurants/cruise-dinner.jpg",
+      "description": "A dining experience on the water.",
+      "categories": ["Buffet","Yakiniku"]
+    },
+    {
+      "id": 5,
+      "name": "Cruise Dinner Bliss",
+      "location": "Phuket",
+      "image": "/images/restaurants/cruise-dinner.jpg",
+      "description": "A dining experience on the water.",
+      "categories": ["Buffet","Yakiniku"]
+    },
+    {
+      "id": 6,
+      "name": "Cruise Dinner Bliss",
+      "location": "Phuket",
+      "image": "/images/restaurants/cruise-dinner.jpg",
+      "description": "A dining experience on the water.",
+      "categories": ["Buffet","Yakiniku"]
+    },
+    {
+      "id": 7,
+      "name": "Cruise Dinner Bliss",
+      "location": "Phuket",
+      "image": "/images/restaurants/cruise-dinner.jpg",
+      "description": "A dining experience on the water.",
+      "categories": ["Buffet","Yakiniku"]
+    },
+    {
+      "id": 8,
+      "name": "Cruise Dinner Bliss",
+      "location": "Phuket",
+      "image": "/images/restaurants/cruise-dinner.jpg",
+      "description": "A dining experience on the water.",
+      "categories": ["Buffet","Yakiniku"]
+    },
+    {
+      "id": 9,
+      "name": "Cruise Dinner Bliss",
+      "location": "Phuket",
+      "image": "/images/restaurants/cruise-dinner.jpg",
+      "description": "A dining experience on the water.",
+      "categories": ["Buffet","Yakiniku"]
+    },
+    {
+      "id": 10,
+      "name": "Cruise Dinner Bliss",
+      "location": "Phuket",
+      "image": "/images/restaurants/cruise-dinner.jpg",
+      "description": "A dining experience on the water.",
+      "categories": ["Buffet","Yakiniku"]
+    },
+    {
+      "id": 11,
+      "name": "Cruise Dinner Bliss",
+      "location": "Phuket",
+      "image": "/images/restaurants/cruise-dinner.jpg",
+      "description": "A dining experience on the water.",
+      "categories": ["Buffet","Yakiniku"]
+    },
+    {
+      "id": 12,
+      "name": "Cruise Dinner Bliss",
+      "location": "Phuket",
+      "image": "/images/restaurants/cruise-dinner.jpg",
+      "description": "A dining experience on the water.",
+      "categories": ["Buffet","Yakiniku"]
+    },
+    {
+      "id": 13,
+      "name": "Cruise Dinner Bliss",
+      "location": "Phuket",
+      "image": "/images/restaurants/cruise-dinner.jpg",
+      "description": "A dining experience on the water.",
+      "categories": ["Buffet","Yakiniku"]
+    },
+    {
+      "id": 14,
+      "name": "Cruise Dinner Bliss",
+      "location": "Phuket",
+      "image": "/images/restaurants/cruise-dinner.jpg",
+      "description": "A dining experience on the water.",
+      "categories": ["Buffet","Yakiniku"]
+    },{
+      "id": 15,
+      "name": "Cruise Dinner Bliss",
+      "location": "Phuket",
+      "image": "/images/restaurants/cruise-dinner.jpg",
+      "description": "A dining experience on the water.",
+      "categories": ["Buffet","Yakiniku"]
+    }
+  ]
+}
