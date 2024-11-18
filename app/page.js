@@ -1,5 +1,4 @@
-'use client';
-
+"use client";
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Navbar from '../components/navbar';
@@ -22,6 +21,7 @@ export default function HomePage() {
   const [restaurants, setRestaurants] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedLocation, setSelectedLocation] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState(''); // Add category state
   const router = useRouter();
 
   useEffect(() => {
@@ -40,79 +40,103 @@ export default function HomePage() {
       });
   }, []);
 
-  // Filter restaurants based on the search term and selected location
+  // Filter restaurants based on the search term, selected location, and selected category
   const filteredRestaurants = restaurants.filter((restaurant) => {
     const matchesSearchTerm = restaurant.name.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesLocation = selectedLocation ? restaurant.location.toLowerCase() === selectedLocation.toLowerCase() : true;
+    const matchesCategory = selectedCategory ? restaurant.categories.includes(selectedCategory) : true; // Filter by category
 
-    return matchesSearchTerm && matchesLocation;
+    return matchesSearchTerm && matchesLocation && matchesCategory;
   });
 
   // Limit displayed restaurants to 15
   const limitedRestaurants = filteredRestaurants.slice(0, 15);
+
+  // Reset category filter
+  const resetCategoryFilter = () => {
+    setSelectedCategory('');
+  };
 
   return (
     <>
       <Navbar />
       <div className="bg-[#F3EDE5] min-h-screen p-8">
         {/* Flex container for text and images */}
-          <section className="flex items-center mb-16">
-            {/* Text and Search Section */}
-            <div className="flex flex-col space-y-2 w-1/2">
-              <h2 className="text-3xl font-semibold text-[#2E2D2B]">RESERVE AS YOU WANT</h2>
-              <p className="text-lg text-gray-700">
-                Real-time floor plan of the restaurant you desire
-              </p>
+        <section className="flex items-center mb-16">
+          {/* Text and Search Section */}
+          <div className="flex flex-col space-y-2 w-1/2">
+            <h2 className="text-3xl font-semibold text-[#2E2D2B]">RESERVE AS YOU WANT</h2>
+            <p className="text-lg text-gray-700">
+              Real-time floor plan of the restaurant you desire
+            </p>
 
-              <div className="flex items-center mt-4 w-full">
-                {/* Search Input */}
-                <input
-                  type="text"
-                  placeholder="Search for a restaurant..."
-                  className="w-1/2 p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#F4A261] transition-all text-black"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-                
-                {/* Search Button */}
-                <button
-                  className="w-1/4 p-3 bg-[#F4A261] text-white rounded-lg hover:bg-[#F4A261] hover:opacity-80 transition-all"
-                  onClick={() => {/* Add search logic here */}}
-                >
-                  Search
-                </button>
-              </div>
+            <div className="flex items-center mt-4 w-full">
+              {/* Search Input */}
+              <input
+                type="text"
+                placeholder="Search for a restaurant..."
+                className="w-1/2 p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#F4A261] transition-all text-black"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+              
+              {/* Search Button */}
+              <button
+                className="w-1/4 p-3 bg-[#F4A261] text-white rounded-lg hover:bg-[#F4A261] hover:opacity-80 transition-all"
+                onClick={() => {/* Add search logic here */}}
+              >
+                Search
+              </button>
             </div>
+          </div>
 
-            {/* Images Section */}
-            <section className="flex justify-center space-x-4 mr-8">
-              <img
-                src="/images/body-images/dish1.jpg"
-                alt="Dish 1"
-                className="w-64 h-64 object-cover rounded-lg shadow-lg transform transition duration-300 hover:scale-105"
-              />
-              <img
-                src="/images/body-images/dish2.jpg"
-                alt="Dish 2"
-                className="w-64 h-64 object-cover rounded-lg shadow-lg transform transition duration-300 hover:scale-105"
-              />
-              <img
-                src="/images/body-images/dish3.jpeg"
-                alt="Dish 3"
-                className="w-64 h-64 object-cover rounded-lg shadow-lg transform transition duration-300 hover:scale-105"
-              />
-            </section>
+          {/* Images Section */}
+          <section className="flex justify-center space-x-4 mr-8">
+            <img
+              src="/images/body-images/dish1.jpg"
+              alt="Dish 1"
+              className="w-64 h-64 object-cover rounded-lg shadow-lg transform transition duration-300 hover:scale-105"
+            />
+            <img
+              src="/images/body-images/dish2.jpg"
+              alt="Dish 2"
+              className="w-64 h-64 object-cover rounded-lg shadow-lg transform transition duration-300 hover:scale-105"
+            />
+            <img
+              src="/images/body-images/dish3.jpeg"
+              alt="Dish 3"
+              className="w-64 h-64 object-cover rounded-lg shadow-lg transform transition duration-300 hover:scale-105"
+            />
           </section>
+        </section>
 
         <section className="flex justify-center space-x-12 mb-12">
-          <Category icon={faUtensils} label="Fine Dining" />
-          <Category icon={faCocktail} label="Bar" />
-          <Category icon={faFish} label="Omakase" />
-          <Category icon={faDrumstickBite} label="Steak House" />
-          <Category icon={faPizzaSlice} label="Buffet" />
-          <Category icon={faShip} label="Cruise Dinner" />
-          <Category icon={faCoffee} label="Coffee Shop" />
+          <Category icon={faUtensils} label="Fine Dining" setCategory={setSelectedCategory} />
+          <Category icon={faCocktail} label="Bar" setCategory={setSelectedCategory} />
+          <Category icon={faFish} label="Omakase" setCategory={setSelectedCategory} />
+          <Category icon={faDrumstickBite} label="Steak House" setCategory={setSelectedCategory} />
+          <Category icon={faPizzaSlice} label="Buffet" setCategory={setSelectedCategory} />
+          <Category icon={faShip} label="Cruise Dinner" setCategory={setSelectedCategory} />
+          <Category icon={faCoffee} label="Cafe" setCategory={setSelectedCategory} />
         </section>
+
+        {/* Clear Filter Button */}
+        <div className="flex space-x-4 mb-8">
+          <button
+            className="bg-[#F4A261] text-white font-bold py-2 px-6 rounded-full hover:bg-[#F4A261] hover:opacity-80 transition-all"
+            onClick={() => router.push('/restaurants/all')}
+          >
+            View More
+          </button>
+          <button
+            onClick={resetCategoryFilter}
+            className="bg-[#F4A261] text-white px-8 py-3 rounded-full hover:bg-[#F4A261] hover:opacity-80 transition-all"
+          >
+            X
+          </button>
+
+        </div>
+
 
         <section className="overflow-x-auto whitespace-nowrap mb-12 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
           <div className="inline-flex space-x-6">
@@ -143,19 +167,11 @@ export default function HomePage() {
                 </div>
               </div>
             ))}
-            <div className="min-w-[300px] flex items-center justify-center">
-              <button
-                className="bg-[#F4A261] text-white font-bold py-2 px-6 rounded-full hover:bg-[#F4A261] hover:opacity-80 transition-all"
-                onClick={() => router.push('/restaurants/all')}
-              >
-                View More
-              </button>
-            </div>
           </div>
         </section>
 
         {filteredRestaurants.length > 15 && (
-          <div className="text-center mt-8">
+          <div className="text-left mt-8">
             <button
               onClick={() => router.push('/view-more')}
               className="bg-[#F4A261] text-white px-8 py-3 rounded-full hover:bg-[#F4A261] hover:opacity-80 transition-all"
@@ -169,9 +185,12 @@ export default function HomePage() {
   );
 }
 
-function Category({ icon, label }) {
+function Category({ icon, label, setCategory }) {
   return (
-    <div className="flex flex-col items-center hover:scale-105 transition-transform duration-300">
+    <div
+      onClick={() => setCategory(label)} // Set category when clicked
+      className="flex flex-col items-center cursor-pointer hover:scale-105 transition-transform duration-300"
+    >
       <div className="w-16 h-16 bg-[#F4A261] rounded-full flex items-center justify-center mb-4 shadow-xl">
         <FontAwesomeIcon icon={icon} className="text-white text-2xl" />
       </div>
