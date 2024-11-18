@@ -56,7 +56,7 @@ export default function Navbar() {
   };
 
   const handleSuccessfulLogin = (userData) => {
-    setUser(userData); // This updates the user state with the logged-in user data
+    setUser(userData); // Update the user state with the logged-in user data
     localStorage.setItem("user", JSON.stringify(userData)); // Optionally store user data in localStorage
   };
 
@@ -97,7 +97,7 @@ export default function Navbar() {
                 </div>
                 {/* Dropdown Menu */}
                 {isDropdownOpen && (
-                  <div className="absolute right-0 mt-2 bg-white rounded-md shadow-lg w-48 p-2">
+                  <div className="absolute right-0 mt-2 bg-white rounded-md shadow-lg w-48 p-2 z-50">
                     <button
                       onClick={() => alert("View User Info")}
                       className="w-full text-left px-4 py-2 text-black hover:bg-[#F4A261] hover:text-white transition"

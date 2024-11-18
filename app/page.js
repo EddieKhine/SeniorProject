@@ -1,8 +1,8 @@
 "use client";
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import Navbar from '../components/navbar';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import Navbar from "../components/navbar";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faUtensils,
   faCocktail,
@@ -11,21 +11,22 @@ import {
   faPizzaSlice,
   faShip,
   faCoffee,
-} from '@fortawesome/free-solid-svg-icons';
-import { config } from '@fortawesome/fontawesome-svg-core';
-import '@fortawesome/fontawesome-svg-core/styles.css';
+} from "@fortawesome/free-solid-svg-icons";
+import { config } from "@fortawesome/fontawesome-svg-core";
+import "@fortawesome/fontawesome-svg-core/styles.css";
 
 config.autoAddCss = false;
 
 export default function HomePage() {
   const [restaurants, setRestaurants] = useState([]);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedLocation, setSelectedLocation] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState(''); // Add category state
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedLocation, setSelectedLocation] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("");
+  const [selectedRestaurant, setSelectedRestaurant] = useState(null); // For modal
   const router = useRouter();
 
   useEffect(() => {
-    fetch('/data/restaurants.json')
+    fetch("/data/restaurants.json")
       .then((response) => {
         if (!response.ok) {
           throw new Error(`Network response was not ok: ${response.status}`);
@@ -36,42 +37,42 @@ export default function HomePage() {
         setRestaurants(data.restaurants);
       })
       .catch((error) => {
-        console.error('Error fetching restaurant data:', error);
+        console.error("Error fetching restaurant data:", error);
       });
   }, []);
 
-  // Filter restaurants based on the search term, selected location, and selected category
   const filteredRestaurants = restaurants.filter((restaurant) => {
     const matchesSearchTerm = restaurant.name.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesLocation = selectedLocation ? restaurant.location.toLowerCase() === selectedLocation.toLowerCase() : true;
-    const matchesCategory = selectedCategory ? restaurant.categories.includes(selectedCategory) : true; // Filter by category
+    const matchesCategory = selectedCategory ? restaurant.categories.includes(selectedCategory) : true;
 
     return matchesSearchTerm && matchesLocation && matchesCategory;
   });
 
-  // Limit displayed restaurants to 15
   const limitedRestaurants = filteredRestaurants.slice(0, 15);
 
-  // Reset category filter
   const resetCategoryFilter = () => {
-    setSelectedCategory('');
+    setSelectedCategory("");
+  };
+
+  const openModal = (restaurant) => {
+    setSelectedRestaurant(restaurant);
+  };
+
+  const closeModal = () => {
+    setSelectedRestaurant(null);
   };
 
   return (
     <>
       <Navbar />
       <div className="bg-[#F3EDE5] min-h-screen p-8">
-        {/* Flex container for text and images */}
         <section className="flex items-center mb-16">
-          {/* Text and Search Section */}
           <div className="flex flex-col space-y-2 w-1/2">
             <h2 className="text-3xl font-semibold text-[#2E2D2B]">RESERVE AS YOU WANT</h2>
-            <p className="text-lg text-gray-700">
-              Real-time floor plan of the restaurant you desire
-            </p>
+            <p className="text-lg text-gray-700">Real-time floor plan of the restaurant you desire</p>
 
             <div className="flex items-center mt-4 w-full">
-              {/* Search Input */}
               <input
                 type="text"
                 placeholder="Search for a restaurant..."
@@ -79,8 +80,6 @@ export default function HomePage() {
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
-              
-              {/* Search Button */}
               <button
                 className="w-1/4 p-3 bg-[#F4A261] text-white rounded-lg hover:bg-[#F4A261] hover:opacity-80 transition-all"
                 onClick={() => {/* Add search logic here */}}
@@ -90,7 +89,6 @@ export default function HomePage() {
             </div>
           </div>
 
-          {/* Images Section */}
           <section className="flex justify-center space-x-4 mr-8">
             <img
               src="/images/body-images/dish1.jpg"
@@ -120,11 +118,10 @@ export default function HomePage() {
           <Category icon={faCoffee} label="Cafe" setCategory={setSelectedCategory} />
         </section>
 
-        {/* Clear Filter Button */}
-        <div className="flex space-x-4 mb-8">
+        <div className="space-x-4 mb-8">
           <button
             className="bg-[#F4A261] text-white font-bold py-2 px-6 rounded-full hover:bg-[#F4A261] hover:opacity-80 transition-all"
-            onClick={() => router.push('/restaurants/all')}
+            onClick={() => router.push("/restaurants/all")}
           >
             View More
           </button>
@@ -134,26 +131,25 @@ export default function HomePage() {
           >
             X
           </button>
-
         </div>
-
 
         <section className="overflow-x-auto whitespace-nowrap mb-12 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
           <div className="inline-flex space-x-6">
             {limitedRestaurants.map((restaurant) => (
               <div
                 key={restaurant.id}
-                className="min-w-[300px] bg-white shadow-xl rounded-lg overflow-hidden transition-transform duration-300 hover:scale-105"
+                className="w-[300px] h-[450px] bg-white shadow-xl rounded-lg overflow-hidden transition-transform duration-300 hover:scale-105"
               >
                 <img
                   src={restaurant.image}
                   alt={restaurant.name}
-                  className="w-full h-48 object-cover rounded-t-lg"
+                  className="w-full h-[50%] object-cover rounded-t-lg"
                 />
-                <div className="p-4">
-                  <h3 className="text-2xl text-black font-semibold mb-2">{restaurant.name}</h3>
-                  <p className="text-black mb-2">{restaurant.location}</p>
-                  <p className="text-gray-600 mb-2">{restaurant.description}</p>
+                <div className="p-4 flex flex-col space-y-4">
+                  <h3 className="text-2xl text-black font-semibold">{restaurant.name}</h3>
+                  <p className="text-black text-sm">{restaurant.location}</p>
+                  <p className="text-gray-600 text-sm">{restaurant.description}</p>
+
                   <div className="flex flex-wrap gap-2">
                     {restaurant.categories.map((category, index) => (
                       <span
@@ -164,23 +160,55 @@ export default function HomePage() {
                       </span>
                     ))}
                   </div>
+
+                  <button
+                    className="text-black flex"
+                    onClick={() => openModal(restaurant)}
+                  >
+                    View Detail
+                  </button>
                 </div>
               </div>
             ))}
           </div>
         </section>
-
-        {filteredRestaurants.length > 15 && (
-          <div className="text-left mt-8">
-            <button
-              onClick={() => router.push('/view-more')}
-              className="bg-[#F4A261] text-white px-8 py-3 rounded-full hover:bg-[#F4A261] hover:opacity-80 transition-all"
-            >
-              View More Restaurants
-            </button>
-          </div>
-        )}
       </div>
+
+      {/* Modal */}
+{selectedRestaurant && (
+  <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
+    <div className="bg-white p-8 rounded-lg shadow-lg relative max-w-lg w-full">
+      {/* Close Button */}
+      <button
+        onClick={closeModal}
+        className="absolute top-2 right-2 text-gray-500 hover:text-gray-800 text-xl font-bold"
+      >
+        &times;
+      </button>
+
+      {/* Image */}
+      <img
+        src={selectedRestaurant.image}
+        alt={selectedRestaurant.name}
+        className="w-full h-64 object-cover rounded-lg mb-4"
+      />
+
+      {/* Restaurant Details */}
+      <h3 className="text-2xl font-semibold mb-4 text-black">{selectedRestaurant.name}</h3>
+      <p className="text-gray-700 mb-2">{selectedRestaurant.description}</p>
+      <p className="text-gray-500 text-sm mb-2">
+        <strong>Address:</strong> {selectedRestaurant["detail-address"]}
+      </p>
+      <p className="text-gray-500 text-sm mb-2">
+        <strong>Opening Hours:</strong> {selectedRestaurant["opening-hours"]}
+      </p>
+      <p className="text-gray-500 text-sm">
+        <strong>Price Range:</strong> {selectedRestaurant["price-range-per-person"]}
+      </p>
+    </div>
+  </div>
+)}
+
     </>
   );
 }
@@ -188,7 +216,7 @@ export default function HomePage() {
 function Category({ icon, label, setCategory }) {
   return (
     <div
-      onClick={() => setCategory(label)} // Set category when clicked
+      onClick={() => setCategory(label)}
       className="flex flex-col items-center cursor-pointer hover:scale-105 transition-transform duration-300"
     >
       <div className="w-16 h-16 bg-[#F4A261] rounded-full flex items-center justify-center mb-4 shadow-xl">
