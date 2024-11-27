@@ -11,7 +11,7 @@ export async function POST(request) {
     const db = await dbConnect();
     console.log("Database connection established:", db);
 
-    // Find user by email
+    // Find user by email (removed the 'name' check)
     const user = await User.findOne({ email });
 
     if (!user) {

@@ -1,13 +1,14 @@
-// /app/api/signup/route.js
 import dbConnect from "@/lib/mongodb"; // Make sure to implement MongoDB connection
 import User from "@/models/user"; // User model for MongoDB
+import bcrypt from 'bcryptjs';
 
 export async function POST(req) {
   await dbConnect();
 
-  const { email, username, password, contactNumber } = await req.json();
+  const { email, name, password, contactNumber } = await req.json();
 
-  if (!email || !username || !password || !contactNumber) {
+  // Validate required fields
+  if (!email || !name || !password || !contactNumber) {
     return new Response(
       JSON.stringify({ message: "All fields are required." }),
       { status: 400 }
@@ -16,7 +17,7 @@ export async function POST(req) {
 
   try {
     // Check if user already exists
-    const existingUser = await User.findOne({ $or: [{ email }, { username }] });
+    const existingUser = await User.findOne({ $or: [{ email }, { name }] });
     if (existingUser) {
       return new Response(
         JSON.stringify({ message: "Email or username already taken." }),
@@ -24,13 +25,19 @@ export async function POST(req) {
       );
     }
 
+    // Hash the password using bcryptjs
+    const salt = await bcrypt.genSalt(10); // Generate a salt with a strength of 10
+    const hashedPassword = await bcrypt.hash(password, salt); // Hash the password with the salt
+
     // Create new user
     const newUser = new User({
       email,
-      username,
-      password, // Remember to hash the password before saving (use bcrypt)
+      name,
+      password: hashedPassword, // Save the hashed password
       contactNumber
     });
+
+    // Save the user to the database
     await newUser.save();
 
     return new Response(

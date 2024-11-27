@@ -1,3 +1,4 @@
+"use client";
 import { useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faEnvelope, faLock, faUtensils } from "@fortawesome/free-solid-svg-icons";
@@ -21,7 +22,6 @@ export default function LoginModal({ isOpen, onClose, openSignupModal, onLoginSu
       });
 
       if (!response.ok) {
-        // If response status is not ok, show error message
         const errorData = await response.json();
         setError(errorData.message || "Invalid credentials");
         setLoading(false);
@@ -31,15 +31,12 @@ export default function LoginModal({ isOpen, onClose, openSignupModal, onLoginSu
       const result = await response.json();
       console.log("Login successful", result);
 
-      // Assuming result contains user data
       const userData = { name: result.name, email: result.email };
 
-      // Trigger onLoginSuccess if provided
       if (onLoginSuccess) {
         onLoginSuccess(userData);
       }
 
-      // Close the modal after successful login
       onClose();
     } catch (error) {
       console.error("Unexpected error during login:", error);
@@ -66,12 +63,10 @@ export default function LoginModal({ isOpen, onClose, openSignupModal, onLoginSu
         <div className="w-full border-b border-gray-300 mb-6"></div>
 
         <form onSubmit={handleLogin} className="w-full">
-          {/* Email Input */}
           <div className="relative mb-6">
             <FontAwesomeIcon icon={faEnvelope} className="absolute left-3 top-3 text-gray-400" />
             <input
               type="email"
-              id="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="Email"
@@ -80,12 +75,10 @@ export default function LoginModal({ isOpen, onClose, openSignupModal, onLoginSu
             />
           </div>
 
-          {/* Password Input */}
           <div className="relative mb-6">
             <FontAwesomeIcon icon={faLock} className="absolute left-3 top-3 text-gray-400" />
             <input
               type="password"
-              id="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Password"
@@ -94,10 +87,8 @@ export default function LoginModal({ isOpen, onClose, openSignupModal, onLoginSu
             />
           </div>
 
-          {/* Error Message */}
           {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
 
-          {/* Submit Button */}
           <button
             type="submit"
             className={`w-full py-3 mt-6 ${loading ? 'bg-gray-400' : 'bg-[#F4A261] hover:bg-[#E07B5D]'} text-black font-semibold rounded-md transition`}
@@ -107,7 +98,6 @@ export default function LoginModal({ isOpen, onClose, openSignupModal, onLoginSu
           </button>
         </form>
 
-        {/* Sign Up Link */}
         <div className="mt-4 text-center">
           <p className="text-sm text-gray-600">
             Don't have an account?{" "}

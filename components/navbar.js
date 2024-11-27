@@ -12,17 +12,13 @@ export default function Navbar() {
   const [user, setUser] = useState(null);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
-  // Function to load user from localStorage
   const loadUserFromStorage = () => {
     const storedUser = localStorage.getItem("user");
     setUser(storedUser ? JSON.parse(storedUser) : null);
   };
 
   useEffect(() => {
-    // Load user data initially
     loadUserFromStorage();
-
-    // Listen for storage changes (in case of updates from other tabs/windows)
     const handleStorageChange = () => {
       loadUserFromStorage();
     };
@@ -37,7 +33,7 @@ export default function Navbar() {
   const handleLogout = () => {
     localStorage.removeItem("user");
     setUser(null);
-    setIsDropdownOpen(false); // Close the dropdown after logging out
+    setIsDropdownOpen(false);
   };
 
   const openLoginModal = () => {
@@ -56,8 +52,8 @@ export default function Navbar() {
   };
 
   const handleSuccessfulLogin = (userData) => {
-    setUser(userData); // Update the user state with the logged-in user data
-    localStorage.setItem("user", JSON.stringify(userData)); // Optionally store user data in localStorage
+    setUser(userData);
+    localStorage.setItem("user", JSON.stringify(userData));
   };
 
   const toggleDropdown = () => {
@@ -66,9 +62,7 @@ export default function Navbar() {
 
   return (
     <>
-      {/* Navbar */}
       <nav className="bg-[#3A2E2B] shadow-md py-4 px-6 flex justify-between items-center">
-        {/* Left side (static) */}
         <div className="flex items-center space-x-4">
           <h1 className="text-2xl font-bold text-[#FFFF]">FoodLoft</h1>
           <Link href="/" passHref>
@@ -81,10 +75,8 @@ export default function Navbar() {
           </Link>
         </div>
 
-        {/* Right side (dynamic) */}
         <div className="flex items-center space-x-4">
           {user ? (
-            // After login
             <>
               <span className="text-white mr-2">{user.name}</span>
               <div className="relative">
@@ -95,15 +87,14 @@ export default function Navbar() {
                 >
                   <FontAwesomeIcon icon={faUser} className="text-white text-lg" />
                 </div>
-                {/* Dropdown Menu */}
                 {isDropdownOpen && (
                   <div className="absolute right-0 mt-2 bg-white rounded-md shadow-lg w-48 p-2 z-50">
-                    <button
-                      onClick={() => alert("View User Info")}
-                      className="w-full text-left px-4 py-2 text-black hover:bg-[#F4A261] hover:text-white transition"
-                    >
-                      View User Information
-                    </button>
+                    <div className="px-4 py-2 text-black">
+                      <p><strong>Name:</strong> {user.name}</p>
+                      <p><strong>Email:</strong> {user.email}</p>
+                      {/* Add more fields as needed */}
+                    </div>
+
                     <button
                       onClick={handleLogout}
                       className="w-full text-left px-4 py-2 text-black hover:bg-[#F4A261] hover:text-white transition"
@@ -115,7 +106,6 @@ export default function Navbar() {
               </div>
             </>
           ) : (
-            // Before login
             <>
               <button
                 onClick={openLoginModal}
@@ -134,14 +124,16 @@ export default function Navbar() {
         </div>
       </nav>
 
-      {/* Modals */}
       <LoginModal
         isOpen={isLoginModalOpen}
         onClose={closeModal}
         openSignupModal={openSignupModal}
         onLoginSuccess={handleSuccessfulLogin}
       />
-      <SignupModal isOpen={isSignupModalOpen} onClose={closeModal} openLoginModal={openLoginModal} />
+      <SignupModal
+        isOpen={isSignupModalOpen}
+        onClose={closeModal}
+      />
     </>
   );
 }

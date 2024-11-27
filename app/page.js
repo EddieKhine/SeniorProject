@@ -121,7 +121,7 @@ export default function HomePage() {
         <div className="space-x-4 mb-8">
           <button
             className="bg-[#F4A261] text-white font-bold py-2 px-6 rounded-full hover:bg-[#F4A261] hover:opacity-80 transition-all"
-            onClick={() => router.push("/restaurants/all")}
+            onClick={() => router.push("/restaurants")}
           >
             View More
           </button>
@@ -176,7 +176,7 @@ export default function HomePage() {
 
       {/* Modal */}
 {selectedRestaurant && (
-  <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
+  <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 modal-backdrop">
     <div className="bg-white p-8 rounded-lg shadow-lg relative max-w-lg w-full">
       {/* Close Button */}
       <button
@@ -197,6 +197,9 @@ export default function HomePage() {
       <h3 className="text-2xl font-semibold mb-4 text-black">{selectedRestaurant.name}</h3>
       <p className="text-gray-700 mb-2">{selectedRestaurant.description}</p>
       <p className="text-gray-500 text-sm mb-2">
+        <strong>Rating:</strong> {selectedRestaurant.rating} ⭐
+      </p>
+      <p className="text-gray-500 text-sm mb-2">
         <strong>Address:</strong> {selectedRestaurant["detail-address"]}
       </p>
       <p className="text-gray-500 text-sm mb-2">
@@ -205,6 +208,7 @@ export default function HomePage() {
       <p className="text-gray-500 text-sm">
         <strong>Price Range:</strong> {selectedRestaurant["price-range-per-person"]}
       </p>
+      <button className="bg-[#F4A261] rounded-xl w-1/4 hover:bg-[#F4A261] hover:opacity-80 transition-all font-bold py-2 px-2 mt-3">Book Now</button>
     </div>
   </div>
 )}
