@@ -3,6 +3,8 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Navbar from "../components/navbar";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faHeart as faSolidHeart } from "@fortawesome/free-solid-svg-icons";
+import { faHeart as faRegularHeart } from "@fortawesome/free-regular-svg-icons";
 import {
   faUtensils,
   faCocktail,
@@ -23,6 +25,7 @@ export default function HomePage() {
   const [selectedLocation, setSelectedLocation] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("");
   const [selectedRestaurant, setSelectedRestaurant] = useState(null); // For modal
+  const [favorites, setFavorites] = useState([]); // Favorites state
   const router = useRouter();
 
   useEffect(() => {
@@ -43,8 +46,12 @@ export default function HomePage() {
 
   const filteredRestaurants = restaurants.filter((restaurant) => {
     const matchesSearchTerm = restaurant.name.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesLocation = selectedLocation ? restaurant.location.toLowerCase() === selectedLocation.toLowerCase() : true;
-    const matchesCategory = selectedCategory ? restaurant.categories.includes(selectedCategory) : true;
+    const matchesLocation = selectedLocation
+      ? restaurant.location.toLowerCase() === selectedLocation.toLowerCase()
+      : true;
+    const matchesCategory = selectedCategory
+      ? restaurant.categories.includes(selectedCategory)
+      : true;
 
     return matchesSearchTerm && matchesLocation && matchesCategory;
   });
@@ -63,14 +70,27 @@ export default function HomePage() {
     setSelectedRestaurant(null);
   };
 
+  const handleFavorite = (restaurant) => {
+    const isFavorite = favorites.some((fav) => fav.id === restaurant.id);
+    if (isFavorite) {
+      setFavorites(favorites.filter((fav) => fav.id !== restaurant.id));
+    } else {
+      setFavorites([...favorites, restaurant]);
+    }
+  };
+
   return (
     <>
       <Navbar />
-      <div className="bg-[#F3EDE5] min-h-screen p-8">
-        <section className="flex items-center mb-16">
+      <div className="bg-gradient-to-r from-[#f3e7e9] to-[#e3eeff] min-h-screen p-8">
+        <section className="flex items-center mb-40">
           <div className="flex flex-col space-y-2 w-1/2">
-            <h2 className="text-3xl font-semibold text-[#2E2D2B]">RESERVE AS YOU WANT</h2>
-            <p className="text-lg text-gray-700">Real-time floor plan of the restaurant you desire</p>
+            <h2 className="text-3xl font-semibold text-[#2E2D2B]">
+              RESERVE AS YOU WANT
+            </h2>
+            <p className="text-lg text-gray-700">
+              Real-time floor plan of the restaurant you desire
+            </p>
 
             <div className="flex items-center mt-4 w-full">
               <input
@@ -82,7 +102,6 @@ export default function HomePage() {
               />
               <button
                 className="w-1/4 p-3 bg-[#F4A261] text-white rounded-lg hover:bg-[#F4A261] hover:opacity-80 transition-all"
-                onClick={() => {/* Add search logic here */}}
               >
                 Search
               </button>
@@ -161,12 +180,27 @@ export default function HomePage() {
                     ))}
                   </div>
 
-                  <button
-                    className="text-black flex"
-                    onClick={() => openModal(restaurant)}
-                  >
-                    View Detail
-                  </button>
+                  <div className="flex justify-between">
+                    <button
+                      className="text-black"
+                      onClick={() => openModal(restaurant)}
+                    >
+                      View Detail
+                    </button>
+                    <FontAwesomeIcon
+                      icon={
+                        favorites.some((fav) => fav.id === restaurant.id)
+                          ? faSolidHeart
+                          : faRegularHeart
+                      }
+                      className={`text-xl cursor-pointer ${
+                        favorites.some((fav) => fav.id === restaurant.id)
+                          ? "text-red-500"
+                          : "text-gray-500"
+                      }`}
+                      onClick={() => handleFavorite(restaurant)}
+                    />
+                  </div>
                 </div>
               </div>
             ))}
@@ -175,44 +209,60 @@ export default function HomePage() {
       </div>
 
       {/* Modal */}
-{selectedRestaurant && (
-  <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 modal-backdrop">
-    <div className="bg-white p-8 rounded-lg shadow-lg relative max-w-lg w-full">
-      {/* Close Button */}
-      <button
-        onClick={closeModal}
-        className="absolute top-2 right-2 text-gray-500 hover:text-gray-800 text-xl font-bold"
-      >
-        &times;
-      </button>
+      {selectedRestaurant && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 modal-backdrop">
+          <div className="bg-white p-8 rounded-lg shadow-lg relative max-w-lg w-full">
+            <button
+              onClick={closeModal}
+              className="absolute top-2 right-2 text-gray-500 hover:text-gray-800 text-xl font-bold"
+            >
+              &times;
+            </button>
 
-      {/* Image */}
-      <img
-        src={selectedRestaurant.image}
-        alt={selectedRestaurant.name}
-        className="w-full h-64 object-cover rounded-lg mb-4"
-      />
+            <img
+              src={selectedRestaurant.image}
+              alt={selectedRestaurant.name}
+              className="w-full h-64 object-cover rounded-lg mb-4"
+            />
 
-      {/* Restaurant Details */}
-      <h3 className="text-2xl font-semibold mb-4 text-black">{selectedRestaurant.name}</h3>
-      <p className="text-gray-700 mb-2">{selectedRestaurant.description}</p>
-      <p className="text-gray-500 text-sm mb-2">
-        <strong>Rating:</strong> {selectedRestaurant.rating} ⭐
-      </p>
-      <p className="text-gray-500 text-sm mb-2">
-        <strong>Address:</strong> {selectedRestaurant["detail-address"]}
-      </p>
-      <p className="text-gray-500 text-sm mb-2">
-        <strong>Opening Hours:</strong> {selectedRestaurant["opening-hours"]}
-      </p>
-      <p className="text-gray-500 text-sm">
-        <strong>Price Range:</strong> {selectedRestaurant["price-range-per-person"]}
-      </p>
-      <button className="bg-[#F4A261] rounded-xl w-1/4 hover:bg-[#F4A261] hover:opacity-80 transition-all font-bold py-2 px-2 mt-3">Book Now</button>
-    </div>
-  </div>
-)}
+            <h3 className="text-2xl font-semibold mb-4 text-black">{selectedRestaurant.name}</h3>
+            <p className="text-gray-700 mb-2">{selectedRestaurant.description}</p>
+            <p className="text-gray-500 text-sm mb-2">
+              <strong>Rating:</strong> {selectedRestaurant.rating} ⭐
+            </p>
+            <p className="text-gray-500 text-sm mb-2">
+              <strong>Address:</strong> {selectedRestaurant["detail-address"]}
+            </p>
+            <p className="text-gray-500 text-sm mb-2">
+              <strong>Opening Hours:</strong> {selectedRestaurant["opening-hours"]}
+            </p>
+            <p className="text-gray-500 text-sm">
+              <strong>Price Range:</strong> {selectedRestaurant["price-range-per-person"]}
+            </p>
 
+            <div className="flex justify-between items-center mt-4">
+              <button
+                className="bg-[#F4A261] rounded-xl w-1/3 hover:bg-[#F4A261] hover:opacity-80 transition-all font-bold py-2 px-4"
+              >
+                Book Now
+              </button>
+              <FontAwesomeIcon
+                icon={
+                  favorites.some((fav) => fav.id === selectedRestaurant.id)
+                    ? faSolidHeart
+                    : faRegularHeart
+                }
+                className={`text-2xl cursor-pointer ${
+                  favorites.some((fav) => fav.id === selectedRestaurant.id)
+                    ? "text-red-500"
+                    : "text-gray-500"
+                }`}
+                onClick={() => handleFavorite(selectedRestaurant)}
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

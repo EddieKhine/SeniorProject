@@ -11,8 +11,8 @@ export default function LoginModal({ isOpen, onClose, openSignupModal, onLoginSu
 
   const handleLogin = async (e) => {
     e.preventDefault();
-    setLoading(true); // Start loading state
-    setError(""); // Clear previous error
+    setLoading(true);
+    setError("");
 
     try {
       const response = await fetch("/api/login", {
@@ -29,20 +29,25 @@ export default function LoginModal({ isOpen, onClose, openSignupModal, onLoginSu
       }
 
       const result = await response.json();
-      console.log("Login successful", result);
+      const userData = {
+        firstName: result.user.firstName,
+        lastName: result.user.lastName,
+        email: result.user.email,
+        contactNumber: result.user.contactNumber,
+        role: result.user.role,
+      };
 
-      const userData = { name: result.name, email: result.email };
+      // Save user data and token in localStorage
+      localStorage.setItem("user", JSON.stringify(userData));
+      localStorage.setItem("token", result.token);
 
-      if (onLoginSuccess) {
-        onLoginSuccess(userData);
-      }
-
+      onLoginSuccess(userData);
       onClose();
     } catch (error) {
       console.error("Unexpected error during login:", error);
       setError("Unexpected error occurred. Please try again.");
     } finally {
-      setLoading(false); // End loading state
+      setLoading(false);
     }
   };
 

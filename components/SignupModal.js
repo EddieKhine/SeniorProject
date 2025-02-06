@@ -8,7 +8,8 @@ import { faGoogle } from "@fortawesome/free-brands-svg-icons";
 
 export default function SignupModal({ isOpen, onClose, openLoginModal }) {
   const [email, setEmail] = useState("");
-  const [name, setUsername] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [password, setPassword] = useState("");
   const [contactNumber, setContactNumber] = useState("");
   const [message, setMessage] = useState("");
@@ -34,7 +35,7 @@ export default function SignupModal({ isOpen, onClose, openLoginModal }) {
       return;
     }
   
-    const payload = { email, name, password, contactNumber };
+    const payload = { email, firstName, lastName, password, contactNumber };
     console.log('Payload:', payload);
   
     try {
@@ -85,9 +86,20 @@ export default function SignupModal({ isOpen, onClose, openLoginModal }) {
             <FontAwesomeIcon icon={faUser} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500" />
             <input
               type="text"
-              placeholder="name"
-              value={name}
-              onChange={(e) => setUsername(e.target.value)}
+              placeholder="First Name"
+              value={firstName}
+              onChange={(e) => setFirstName(e.target.value)}
+              required
+              className="w-full pl-10 border-b border-gray-300 focus:border-[#F4A261] focus:outline-none py-3 text-black text-lg"
+            />
+          </div>
+          <div className="relative">
+            <FontAwesomeIcon icon={faUser} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500" />
+            <input
+              type="text"
+              placeholder="Last Name"
+              value={lastName}
+              onChange={(e) => setLastName(e.target.value)}
               required
               className="w-full pl-10 border-b border-gray-300 focus:border-[#F4A261] focus:outline-none py-3 text-black text-lg"
             />

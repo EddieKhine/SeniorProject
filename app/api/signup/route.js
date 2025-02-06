@@ -1,54 +1,64 @@
-import dbConnect from "@/lib/mongodb"; // Make sure to implement MongoDB connection
-import User from "@/models/user"; // User model for MongoDB
-import bcrypt from 'bcryptjs';
+import { MongoClient } from "mongodb";
+import bcrypt from "bcryptjs";
 
 export async function POST(req) {
-  await dbConnect();
-
-  const { email, name, password, contactNumber } = await req.json();
-
-  // Validate required fields
-  if (!email || !name || !password || !contactNumber) {
-    return new Response(
-      JSON.stringify({ message: "All fields are required." }),
-      { status: 400 }
-    );
-  }
-
   try {
-    // Check if user already exists
-    const existingUser = await User.findOne({ $or: [{ email }, { name }] });
-    if (existingUser) {
-      return new Response(
-        JSON.stringify({ message: "Email or username already taken." }),
-        { status: 400 }
-      );
+    const { email, firstName, lastName, password, contactNumber } = await req.json();
+
+    // Basic validation
+    if (!email || !firstName || !lastName || !password || !contactNumber) {
+      return new Response(JSON.stringify({ message: "All fields are required" }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      });
     }
 
-    // Hash the password using bcryptjs
-    const salt = await bcrypt.genSalt(10); // Generate a salt with a strength of 10
-    const hashedPassword = await bcrypt.hash(password, salt); // Hash the password with the salt
+    // Create the MongoDB client instance
+    const client = new MongoClient(process.env.MONGODB_URI);
 
-    // Create new user
-    const newUser = new User({
+    // Connect to MongoDB
+    await client.connect();
+
+    const db = client.db("cluster0"); // Replace with your database name
+    const usersCollection = db.collection("users");
+
+    // Check if user already exists
+    const existingUser = await usersCollection.findOne({ email });
+    if (existingUser) {
+      return new Response(JSON.stringify({ message: "Email already exists" }), {
+        status: 409,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    // Hash the password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Save user to database
+    const newUser = {
       email,
-      name,
-      password: hashedPassword, // Save the hashed password
-      contactNumber
+      firstName,
+      lastName,
+      password: hashedPassword,
+      contactNumber,
+      createdAt: new Date(),
+      role: "customer",
+    };
+
+    const result = await usersCollection.insertOne(newUser);
+
+    // Close the MongoDB connection
+    await client.close();
+
+    return new Response(JSON.stringify({ message: "Signup successful", userId: result.insertedId }), {
+      status: 201,
+      headers: { "Content-Type": "application/json" },
     });
-
-    // Save the user to the database
-    await newUser.save();
-
-    return new Response(
-      JSON.stringify({ message: "Signup successful!" }),
-      { status: 201 }
-    );
   } catch (error) {
-    console.error("Error during signup:", error);
-    return new Response(
-      JSON.stringify({ message: "Internal server error." }),
-      { status: 500 }
-    );
+    console.error("Error in signup API:", error);
+    return new Response(JSON.stringify({ message: "Internal Server Error" }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
+    });
   }
 }

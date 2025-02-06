@@ -11,15 +11,23 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
-  name: {
+  firstName: {
     type: String,
     required: true,
-    unique: true,
+  },
+  lastName: {
+    type: String,
+    required: true,
   },
   contactNumber: {
     type: String,
     required: true,
-  }
+  },
+  role: {
+    type: String,
+    enum: ["customer", "restaurant owner"],
+    default: "customer"
+  },
 }, { timestamps: true });
 
 const User = mongoose.models.User || mongoose.model('User', userSchema);
