@@ -9,14 +9,6 @@ const restaurantOwnerSchema = new mongoose.Schema(
     contactNumber: { type: String, required: true },
     role: { type: String, default: "restaurant-owner" }, // Default role
     subscriptionPlan: { type: String, default: "Basic" }, // Default plan
-    restaurants: [
-      {
-        name: { type: String, required: true },
-        address: { type: String, required: true },
-        city: { type: String, required: true },
-        cuisineType: { type: String, required: true },
-      },
-    ],
   },
   { timestamps: true }
 );

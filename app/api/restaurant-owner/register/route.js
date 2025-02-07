@@ -7,11 +7,11 @@ export async function POST(req) {
   try {
     await dbConnect(); // Ensure database connection
 
-    const { firstName, lastName, email, password, contactNumber, restaurantName } =
+    const { firstName, lastName, email, password, contactNumber} =
       await req.json();
 
     // Validate input
-    if (!firstName || !lastName || !email || !password || !contactNumber || !restaurantName) {
+    if (!firstName || !lastName || !email || !password || !contactNumber ) {
       return NextResponse.json(
         { message: "All fields are required" },
         { status: 400 }
@@ -37,7 +37,6 @@ export async function POST(req) {
       email,
       password: hashedPassword,
       contactNumber,
-      restaurantName, // Store first restaurant
       subscriptionPlan: "Basic"
     });
 

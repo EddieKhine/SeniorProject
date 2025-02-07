@@ -18,7 +18,7 @@ export default function Navbar() {
 
   // Load user from localStorage
   const loadUserFromStorage = () => {
-    const storedUser = localStorage.getItem("user");
+    const storedUser = localStorage.getItem("customerUser");
     setUser(storedUser ? JSON.parse(storedUser) : null);
   };
 
@@ -35,11 +35,11 @@ export default function Navbar() {
   }, []);
 
   const handleLogout = () => {
-    localStorage.removeItem("user");
-    localStorage.removeItem("token"); // Also remove token on logout
+    localStorage.removeItem("customerUser");
+    localStorage.removeItem("customerToken");
     setUser(null);
     setIsDropdownOpen(false);
-    router.push("/"); // Redirect to home after logout
+    router.push("/");
   };
 
   const openLoginModal = () => {
@@ -59,7 +59,7 @@ export default function Navbar() {
 
   const handleSuccessfulLogin = (userData) => {
     setUser(userData);
-    localStorage.setItem("user", JSON.stringify(userData));
+    localStorage.setItem("customerUser", JSON.stringify(userData));
   };
 
   const toggleDropdown = () => {

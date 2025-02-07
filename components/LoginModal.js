@@ -1,7 +1,8 @@
 "use client";
+
 import { useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faEnvelope, faLock, faUtensils } from "@fortawesome/free-solid-svg-icons";
+import { faEnvelope, faLock } from "@fortawesome/free-solid-svg-icons";
 
 export default function LoginModal({ isOpen, onClose, openSignupModal, onLoginSuccess }) {
   const [email, setEmail] = useState("");
@@ -28,20 +29,16 @@ export default function LoginModal({ isOpen, onClose, openSignupModal, onLoginSu
         return;
       }
 
-      const result = await response.json();
-      const userData = {
-        firstName: result.user.firstName,
-        lastName: result.user.lastName,
-        email: result.user.email,
-        contactNumber: result.user.contactNumber,
-        role: result.user.role,
-      };
+      const data = await response.json();
 
-      // Save user data and token in localStorage
-      localStorage.setItem("user", JSON.stringify(userData));
-      localStorage.setItem("token", result.token);
+      // Preserve restaurant owner session while updating only customer session
+      localStorage.removeItem("restaurantOwnerUser");
+      localStorage.removeItem("restaurantOwnerToken");
 
-      onLoginSuccess(userData);
+      localStorage.setItem("customerUser", JSON.stringify(data.user));
+      localStorage.setItem("customerToken", data.token);
+
+      onLoginSuccess(data.user);
       onClose();
     } catch (error) {
       console.error("Unexpected error during login:", error);
@@ -55,62 +52,25 @@ export default function LoginModal({ isOpen, onClose, openSignupModal, onLoginSu
 
   return (
     <div className="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-lg w-96 p-8 relative flex flex-col items-center">
+      <div className="bg-white rounded-lg shadow-lg w-96 p-8 relative">
         <button onClick={onClose} className="absolute top-2 right-2 text-gray-400 hover:text-gray-600">
           &times;
         </button>
-
-        <div className="flex flex-col items-center mb-8">
-          <FontAwesomeIcon icon={faUtensils} className="text-5xl text-[#F4A261] mb-4" />
-          <h2 className="text-2xl font-bold text-center text-[#F4A261]">Welcome to FoodLoft</h2>
-        </div>
-
-        <div className="w-full border-b border-gray-300 mb-6"></div>
-
-        <form onSubmit={handleLogin} className="w-full">
-          <div className="relative mb-6">
-            <FontAwesomeIcon icon={faEnvelope} className="absolute left-3 top-3 text-gray-400" />
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="Email"
-              required
-              className="w-full pl-10 border-b-2 border-gray-300 focus:outline-none focus:border-[#F4A261] py-2 text-black"
-            />
+        <h2 className="text-2xl font-bold text-[#F4A261] mb-6 text-center">Customer Login</h2>
+        <form onSubmit={handleLogin} className="space-y-6">
+          <div className="relative">
+            <FontAwesomeIcon icon={faEnvelope} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" required className="w-full pl-10 border-b border-gray-300 focus:border-[#F4A261] focus:outline-none py-3" />
           </div>
-
-          <div className="relative mb-6">
-            <FontAwesomeIcon icon={faLock} className="absolute left-3 top-3 text-gray-400" />
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Password"
-              required
-              className="w-full pl-10 border-b-2 border-gray-300 focus:outline-none focus:border-[#F4A261] py-2 text-black"
-            />
+          <div className="relative">
+            <FontAwesomeIcon icon={faLock} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+            <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password" required className="w-full pl-10 border-b border-gray-300 focus:border-[#F4A261] focus:outline-none py-3" />
           </div>
-
-          {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
-
-          <button
-            type="submit"
-            className={`w-full py-3 mt-6 ${loading ? 'bg-gray-400' : 'bg-[#F4A261] hover:bg-[#E07B5D]'} text-black font-semibold rounded-md transition`}
-            disabled={loading}
-          >
+          {error && <p className="text-red-500 text-sm text-center">{error}</p>}
+          <button type="submit" className={`w-full py-3 ${loading ? "bg-gray-400" : "bg-[#F4A261]"} text-white font-semibold rounded-md hover:bg-[#E07B5D] transition`} disabled={loading}>
             {loading ? "Logging in..." : "Login"}
           </button>
         </form>
-
-        <div className="mt-4 text-center">
-          <p className="text-sm text-gray-600">
-            Don't have an account?{" "}
-            <button onClick={openSignupModal} className="text-[#F4A261] hover:text-[#E07B5D]">
-              Sign Up
-            </button>
-          </p>
-        </div>
       </div>
     </div>
   );
