@@ -18,7 +18,10 @@ export default function RestaurantOwnerHome() {
   ];
   const handleLoginSuccess = (user) => {
     console.log("Logged in user ", user);
-    router.push('/restaurant-owner/setup')
+    // Get the token from localStorage
+    const token = localStorage.getItem('restaurantOwnerToken');
+    // Use simple string path instead of object
+    router.push('/restaurant-owner/setup');
   }
   return (
     <>

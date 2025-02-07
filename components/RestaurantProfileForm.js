@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-export default function RestaurantProfileForm({ onProfileSubmit }) {
+export default function RestaurantProfileForm({ onProfileSubmit, authToken }) {
   const [formData, setFormData] = useState({
     restaurantName: "",
     cuisineType: "",
@@ -42,27 +42,28 @@ export default function RestaurantProfileForm({ onProfileSubmit }) {
     setLoading(true);
     setError("");
 
-    const token = localStorage.getItem("token");
-    if (!token) {
+    if (!authToken) {
       setError("Unauthorized! Please log in.");
       setLoading(false);
       return;
     }
 
     try {
-      const response = await fetch("/api/restaurants", {
+      const response = await fetch("/api/restaurant/profile", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
+          "Authorization": `Bearer ${authToken}`,
         },
         body: JSON.stringify(formData),
       });
 
       const result = await response.json();
       if (response.ok) {
+        // Store restaurant data
+        localStorage.setItem('restaurantData', JSON.stringify(result.restaurant));
         alert("Restaurant profile created successfully!");
-        onProfileSubmit(); // Proceed to next step
+        onProfileSubmit();
       } else {
         setError(result.message || "Failed to save profile.");
       }

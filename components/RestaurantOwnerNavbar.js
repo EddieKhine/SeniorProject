@@ -68,9 +68,9 @@ const RestaurantOwnerNavbar = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <Link href="/restaurant-owner/dashboard" className="flex items-center space-x-2">
-            <FaUtensils className="h-8 w-8 text-[#F4A261]" />
-            <span className="font-bold text-xl text-gray-800">FoodLoft</span>
+          <Link href="/restaurant-owner" className="flex items-center space-x-2">
+            <FaUtensils className="h-6 w-6 text-[#F4A261]" />
+            <span className="font-['Pacifico'] text-2xl text-[#F4A261]">FoodLoft</span>
           </Link>
 
           {/* Desktop Navigation */}

@@ -108,7 +108,7 @@ export default function HomePage() {
                     <input
                       type="text"
                       placeholder="Search restaurants, cuisines, or locations..."
-                      className="w-full py-3 focus:outline-none text-gray-800 bg-transparent"
+                      className="w-full py-3 focus:outline-none rounded-lg text-gray-800 bg-transparent"
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
                     />

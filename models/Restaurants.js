@@ -1,6 +1,10 @@
 import mongoose from "mongoose";
 
 const restaurantSchema = new mongoose.Schema({
+  floorplanId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Floorplan'
+  },
   ownerId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "RestaurantOwner",
