@@ -17,7 +17,7 @@ export default function CustomerProfile() {
   });
 
   useEffect(() => {
-    const storedUser = localStorage.getItem("user");
+    const storedUser = localStorage.getItem("customerUser");
     if (storedUser) {
       const parsedUser = JSON.parse(storedUser);
       setUser(parsedUser);
@@ -34,7 +34,7 @@ export default function CustomerProfile() {
   }, [router]);
 
   const handleLogout = () => {
-    localStorage.removeItem("user");
+    localStorage.removeItem("customerUser");
     router.push("/");
   };
 
@@ -81,32 +81,32 @@ export default function CustomerProfile() {
   
 
   return (
-    <div className="flex min-h-screen bg-gray-100">
+    <div className="flex min-h-screen bg-gray-50">
       {/* Sidebar */}
-      <aside className="w-64 bg-[#3A2E2B] text-white flex flex-col p-6 shadow-xl">
-        <h2 className="text-lg font-semibold text-center mb-6">Customer Panel</h2>
+      <aside className="w-64 bg-gradient-to-b from-[#3A2E2B] to-[#2C1F1C] text-white flex flex-col p-6 shadow-lg">
+        <h2 className="text-xl font-bold text-center mb-6">Customer Panel</h2>
         <nav className="space-y-4">
           <button
-            className={`w-full text-left px-4 py-3 rounded-lg ${activeTab === "view" ? "bg-[#F4A261] text-black" : "hover:bg-[#F4A261] hover:text-black"}`}
+            className={`w-full text-left px-4 py-3 rounded-lg transition-colors duration-300 ${activeTab === "view" ? "bg-[#F4A261] text-black" : "hover:bg-[#F4A261] hover:text-black"}`}
             onClick={() => setActiveTab("view")}
           >
             View Profile
           </button>
           <button
-            className={`w-full text-left px-4 py-3 rounded-lg ${activeTab === "edit" ? "bg-[#F4A261] text-black" : "hover:bg-[#F4A261] hover:text-black"}`}
+            className={`w-full text-left px-4 py-3 rounded-lg transition-colors duration-300 ${activeTab === "edit" ? "bg-[#F4A261] text-black" : "hover:bg-[#F4A261] hover:text-black"}`}
             onClick={() => setActiveTab("edit")}
           >
             Edit Profile
           </button>
           <button
-            className="w-full text-left px-4 py-3 hover:bg-[#F4A261] hover:text-black rounded-lg flex items-center space-x-2"
+            className="w-full text-left px-4 py-3 hover:bg-[#F4A261] hover:text-black rounded-lg flex items-center space-x-2 transition-colors duration-300"
             onClick={() => router.push("/")}
           >
             <FaHome />
             <span>Home</span>
           </button>
           <button
-            className="w-full text-left px-4 py-3 hover:bg-red-500 hover:text-white rounded-lg flex items-center space-x-2"
+            className="w-full text-left px-4 py-3 hover:bg-red-500 hover:text-white rounded-lg flex items-center space-x-2 transition-colors duration-300"
             onClick={handleLogout}
           >
             <FaSignOutAlt />
@@ -119,8 +119,8 @@ export default function CustomerProfile() {
       <main className="flex-1 p-10">
         {user ? (
           activeTab === "view" ? (
-            <div className="bg-white shadow-lg rounded-lg p-8">
-              <h2 className="text-2xl font-semibold text-gray-700 mb-6">User Information</h2>
+            <div className="bg-white shadow-md rounded-lg p-8 transition-transform transform hover:scale-105">
+              <h2 className="text-3xl font-semibold text-gray-800 mb-6">User Information</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="bg-[#FFFBEB] p-4 rounded-lg shadow">
                   <p className="text-sm font-medium text-gray-600">First Name</p>
@@ -145,47 +145,47 @@ export default function CustomerProfile() {
               </div>
             </div>
           ) : (
-            <div className="bg-white shadow-lg rounded-lg p-8">
-              <h2 className="text-2xl font-semibold text-gray-700 mb-6">Edit Profile</h2>
+            <div className="bg-white shadow-md rounded-lg p-8 transition-transform transform hover:scale-105">
+              <h2 className="text-3xl font-semibold text-gray-800 mb-6">Edit Profile</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-black">
                 <input
                   type="text"
                   placeholder="First Name"
-                  className="p-3 border rounded-md w-full"
+                  className="p-3 border rounded-md w-full focus:outline-none focus:ring-2 focus:ring-[#F4A261]"
                   value={updatedUser.firstName}
                   onChange={(e) => setUpdatedUser({ ...updatedUser, firstName: e.target.value })}
                 />
                 <input
                   type="text"
                   placeholder="Last Name"
-                  className="p-3 border rounded-md w-full"
+                  className="p-3 border rounded-md w-full focus:outline-none focus:ring-2 focus:ring-[#F4A261]"
                   value={updatedUser.lastName}
                   onChange={(e) => setUpdatedUser({ ...updatedUser, lastName: e.target.value })}
                 />
                 <input
                   type="email"
                   placeholder="Email"
-                  className="p-3 border rounded-md w-full"
+                  className="p-3 border rounded-md w-full focus:outline-none focus:ring-2 focus:ring-[#F4A261]"
                   value={updatedUser.email}
                   onChange={(e) => setUpdatedUser({ ...updatedUser, email: e.target.value })}
                 />
                 <input
                   type="text"
                   placeholder="Contact Number"
-                  className="p-3 border rounded-md w-full"
+                  className="p-3 border rounded-md w-full focus:outline-none focus:ring-2 focus:ring-[#F4A261]"
                   value={updatedUser.contactNumber}
                   onChange={(e) => setUpdatedUser({ ...updatedUser, contactNumber: e.target.value })}
                 />
                 <input
                   type="password"
                   placeholder="New Password"
-                  className="p-3 border rounded-md w-full"
+                  className="p-3 border rounded-md w-full focus:outline-none focus:ring-2 focus:ring-[#F4A261]"
                   value={updatedUser.newPassword}
                   onChange={(e) => setUpdatedUser({ ...updatedUser, newPassword: e.target.value })}
                 />
               </div>
               <button
-                className="mt-6 px-6 py-3 bg-[#F4A261] text-white rounded-md hover:bg-[#d87c42]"
+                className="mt-6 px-6 py-3 bg-[#F4A261] text-white rounded-md hover:bg-[#d87c42] transition-transform transform hover:scale-105"
                 onClick={handleUpdateProfile}
               >
                 Save Changes

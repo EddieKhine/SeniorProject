@@ -3,12 +3,14 @@
 import { useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faEnvelope, faLock } from "@fortawesome/free-solid-svg-icons";
+import { useRouter } from "next/navigation";
 
 export default function RestaurantOwnerLoginModal({ isOpen, onClose, onLoginSuccess }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const router = useRouter();
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -34,8 +36,14 @@ export default function RestaurantOwnerLoginModal({ isOpen, onClose, onLoginSucc
 
       localStorage.setItem("restaurantOwnerUser", JSON.stringify(data.user));
       localStorage.setItem("restaurantOwnerToken", data.token);
-
-      onLoginSuccess(data.user);
+      
+      // Navigate based on restaurant association
+      if (data.user.hasRestaurant) {
+        router.push('/restaurant-owner/setup/dashboard');
+      } else {
+        router.push('/restaurant-owner/setup');
+      }
+      
       onClose();
     } catch (err) {
       setError(err.message);

@@ -49,7 +49,7 @@ export default function RestaurantProfileForm({ onProfileSubmit, authToken }) {
     }
 
     try {
-      const response = await fetch("/api/restaurant/profile", {
+      const response = await fetch("/api/restaurants", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -76,16 +76,13 @@ export default function RestaurantProfileForm({ onProfileSubmit, authToken }) {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="max-w-5xl mx-auto">
-      <div className="bg-gradient-to-br from-[#3A2E2B] to-[#3A2E2B]/90 rounded-t-3xl p-8 md:p-12">
-        <h2 className="text-4xl font-bold text-white mb-3">Restaurant Profile</h2>
-        <p className="text-[#F4A261] text-lg">Let's create your restaurant's digital presence</p>
-      </div>
-
-      <div className="bg-white rounded-b-3xl shadow-2xl p-8 md:p-12 space-y-8">
+    <form onSubmit={handleSubmit} className="max-w-4xl mx-auto space-y-6">
+      {/* Basic Information Section */}
+      <div className="bg-white rounded-2xl shadow-md p-8">
+        <h3 className="text-xl font-bold text-gray-900 mb-6">Basic Information</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          <div className="group">
-            <label className="inline-block text-[#3A2E2B] font-medium mb-2 group-focus-within:text-[#F4A261] transition-colors">
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
               Restaurant Name
             </label>
             <input
@@ -93,13 +90,12 @@ export default function RestaurantProfileForm({ onProfileSubmit, authToken }) {
               name="restaurantName"
               value={formData.restaurantName}
               onChange={handleInputChange}
-              className="w-full px-4 py-3 bg-gray-50 border-b-2 border-[#3A2E2B]/10 focus:border-[#F4A261] focus:outline-none transition-all duration-300 text-[#3A2E2B]"
+              className="w-full px-4 py-3 text-black rounded-xl border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all outline-none"
               required
             />
           </div>
-
-          <div className="group">
-            <label className="inline-block text-[#3A2E2B] font-medium mb-2 group-focus-within:text-[#F4A261] transition-colors">
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
               Cuisine Type
             </label>
             <input
@@ -107,102 +103,113 @@ export default function RestaurantProfileForm({ onProfileSubmit, authToken }) {
               name="cuisineType"
               value={formData.cuisineType}
               onChange={handleInputChange}
-              className="w-full px-4 py-3 bg-gray-50 border-b-2 border-[#3A2E2B]/10 focus:border-[#F4A261] focus:outline-none transition-all duration-300 text-[#3A2E2B]"
+              className="w-full px-4 py-3 text-black rounded-xl border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all outline-none"
               required
             />
           </div>
         </div>
+      </div>
 
-        <div className="group">
-          <label className="inline-block text-[#3A2E2B] font-medium mb-2 group-focus-within:text-[#F4A261] transition-colors">
-            Location
-          </label>
-          <input
-            type="text"
-            name="location"
-            value={formData.location}
-            onChange={handleInputChange}
-            className="w-full px-4 py-3 bg-gray-50 border-b-2 border-[#3A2E2B]/10 focus:border-[#F4A261] focus:outline-none transition-all duration-300 text-[#3A2E2B]"
-            required
-          />
-        </div>
-
-        <div className="group">
-          <label className="inline-block text-[#3A2E2B] font-medium mb-2 group-focus-within:text-[#F4A261] transition-colors">
-            Description
-          </label>
-          <textarea
-            name="description"
-            value={formData.description}
-            onChange={handleInputChange}
-            rows={4}
-            className="w-full px-4 py-3 bg-gray-50 border-b-2 border-[#3A2E2B]/10 focus:border-[#F4A261] focus:outline-none transition-all duration-300 text-[#3A2E2B] resize-none"
-            required
-          />
-        </div>
-
-        <div className="bg-[#3A2E2B]/5 rounded-2xl p-6 md:p-8">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-xl font-bold text-[#3A2E2B]">Opening Hours</h3>
-            <div className="px-3 py-1 bg-[#F4A261]/20 rounded-full">
-              <span className="text-sm font-medium text-[#3A2E2B]">Required</span>
-            </div>
+      {/* Location & Description Section */}
+      <div className="bg-white rounded-2xl shadow-md p-8">
+        <h3 className="text-xl font-bold text-gray-900 mb-6">Location & Details</h3>
+        <div className="space-y-6">
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              Location
+            </label>
+            <input
+              type="text"
+              name="location"
+              value={formData.location}
+              onChange={handleInputChange}
+              className="w-full px-4 py-3 text-black rounded-xl border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all outline-none"
+              required
+            />
           </div>
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              Description
+            </label>
+            <textarea
+              name="description"
+              value={formData.description}
+              onChange={handleInputChange}
+              rows={4}
+              className="w-full px-4 py-3 text-black rounded-xl border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all outline-none resize-none"
+              required
+            />
+          </div>
+        </div>
+      </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {Object.keys(formData.openingHours).map((day) => (
-              <div key={day} className="flex items-center space-x-4 p-4 bg-white rounded-xl">
-                <span className="w-24 text-sm font-semibold capitalize text-[#3A2E2B]">{day}</span>
-                <div className="flex items-center gap-2 flex-1">
+      {/* Opening Hours Section - Redesigned */}
+      <div className="bg-white rounded-2xl shadow-md p-8">
+        <h3 className="text-xl font-bold text-gray-900 mb-6">Opening Hours</h3>
+        <div className="grid grid-cols-1 gap-6">
+          {Object.keys(formData.openingHours).map((day) => (
+            <div key={day} className="flex flex-col sm:flex-row sm:items-center gap-4">
+              <div className="w-full sm:w-32">
+                <span className="inline-flex items-center justify-center px-4 py-2 bg-gray-100 rounded-lg text-sm font-semibold capitalize text-gray-700 w-full sm:w-auto">
+                  {day}
+                </span>
+              </div>
+              <div className="flex-1 grid grid-cols-2 gap-4">
+                <div className="relative">
+                  <label className="absolute -top-2.5 left-4 bg-white px-2 text-xs font-medium text-gray-600">
+                    Opening Time
+                  </label>
                   <input
                     type="time"
                     value={formData.openingHours[day].open}
                     onChange={(e) => handleHoursChange(day, "open", e.target.value)}
-                    className="flex-1 px-3 py-2 bg-gray-50 border-b-2 border-[#3A2E2B]/10 focus:border-[#F4A261] focus:outline-none transition-all duration-300"
+                    className="w-full px-4 py-3 text-black rounded-xl border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all outline-none"
                     required
                   />
-                  <span className="text-[#3A2E2B]/40">→</span>
+                </div>
+                <div className="relative">
+                  <label className="absolute -top-2.5 left-4 bg-white px-2 text-xs font-medium text-gray-600">
+                    Closing Time
+                  </label>
                   <input
                     type="time"
                     value={formData.openingHours[day].close}
                     onChange={(e) => handleHoursChange(day, "close", e.target.value)}
-                    className="flex-1 px-3 py-2 bg-gray-50 border-b-2 border-[#3A2E2B]/10 focus:border-[#F4A261] focus:outline-none transition-all duration-300"
+                    className="w-full px-4 py-3 text-black rounded-xl border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all outline-none"
                     required
                   />
                 </div>
               </div>
-            ))}
-          </div>
+            </div>
+          ))}
         </div>
+      </div>
 
-        {error && (
-          <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-lg">
-            <p className="text-red-700 text-sm">{error}</p>
-          </div>
-        )}
+      {error && (
+        <div className="rounded-xl bg-red-50 p-4 text-sm text-red-600">
+          {error}
+        </div>
+      )}
 
-        <div className="flex justify-end pt-6">
-          <button
-            type="submit"
-            disabled={loading}
-            className="relative inline-flex items-center px-8 py-3 bg-[#F4A261] text-white rounded-xl overflow-hidden transition-all hover:bg-[#3A2E2B] disabled:opacity-50 disabled:cursor-not-allowed group"
-          >
-            <span className="relative z-10 font-medium">
-              {loading ? (
-                <span className="flex items-center gap-2">
-                  <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                  </svg>
-                  Creating...
-                </span>
-              ) : (
-                'Create Profile'
-              )}
+      <div className="flex justify-end pt-4">
+        <button
+          type="submit"
+          disabled={loading}
+          className="px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl
+          font-semibold shadow-lg shadow-blue-600/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300"
+        >
+          {loading ? (
+            <span className="flex items-center gap-2">
+              <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+              </svg>
+              Saving...
             </span>
-            <div className="absolute inset-0 -translate-x-full group-hover:translate-x-0 bg-[#3A2E2B] transition-transform duration-300 ease-out" />
-          </button>
-        </div>
+          ) : (
+            'Save Profile'
+          )}
+        </button>
       </div>
     </form>
   );

@@ -68,3 +68,32 @@ export async function POST(req) {
     return NextResponse.json({ message: "Internal server error" }, { status: 500 });
   }
 }
+
+// ✅ GET: Fetch restaurant profile
+export async function GET(req) {
+  await dbConnect();
+
+  try {
+    const authHeader = req.headers.get("authorization");
+    if (!authHeader) {
+      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+    }
+
+    const token = authHeader.split(" ")[1];
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const ownerId = decoded.userId;
+
+    // Find restaurant by owner ID
+    const restaurant = await Restaurant.findOne({ ownerId });
+    
+    if (!restaurant) {
+      return NextResponse.json({ message: "Restaurant not found" }, { status: 404 });
+    }
+
+    return NextResponse.json(restaurant, { status: 200 });
+
+  } catch (error) {
+    console.error("Error fetching restaurant profile:", error);
+    return NextResponse.json({ message: "Internal server error" }, { status: 500 });
+  }
+}

@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import dbConnect from "@/lib/mongodb";
 import RestaurantOwner from "@/models/restaurant-owner";
+import Restaurant from "@/models/Restaurants";
 
 export async function POST(req) {
   try {
@@ -24,8 +25,17 @@ export async function POST(req) {
       return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
     }
 
+    // Check if owner has any restaurants
+    const restaurant = await Restaurant.findOne({ ownerId: owner._id });
+    const hasRestaurant = !!restaurant;
+
     const token = jwt.sign(
-      { userId: owner._id, email: owner.email, role: "restaurantOwner" },
+      { 
+        userId: owner._id, 
+        email: owner.email, 
+        role: "restaurantOwner",
+        hasRestaurant 
+      },
       process.env.JWT_SECRET,
       { expiresIn: "2h" }
     );
@@ -40,6 +50,7 @@ export async function POST(req) {
         lastName: owner.lastName,
         role: "restaurantOwner",
         subscriptionPlan: owner.subscriptionPlan || "Basic",
+        hasRestaurant
       },
     }, { status: 200 });
 

@@ -24,6 +24,8 @@ export default function HomePage() {
   const [selectedCategory, setSelectedCategory] = useState("");
   const [selectedRestaurant, setSelectedRestaurant] = useState(null);
   const [favorites, setFavorites] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [scrollPosition, setScrollPosition] = useState(0);
   const router = useRouter();
 
   useEffect(() => {
@@ -40,6 +42,19 @@ export default function HomePage() {
       .catch((error) => {
         console.error("Error fetching restaurant data:", error);
       });
+  }, []);
+
+  useEffect(() => {
+    // Handle scroll position for parallax effects
+    const handleScroll = () => {
+      setScrollPosition(window.scrollY);
+    };
+    window.addEventListener('scroll', handleScroll);
+
+    // Simulate loading state
+    setTimeout(() => setIsLoading(false), 1500);
+
+    return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
   const filteredRestaurants = restaurants.filter((restaurant) => {
@@ -79,42 +94,56 @@ export default function HomePage() {
 
   return (
     <>
-      <Navbar />
-      <main className="min-h-screen bg-gray-50">
-        {/* Hero Section */}
-        <section className="relative h-[85vh]">
+      {/* Loading Screen */}
+      {isLoading && (
+        <div className="fixed inset-0 bg-white z-50 flex items-center justify-center">
+          <div className="relative w-24 h-24">
+            <div className="absolute animate-ping w-full h-full rounded-full bg-orange-400 opacity-75"></div>
+            <div className="relative animate-spin rounded-full h-24 w-24 border-t-2 border-b-2 border-orange-500"></div>
+          </div>
+        </div>
+      )}
+
+      <Navbar className={`sticky top-0 z-40 transition-all duration-500 ${
+        scrollPosition > 100 ? 'bg-white/80 backdrop-blur-lg shadow-lg' : 'bg-transparent'
+      }`} />
+      
+      <main className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
+        {/* Hero Section with Refined Parallax */}
+        <section className="relative h-[90vh] overflow-hidden">
           <div className="absolute inset-0">
-            <div className="absolute inset-0 bg-gradient-to-b from-black/80 to-black/40 z-10" />
+            <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/50 to-transparent z-10" />
             <img
               src="https://images.unsplash.com/photo-1517248135467-4c7edcad34c4"
               alt="Restaurant ambience"
               className="w-full h-full object-cover"
+              style={{ transform: `translateY(${scrollPosition * 0.2}px)` }}
             />
           </div>
 
           <div className="relative z-20 h-full container mx-auto px-6 flex flex-col justify-center">
-            <div className="max-w-3xl">
-              <h1 className="text-6xl font-bold text-white leading-tight mb-6">
-                Find your next
-                <span className="block mt-2 bg-clip-text text-transparent bg-gradient-to-r from-orange-400 to-red-500">
-                  dining experience
+            <div className="max-w-3xl animate-fade-in-up">
+              <h1 className="text-7xl font-bold text-white leading-tight mb-6">
+                Discover
+                <span className="block mt-2 bg-clip-text text-transparent bg-gradient-to-r from-orange-400 via-red-400 to-pink-500">
+                  Your Perfect Table
                 </span>
               </h1>
               
-              <div className="bg-white/90 backdrop-blur-md rounded-2xl shadow-xl p-2 mt-12 max-w-2xl">
-                <div className="flex items-center">
-                  <div className="flex-1 flex items-center px-4">
-                    <FontAwesomeIcon icon={faSearch} className="text-gray-400 mr-3" />
+              <div className="bg-white/10 backdrop-blur-xl rounded-3xl shadow-2xl p-3 mt-12 max-w-2xl border border-white/20">
+                <div className="flex items-center gap-2">
+                  <div className="flex-1 flex items-center px-4 bg-white/10 rounded-xl">
+                    <FontAwesomeIcon icon={faSearch} className="text-white/70 mr-3" />
                     <input
                       type="text"
                       placeholder="Search restaurants, cuisines, or locations..."
-                      className="w-full py-3 focus:outline-none rounded-lg text-gray-800 bg-transparent"
+                      className="w-full py-4 focus:outline-none rounded-lg text-white placeholder-white/70 bg-transparent"
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
                     />
                   </div>
-                  <button className="bg-gradient-to-r from-orange-400 to-red-500 text-white px-8 py-3 rounded-xl hover:opacity-90 transition-all duration-300">
-                    Search
+                  <button className="bg-gradient-to-r from-orange-400 to-pink-500 text-white px-8 py-4 rounded-xl hover:shadow-lg hover:scale-105 transition-all duration-300">
+                    Explore
                   </button>
                 </div>
               </div>
@@ -122,25 +151,27 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* Categories Section */}
-        <section className="py-16 px-6">
-          <div className="container mx-auto">
-            <div className="flex justify-between items-end mb-10 animate-fade-in">
+        {/* Categories Section with Enhanced Animation */}
+        <section className="py-20 px-6 relative">
+          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-orange-50/30 to-transparent"></div>
+          <div className="container mx-auto relative">
+            <div className="flex justify-between items-end mb-12">
               <div>
-                <h2 className="text-3xl font-bold text-gray-900">Browse by Category</h2>
-                <p className="text-gray-600 mt-1">Discover restaurants by your preferred dining style</p>
+                <h2 className="text-4xl font-bold text-gray-900">Explore Categories</h2>
+                <p className="text-gray-600 mt-2 text-lg">Find your preferred dining experience</p>
               </div>
               {selectedCategory && (
                 <button
                   onClick={() => setSelectedCategory("")}
-                  className="text-orange-500 hover:text-orange-600 transition-colors"
+                  className="text-orange-500 hover:text-orange-600 transition-colors flex items-center gap-2"
                 >
                   Clear Filter
+                  <span className="text-sm">×</span>
                 </button>
               )}
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6">
               {[
                 { 
                   name: "Fine Dining", 
@@ -190,23 +221,28 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* Restaurants Section */}
-        <section className="py-16 px-6">
+        {/* Restaurants Section with Enhanced Cards */}
+        <section className="py-20 px-6">
           <div className="container mx-auto">
-            <div className="flex items-center justify-between mb-10 animate-fade-in">
-              <h2 className="text-3xl font-bold text-gray-900">
-                Available Restaurants
-                {selectedCategory && (
-                  <span className="text-orange-500 ml-2">• {selectedCategory}</span>
-                )}
-              </h2>
+            <div className="flex items-center justify-between mb-12">
+              <div>
+                <h2 className="text-4xl font-bold text-gray-900">
+                  Featured Restaurants
+                  {selectedCategory && (
+                    <span className="text-orange-500 ml-3">• {selectedCategory}</span>
+                  )}
+                </h2>
+                <p className="text-gray-600 mt-2 text-lg">
+                  {filteredRestaurants.length} restaurants available
+                </p>
+              </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {limitedRestaurants.map((restaurant, index) => (
                 <div
                   key={restaurant.id}
-                  className="group bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 animate-fade-in-up"
+                  className="group bg-white/50 backdrop-blur-sm rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-500 border border-gray-100"
                   style={{ animationDelay: `${index * 100}ms` }}
                 >
                   <div className="relative aspect-[16/9] overflow-hidden">
@@ -282,6 +318,20 @@ export default function HomePage() {
             </div>
           </div>
         </section>
+
+        {/* Enhanced Quick Filters */}
+        <div className="fixed bottom-8 left-1/2 transform -translate-x-1/2 z-30">
+          <div className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-2xl px-8 py-4 flex space-x-6 border border-white/20">
+            {['Popular', 'Nearby', 'Open Now', 'Top Rated'].map((filter) => (
+              <button
+                key={filter}
+                className="px-5 py-2 rounded-xl text-sm font-medium hover:bg-orange-100 hover:text-orange-600 transition-all duration-300"
+              >
+                {filter}
+              </button>
+            ))}
+          </div>
+        </div>
       </main>
     </>
   );

@@ -9,6 +9,7 @@ const restaurantOwnerSchema = new mongoose.Schema(
     contactNumber: { type: String, required: true },
     role: { type: String, default: "restaurant-owner" }, // Default role
     subscriptionPlan: { type: String, default: "Basic" }, // Default plan
+    restaurants: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Restaurant' }]
   },
   { timestamps: true }
 );

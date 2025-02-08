@@ -5,7 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { FaUtensils, FaChartBar, FaCalendarAlt, FaCog, FaSignOutAlt, FaBars, FaTimes } from 'react-icons/fa';
 
-const RestaurantOwnerNavbar = () => {
+const RestaurantOwnerNavbar = ({ onLoginClick }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [user, setUser] = useState(null);
@@ -18,6 +18,24 @@ const RestaurantOwnerNavbar = () => {
     { name: 'Reservations', href: '/restaurant-owner/reservations', icon: <FaCalendarAlt /> },
     { name: 'Settings', href: '/restaurant-owner/settings', icon: <FaCog /> },
   ];
+
+  // Add badge text for restaurant owner interface
+  const ownerBadge = (
+    <div className="px-2 py-1 text-xs font-semibold text-white bg-[#E07B5D] rounded-full">
+      Restaurant Owner
+    </div>
+  );
+
+  // Add customer side navigation button
+  const CustomerSideButton = () => (
+    <Link
+      href="/"
+      className="flex items-center space-x-2 px-3 py-2 rounded-lg text-gray-600 hover:text-[#F4A261] hover:bg-orange-50 transition-colors"
+    >
+      <FaUtensils className="rotate-180" />
+      <span>Customer View</span>
+    </Link>
+  );
 
   useEffect(() => {
     const handleScroll = () => {
@@ -54,6 +72,7 @@ const RestaurantOwnerNavbar = () => {
     try {
       localStorage.removeItem("restaurantOwnerUser");
       localStorage.removeItem("restaurantOwnerToken");
+      localStorage.removeItem("restaurantData");
       setUser(null);
       router.push("/restaurant-owner");
     } catch (error) {
@@ -74,49 +93,82 @@ const RestaurantOwnerNavbar = () => {
           </Link>
 
           {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center space-x-8">
-            <span className="text-gray-600">
-              {user ? `Welcome, ${user.firstName} ${user.lastName}` : "Welcome, Guest"}
-            </span>
-            {navItems.map((item) => (
-              <Link
-                key={item.name}
-                href={item.href}
-                className={`flex items-center space-x-2 px-3 py-2 rounded-lg transition-colors ${
-                  pathname === item.href
-                    ? 'text-[#F4A261] bg-orange-50'
-                    : 'text-gray-600 hover:text-[#F4A261] hover:bg-orange-50'
-                }`}
-              >
-                <span className="text-lg">{item.icon}</span>
-                <span>{item.name}</span>
-              </Link>
-            ))}
-            {user && (
-              <button
-                onClick={handleLogout}
-                className="flex items-center space-x-2 px-4 py-2 rounded-lg text-white bg-gradient-to-r from-[#F4A261] to-[#E07B5D] hover:opacity-90 transition-opacity"
-              >
-                <FaSignOutAlt />
-                <span>Logout</span>
-              </button>
+          <div className="hidden md:flex items-center space-x-6">
+            {user ? (
+              <>
+                {navItems.map((item) => (
+                  <Link
+                    key={item.name}
+                    href={item.href}
+                    className={`flex items-center space-x-2 px-3 py-2 rounded-lg transition-colors ${
+                      pathname === item.href
+                        ? 'text-[#F4A261] bg-orange-50'
+                        : 'text-gray-600 hover:text-[#F4A261] hover:bg-orange-50'
+                    }`}
+                  >
+                    <span className="text-lg">{item.icon}</span>
+                    <span>{item.name}</span>
+                  </Link>
+                ))}
+                <div className="flex items-center space-x-4 border-l pl-4">
+                  <Link
+                    href="/"
+                    className="text-gray-600 hover:text-[#F4A261]"
+                    title="Customer View"
+                  >
+                    <FaUtensils className="rotate-180" />
+                  </Link>
+                  <button
+                    onClick={handleLogout}
+                    className="text-gray-600 hover:text-[#F4A261]"
+                    title="Logout"
+                  >
+                    <FaSignOutAlt />
+                  </button>
+                </div>
+              </>
+            ) : (
+              <div className="flex items-center space-x-4">
+                <button
+                  onClick={onLoginClick}
+                  className="flex items-center space-x-2 px-4 py-2 rounded-lg text-white bg-gradient-to-r from-[#F4A261] to-[#E07B5D] hover:opacity-90 transition-opacity"
+                >
+                  <span>Restaurant Login</span>
+                </button>
+                <CustomerSideButton />
+              </div>
             )}
           </div>
 
           {/* Mobile menu button */}
-          <div className="md:hidden">
-            <button
-              onClick={() => setIsOpen(!isOpen)}
-              className="text-gray-600 hover:text-[#F4A261] focus:outline-none"
-            >
-              {isOpen ? <FaTimes size={24} /> : <FaBars size={24} />}
-            </button>
-          </div>
+          {user && (
+            <div className="md:hidden">
+              <button
+                onClick={() => setIsOpen(!isOpen)}
+                className="text-gray-600 hover:text-[#F4A261] focus:outline-none"
+              >
+                {isOpen ? <FaTimes size={24} /> : <FaBars size={24} />}
+              </button>
+            </div>
+          )}
+
+          {/* Mobile buttons when not logged in */}
+          {!user && (
+            <div className="md:hidden flex items-center space-x-2">
+              <button
+                onClick={onLoginClick}
+                className="flex items-center space-x-2 px-3 py-2 rounded-lg text-white bg-gradient-to-r from-[#F4A261] to-[#E07B5D] hover:opacity-90 transition-opacity"
+              >
+                <span>Login</span>
+              </button>
+              <CustomerSideButton />
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Mobile Navigation */}
-      {isOpen && (
+      {/* Simplified Mobile Navigation */}
+      {isOpen && user && (
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -124,9 +176,6 @@ const RestaurantOwnerNavbar = () => {
           className="md:hidden bg-white shadow-lg"
         >
           <div className="px-2 pt-2 pb-3 space-y-1">
-            <div className="px-3 py-2 text-gray-600 border-b border-gray-200">
-              {user ? `Welcome, ${user.firstName} ${user.lastName}` : "Welcome, Guest"}
-            </div>
             {navItems.map((item) => (
               <Link
                 key={item.name}
@@ -142,15 +191,21 @@ const RestaurantOwnerNavbar = () => {
                 <span>{item.name}</span>
               </Link>
             ))}
-            {user && (
+            <div className="flex items-center justify-between px-3 py-2 border-t">
+              <Link
+                href="/"
+                className="text-gray-600 hover:text-[#F4A261]"
+                onClick={() => setIsOpen(false)}
+              >
+                <FaUtensils className="rotate-180" />
+              </Link>
               <button
                 onClick={handleLogout}
-                className="w-full flex items-center space-x-2 px-3 py-2 rounded-lg text-white bg-gradient-to-r from-[#F4A261] to-[#E07B5D] hover:opacity-90 transition-opacity"
+                className="text-gray-600 hover:text-[#F4A261]"
               >
                 <FaSignOutAlt />
-                <span>Logout</span>
               </button>
-            )}
+            </div>
           </div>
         </motion.div>
       )}

@@ -148,15 +148,6 @@ export default function Navbar() {
                             View Profile
                           </button>
                         )}
-                        {user.role === "owner" && (
-                          <button
-                            onClick={() => { router.push("/restaurant-dashboard"); setIsDropdownOpen(false); }}
-                            className="w-full px-6 py-3 text-gray-700 hover:bg-gray-50 flex items-center group transition-colors duration-200"
-                          >
-                            <FontAwesomeIcon icon={faUtensils} className="mr-3 text-[#F4A261] group-hover:scale-110 transition-transform duration-200" />
-                            Restaurant Dashboard
-                          </button>
-                        )}
                       </div>
 
                       <div className="border-t border-gray-100">
