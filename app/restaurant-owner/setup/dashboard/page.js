@@ -3,11 +3,21 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import RestaurantOwnerNavbar from '@/components/RestaurantOwnerNavbar'
+import RestaurantInformation from '@/components/RestaurantInformation'
+import SubscriptionPlans from '@/components/SubscriptionPlans'
+import { RiRestaurantLine, RiLayoutLine, RiCalendarLine, RiVipCrownLine, RiUserLine } from 'react-icons/ri'
+import { motion } from 'framer-motion'
+import OwnerProfile from '@/components/OwnerProfile'
 
 export default function RestaurantSetupDashboard() {
   const router = useRouter()
   const [restaurant, setRestaurant] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [activeSection, setActiveSection] = useState('owner-profile')
+
+  useEffect(() => {
+    console.log('Active section changed to:', activeSection);
+  }, [activeSection]);
 
   useEffect(() => {
     const fetchRestaurantProfile = async () => {
@@ -68,58 +78,107 @@ export default function RestaurantSetupDashboard() {
   return (
     <>
       <RestaurantOwnerNavbar />
-      <div className="min-h-screen bg-gray-50">
-        <div className="max-w-4xl mx-auto p-8 text-black">
-          <div className="bg-white rounded-2xl shadow-lg p-8">
-            <h1 className="text-4xl font-bold text-gray-800 mb-2">Restaurant Profile</h1>
-            
-            <div className="space-y-8 mt-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <h3 className="text-sm font-semibold text-gray-700 mb-2">Restaurant Name</h3>
-                  <p className="text-lg">{restaurant.restaurantName}</p>
-                </div>
-
-                <div>
-                  <h3 className="text-sm font-semibold text-gray-700 mb-2">Cuisine Type</h3>
-                  <p className="text-lg">{restaurant.cuisineType}</p>
-                </div>
-              </div>
-
-              <div>
-                <h3 className="text-sm font-semibold text-gray-700 mb-2">Location</h3>
-                <p className="text-lg">{restaurant.location}</p>
-              </div>
-
-              <div>
-                <h3 className="text-sm font-semibold text-gray-700 mb-2">Description</h3>
-                <p className="text-lg">{restaurant.description}</p>
-              </div>
-
-              <div className="bg-gray-50 rounded-xl p-6">
-                <h3 className="text-xl font-semibold text-gray-800 mb-6">Opening Hours</h3>
-                <div className="space-y-4">
-                  {Object.entries(restaurant.openingHours).map(([day, hours]) => (
-                    <div key={day} className="flex items-center gap-4">
-                      <span className="w-28 text-sm font-medium capitalize">{day}</span>
-                      <span className="text-lg">
-                        {hours.open} - {hours.close}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="pt-6">
-                <button
-                  onClick={() => router.push('/restaurant-owner/setup/edit')}
-                  className="w-full bg-blue-600 text-white py-3 px-6 rounded-lg font-semibold hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transform transition-all duration-200 hover:scale-[1.02]"
-                >
-                  Edit Profile
-                </button>
-              </div>
-            </div>
+      <div className="flex min-h-[calc(100vh-64px)] bg-gray-100 pt-24">
+        {/* Sidebar */}
+        <div className="w-64 bg-white shadow-lg fixed left-0 top-16 h-[calc(100vh-64px)] border-r border-gray-200">
+          <div className="p-4">
+            <h2 className="text-lg font-semibold text-gray-800 mb-6 px-3">Dashboard</h2>
+            <nav className="space-y-2">
+              <button
+                onClick={() => setActiveSection('owner-profile')}
+                className={`flex items-center space-x-3 w-full p-3 rounded-lg transition-all duration-200 ${
+                  activeSection === 'owner-profile'
+                    ? 'bg-orange-50 text-orange-600 font-medium shadow-sm'
+                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                }`}
+              >
+                <RiUserLine className={`text-xl ${activeSection === 'owner-profile' ? 'text-orange-600' : 'text-gray-400'}`} />
+                <span>Profile</span>
+              </button>
+              <button
+                onClick={() => setActiveSection('profile')}
+                className={`flex items-center space-x-3 w-full p-3 rounded-lg transition-all duration-200 ${
+                  activeSection === 'profile'
+                    ? 'bg-orange-50 text-orange-600 font-medium shadow-sm'
+                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                }`}
+                type="button"
+              >
+                <RiRestaurantLine className={`text-xl ${activeSection === 'profile' ? 'text-orange-600' : 'text-gray-400'}`} />
+                <span>Restaurant Profile</span>
+              </button>
+              
+              <button
+                onClick={() => setActiveSection('floorplan')}
+                className={`flex items-center space-x-3 w-full p-3 rounded-lg transition-all duration-200 ${
+                  activeSection === 'floorplan'
+                    ? 'bg-orange-50 text-orange-600 font-medium shadow-sm'
+                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                }`}
+                type="button"
+              >
+                <RiLayoutLine className={`text-xl ${activeSection === 'floorplan' ? 'text-orange-600' : 'text-gray-400'}`} />
+                <span>Floor Plan</span>
+              </button>
+              
+              <button
+                onClick={() => setActiveSection('reservation')}
+                className={`flex items-center space-x-3 w-full p-3 rounded-lg transition-all duration-200 ${
+                  activeSection === 'reservation'
+                    ? 'bg-orange-50 text-orange-600 font-medium shadow-sm'
+                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                }`}
+              >
+                <RiCalendarLine className={`text-xl ${activeSection === 'reservation' ? 'text-orange-600' : 'text-gray-400'}`} />
+                <span>Reservation</span>
+              </button>
+              
+              <button
+                onClick={() => setActiveSection('subscription')}
+                className={`flex items-center space-x-3 w-full p-3 rounded-lg transition-all duration-200 ${
+                  activeSection === 'subscription'
+                    ? 'bg-orange-50 text-orange-600 font-medium shadow-sm'
+                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                }`}
+              >
+                <RiVipCrownLine className={`text-xl ${activeSection === 'subscription' ? 'text-orange-600' : 'text-gray-400'}`} />
+                <span>Subscription</span>
+              </button>
+              
+              
+            </nav>
           </div>
+        </div>
+
+        {/* Main Content */}
+        <div className="flex-1 ml-64 px-8">
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className="max-w-4xl mx-auto"
+          >
+            {activeSection === 'profile' && (
+              <RestaurantInformation 
+                restaurant={restaurant} 
+                onEditClick={() => router.push('/restaurant-owner/setup/edit')}
+              />
+            )}
+            {activeSection === 'floorplan' && (
+              <div>Floor Plan Component</div>
+            )}
+            {activeSection === 'reservation' && (
+              <div>Reservation Component</div>
+            )}
+            {activeSection === 'subscription' && (
+              <div className="mt-4">
+                <SubscriptionPlans />
+              </div>
+            )}
+            {activeSection === 'owner-profile' && (
+              <OwnerProfile />
+            )}
+          </motion.div>
         </div>
       </div>
     </>

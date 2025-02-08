@@ -29,229 +29,261 @@ export default function RestaurantOwnerHome() {
   return (
     <>
       <RestaurantOwnerNavbar onLoginClick={handleLoginClick} />
-      <div className="min-h-screen bg-[url('/images/restaurant-bg.jpg')] bg-cover bg-center bg-fixed">
-        <div className="min-h-screen bg-gradient-to-b from-black/70 to-black/40 backdrop-blur-sm">
-          <div className="container mx-auto flex flex-col items-center text-center p-6 md:p-10 pt-32 md:pt-40">
-            {/* Hero Section */}
-            {!showDemo && (
-              <motion.div
-                className="max-w-5xl relative z-10"
-                initial={{ opacity: 0, y: -50 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.8 }}
-              >
-                <div className="absolute -top-20 left-1/2 transform -translate-x-1/2 w-32 h-1 bg-gradient-to-r from-transparent via-[#F4A261] to-transparent"></div>
-                <h1 className="text-6xl md:text-8xl font-bold text-white mb-8 leading-tight tracking-tight">
-                  Transform Your Restaurant with
-                  <span className="block mt-4 bg-gradient-to-r from-[#F4A261] via-[#E07B5D] to-[#F4A261] text-transparent bg-clip-text">
-                    Interactive 3D Floor Plans
-                  </span>
-                </h1>
-                <p className="text-xl md:text-2xl text-gray-200 mb-12 max-w-3xl mx-auto leading-relaxed">
-                  Create stunning interactive 3D floor plans that enhance your customers'
-                  <span className="font-semibold text-[#F4A261]"> booking experience</span> while optimizing your space.
-                </p>
-                <div className="flex flex-col sm:flex-row gap-8 justify-center">
-                  <motion.button
-                    whileHover={{ scale: 1.05, backgroundColor: '#E07B5D' }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => router.push("/owner/register")}
-                    className="bg-[#F4A261] text-white px-12 py-6 rounded-full text-lg font-semibold shadow-[0_0_20px_rgba(244,162,97,0.3)] hover:shadow-[0_0_30px_rgba(244,162,97,0.5)] transition-all duration-300"
+      
+      {/* Split-screen hero section */}
+      <div className="min-h-screen flex flex-col lg:flex-row">
+        {/* Left side - Content */}
+        <div className="lg:w-1/2 bg-gradient-to-br from-[#2D3436] to-[#1A1C1E] p-8 lg:p-16 flex items-center">
+          <div className="max-w-2xl mx-auto">
+            <motion.div
+              initial={{ opacity: 0, x: -50 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.8 }}
+            >
+              <h1 className="text-5xl lg:text-7xl font-bold text-white mb-6">
+                Design Your Space,
+                <span className="block mt-2 text-[#F4A261]">Delight Your Guests</span>
+              </h1>
+              <p className="text-xl text-gray-300 mb-8">
+                Create immersive 3D floor plans that transform the dining experience and maximize your restaurant's potential.
+              </p>
+              
+              {/* Interactive Feature Pills */}
+              <div className="flex flex-wrap gap-4 mb-8">
+                {benefits.map((benefit, index) => (
+                  <motion.div
+                    key={index}
+                    className="bg-white/10 backdrop-blur px-4 py-2 rounded-full"
+                    whileHover={{ scale: 1.05, backgroundColor: 'rgba(244,162,97,0.2)' }}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: index * 0.1 }}
                   >
-                    Get Started Free
-                  </motion.button>
-                  <motion.button
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => setShowDemo(true)}
-                    className="bg-white/10 backdrop-blur-md text-white px-12 py-6 rounded-full text-lg font-semibold border-2 border-white/30 hover:bg-white/20 transition-all duration-300 hover:border-white/50"
-                  >
-                    View Demo
-                  </motion.button>
-                </div>
-                
-                <div className="absolute -bottom-16 left-1/2 transform -translate-x-1/2 w-32 h-1 bg-gradient-to-r from-transparent via-[#F4A261] to-transparent"></div>
-                <div className="absolute -left-10 top-1/2 transform -translate-y-1/2 w-1 h-32 bg-gradient-to-b from-transparent via-[#F4A261] to-transparent hidden lg:block"></div>
-                <div className="absolute -right-10 top-1/2 transform -translate-y-1/2 w-1 h-32 bg-gradient-to-b from-transparent via-[#F4A261] to-transparent hidden lg:block"></div>
-              </motion.div>
-            )}
-
-            {/* Benefits Section */}
-            {!showDemo && (
-              <div className="mt-40 max-w-6xl w-full">
-                <h2 className="text-5xl font-bold text-white mb-20 text-center">Why Choose Us?</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  {benefits.map((benefit, index) => (
-                    <motion.div
-                      key={index}
-                      className="flex items-start space-x-6 bg-white/10 backdrop-blur-md p-8 rounded-3xl border border-white/10 hover:bg-white/20 transition-all duration-300"
-                      whileHover={{ scale: 1.02, backgroundColor: 'rgba(255,255,255,0.15)' }}
-                      initial={{ opacity: 0, y: 20 }}
-                      whileInView={{ opacity: 1, y: 0 }}
-                      viewport={{ once: true }}
-                      transition={{ delay: index * 0.1 }}
-                    >
-                      <FaCheckCircle className="text-[#F4A261] text-3xl flex-shrink-0 mt-1" />
-                      <p className="text-gray-200 text-lg">{benefit}</p>
-                    </motion.div>
-                  ))}
-                </div>
+                    <span className="text-white">{benefit}</span>
+                  </motion.div>
+                ))}
               </div>
-            )}
 
-            {/* Subscription Section */}
-            {!showDemo && (
-              <div className="mt-40 max-w-6xl w-full">
-                <h2 className="text-5xl font-bold text-white mb-20 text-center">Choose Your Plan</h2>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                  {/* Basic Plan */}
-                  <motion.div
-                    className="bg-white/10 backdrop-blur-md p-8 rounded-3xl border border-white/10 relative overflow-hidden group"
-                    whileHover={{ scale: 1.03, backgroundColor: 'rgba(255,255,255,0.15)' }}
-                    initial={{ opacity: 0, y: 20 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
-                  >
-                    <div className="absolute inset-0 bg-gradient-to-br from-[#F4A261]/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                    <h3 className="text-2xl font-bold text-white mb-4">Basic Plan</h3>
-                    <p className="text-3xl font-bold text-[#F4A261] mb-6">฿1,200<span className="text-lg text-gray-300 font-normal">/month</span></p>
-                    <ul className="text-left text-gray-200 space-y-4">
-                      <li>Restaurant profile listing on the platform</li>
-                      <li>1 floor plan for customization</li>
-                      <li>Real-time table reservation management</li>
-                      <li>Custom table and chair sizing</li>
-                      <li>Email notifications for reservations</li>
-                      <li>Basic customer support</li>
-                    </ul>
-                  </motion.div>
-
-                  {/* Professional Plan */}
-                  <motion.div
-                    className="bg-white/10 backdrop-blur-md p-8 rounded-3xl border border-white/10 relative overflow-hidden group"
-                    whileHover={{ scale: 1.03, backgroundColor: 'rgba(255,255,255,0.15)' }}
-                    initial={{ opacity: 0, y: 20 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
-                  >
-                    <div className="absolute inset-0 bg-gradient-to-br from-[#F4A261]/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                    <h3 className="text-2xl font-bold text-white mb-4">Professional Plan</h3>
-                    <p className="text-3xl font-bold text-[#F4A261] mb-6">฿2,800<span className="text-lg text-gray-300 font-normal">/month</span></p>
-                    <ul className="text-left text-gray-200 space-y-4">
-                      <li>Up to 3 floor plans</li>
-                      <li>Real-time reservations with visual seat management</li>
-                      <li>Table grouping feature for large parties</li>
-                      <li>Google Maps integration for customer convenience</li>
-                      <li>Customer reviews and ratings display</li>
-                      <li>SMS and email notifications</li>
-                    </ul>
-                  </motion.div>
-
-                  {/* Business Plan */}
-                  <motion.div
-                    className="bg-white/10 backdrop-blur-md p-8 rounded-3xl border border-white/10 relative overflow-hidden group"
-                    whileHover={{ scale: 1.03, backgroundColor: 'rgba(255,255,255,0.15)' }}
-                    initial={{ opacity: 0, y: 20 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
-                  >
-                    <div className="absolute inset-0 bg-gradient-to-br from-[#F4A261]/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                    <h3 className="text-2xl font-bold text-white mb-4">Business Plan</h3>
-                    <p className="text-3xl font-bold text-[#F4A261] mb-6">฿5,500<span className="text-lg text-gray-300 font-normal">/month</span></p>
-                    <ul className="text-left text-gray-200 space-y-4">
-                      <li>Unlimited floor plans</li>
-                      <li>Advanced real-time seat management</li>
-                      <li>Dynamic table arrangement features</li>
-                      <li>Integration with third-party services</li>
-                      <li>Custom branding (logo, colors)</li>
-                      <li>Priority support (response within 2 hours)</li>
-                    </ul>
-                  </motion.div>
-                </div>
-              </div>
-            )}
-
-            {/* Call-to-Action Section */}
-            {!showDemo && (
-              <motion.div
-                className="mt-40 bg-white/10 backdrop-blur-md p-16 rounded-3xl border border-white/10 max-w-4xl w-full"
-                initial={{ opacity: 0 }}
-                whileInView={{ opacity: 1 }}
-                viewport={{ once: true }}
-              >
-                <h2 className="text-4xl font-bold text-white mb-6">Ready to Transform Your Restaurant?</h2>
-                <p className="text-xl text-gray-200 mb-8">
-                  Join thousands of restaurants already using our 3D floor plan solution.
-                </p>
-                <div className="flex flex-col sm:flex-row gap-6 justify-center">
-                  <motion.button
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => router.push("/restaurant-owner/register")}
-                    className="bg-[#F4A261] text-white px-10 py-5 rounded-full font-semibold shadow-[0_0_20px_rgba(244,162,97,0.3)] hover:shadow-[0_0_30px_rgba(244,162,97,0.5)] transition-all duration-300"
-                  >
-                    Start Free Trial
-                  </motion.button>
-                  <motion.button
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => setShowLoginModal(true)}
-                    className="bg-white/10 backdrop-blur-md text-white px-10 py-5 rounded-full font-semibold border-2 border-white/30 hover:bg-white/20 transition-all duration-300"
-                  >
-                    Log In
-                  </motion.button>
-                </div>
-              </motion.div>
-            )}
-
-            {/* DEMO SECTION (Only visible when "View Demo" is clicked) */}
-            {showDemo && (
-              <motion.div
-                className="mt-16 bg-white p-10 rounded-lg shadow-lg max-w-4xl relative"
-                initial={{ opacity: 0, y: 50 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.8 }}
-              >
-                {/* Close Button */}
-                <button
-                  onClick={() => setShowDemo(false)}
-                  className="absolute top-3 right-3 bg-red-500 text-white p-2 rounded-full shadow-md hover:bg-red-600 transition"
+              <div className="flex flex-col sm:flex-row gap-4">
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  className="bg-[#F4A261] text-white px-8 py-4 rounded-lg font-medium"
                 >
-                  <FaTimes />
-                </button>
+                  Start Free Trial
+                </motion.button>
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  className="bg-transparent border-2 border-[#F4A261] text-[#F4A261] px-8 py-4 rounded-lg font-medium"
+                  onClick={() => setShowDemo(true)}
+                >
+                  Watch Demo
+                </motion.button>
+              </div>
+            </motion.div>
+          </div>
+        </div>
 
-                <h2 className="text-3xl font-bold text-[#3A2E2B] mb-6">Live Demo</h2>
-                <p className="text-gray-700 mb-4">
-                  Experience how the interactive 3D floor plan looks and functions before implementing it.
-                </p>
-
-                {/* DEMO IMAGE OR VIDEO (Replace with actual content later) */}
-                <div className="w-full h-64 bg-gray-200 rounded-lg flex items-center justify-center shadow-md">
-                  <span className="text-gray-600 text-lg">[Demo Preview Placeholder]</span>
-                </div>
-
-                <p className="text-gray-700 mt-6">
-                  Interested in creating your own? <strong>Sign up now</strong> and start designing your restaurant layout!
-                </p>
-
-                <div className="flex gap-4 justify-center mt-6">
-                  <button
-                    onClick={() => router.push("/owner/register")}
-                    className="bg-[#F4A261] text-white px-6 py-3 rounded-lg font-semibold shadow-md hover:bg-[#E07B5D] transition"
-                  >
-                    Get Started
-                  </button>
-                  <button
-                    onClick={() => router.push("/owner/login")}
-                    className="bg-gray-700 text-white px-6 py-3 rounded-lg font-semibold shadow-md hover:bg-gray-900 transition"
-                  >
-                    Log In
-                  </button>
+        {/* Right side - Interactive 3D Preview */}
+        <div className="lg:w-1/2 bg-[#1A1C1E] relative overflow-hidden">
+          <motion.div
+            className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1200&q=80')] bg-cover bg-center"
+            initial={{ scale: 1.1 }}
+            animate={{ scale: 1 }}
+            transition={{ duration: 1 }}
+          >
+            <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent">
+              {/* Interactive hotspots */}
+              <motion.div
+                className="absolute top-1/4 left-1/4 w-12 h-12 cursor-pointer"
+                whileHover={{ scale: 1.2 }}
+              >
+                <div className="relative">
+                  <div className="absolute inset-0 bg-[#F4A261] rounded-full animate-ping opacity-75"></div>
+                  <div className="relative bg-[#F4A261] w-full h-full rounded-full flex items-center justify-center">
+                    <FaUtensils className="text-white" />
+                  </div>
                 </div>
               </motion.div>
-            )}
+              {/* Add more hotspots as needed */}
+            </div>
+          </motion.div>
+        </div>
+      </div>
+
+      {/* Pricing Section - Modern Horizontal Layout */}
+      <div className="bg-gradient-to-b from-[#2D3436] to-[#1A1C1E] py-24">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-16">
+            <motion.h2 
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              className="text-5xl font-bold text-white mb-4"
+            >
+              SUBSCRIPTIONS
+            </motion.h2>
+          </div>
+
+          {/* Pricing Cards - Horizontal Scroll on Mobile */}
+          <div className="flex flex-nowrap overflow-x-auto gap-6 pb-8 px-4 -mx-4 md:mx-0 md:flex-wrap md:justify-center">
+            {/* Basic Plan */}
+            <motion.div
+              whileHover={{ y: -8 }}
+              className="w-[340px] flex-shrink-0 bg-gradient-to-br from-gray-900 to-gray-800 rounded-2xl p-8 border border-gray-700 flex flex-col"
+            >
+              <div className="text-[#F4A261] text-lg font-medium mb-4">Basic Plan</div>
+              <div className="mb-6">
+                <span className="text-2xl font-bold text-white">THB 1,200</span>
+                <span className="text-gray-400">/month</span>
+              </div>
+              <ul className="space-y-4 mb-8 flex-grow">
+                {[
+                  'Restaurant profile listing on the platform',
+                  '1 floor plan for customization',
+                  'Real-time table reservation management',
+                  'Custom table and chair sizing',
+                  'Email notifications for reservations',
+                  'Basic customer support'
+                ].map((feature, index) => (
+                  <li key={index} className="flex items-start text-gray-300">
+                    <FaCheckCircle className="text-[#F4A261] mr-3 mt-1 flex-shrink-0" />
+                    <span>{feature}</span>
+                  </li>
+                ))}
+              </ul>
+              <button className="w-full py-3 px-6 rounded-xl bg-gray-700 text-white hover:bg-gray-600 transition-colors mt-auto">
+                Get Started
+              </button>
+            </motion.div>
+
+            {/* Professional Plan */}
+            <motion.div
+              whileHover={{ y: -8 }}
+              className="w-[340px] flex-shrink-0 bg-gradient-to-br from-[#F4A261] to-[#E76F51] rounded-2xl p-8 relative flex flex-col"
+            >
+              <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-green-500 text-white px-4 py-1 rounded-full text-sm">
+                Most Popular
+              </div>
+              <div className="text-white text-lg font-medium mb-4">Professional Plan</div>
+              <div className="mb-6">
+                <span className="text-2xl font-bold text-white">THB 2,800</span>
+                <span className="text-white/80">/month</span>
+              </div>
+              <ul className="space-y-4 mb-8 flex-grow">
+                {[
+                  'Up to 3 floor plans (perfect for multi-floor or larger restaurants)',
+                  'Real-time reservations with visual seat management',
+                  'Table grouping feature (for large parties)',
+                  'Multi-floor support (dropdown to switch between floors)',
+                  'Google Maps integration for customer convenience',
+                  'Customer reviews and ratings display',
+                  'SMS and email notifications for customers',
+                  'Priority email support'
+                ].map((feature, index) => (
+                  <li key={index} className="flex items-start text-white">
+                    <FaCheckCircle className="text-white mr-3 mt-1 flex-shrink-0" />
+                    <span>{feature}</span>
+                  </li>
+                ))}
+              </ul>
+              <button className="w-full py-3 px-6 rounded-xl bg-white text-[#F4A261] hover:bg-gray-100 transition-colors mt-auto">
+                Get Started
+              </button>
+            </motion.div>
+
+            {/* Business Plan */}
+            <motion.div
+              whileHover={{ y: -8 }}
+              className="w-[340px] flex-shrink-0 bg-gradient-to-br from-gray-900 to-gray-800 rounded-2xl p-8 border border-gray-700 flex flex-col"
+            >
+              <div className="text-[#F4A261] text-lg font-medium mb-4">Business Plan</div>
+              <div className="mb-6">
+                <span className="text-2xl font-bold text-white">THB 5,500</span>
+                <span className="text-gray-400">/month</span>
+              </div>
+              <ul className="space-y-4 mb-8 flex-grow">
+                {[
+                  'Unlimited floor plans (suitable for large restaurants, cruise ships, or chains)',
+                  'Advanced real-time seat management',
+                  'Dynamic table arrangement feature (easily adjust table sizes)',
+                  'Integration with third-party services (e.g., LINE, WhatsApp)',
+                  'Custom branding (logo, colors) on the platform',
+                  'Customizable menus for reservations (seasonal, VIP access)',
+                  'Automated reservation reminders and waitlist management',
+                  'Advanced reporting (reservation trends, revenue, and customer behavior)',
+                  'Priority support (response within 2 hours)'
+                ].map((feature, index) => (
+                  <li key={index} className="flex items-start text-gray-300">
+                    <FaCheckCircle className="text-[#F4A261] mr-3 mt-1 flex-shrink-0" />
+                    <span>{feature}</span>
+                  </li>
+                ))}
+              </ul>
+              <button className="w-full py-3 px-6 rounded-xl bg-gray-700 text-white hover:bg-gray-600 transition-colors mt-auto">
+                Contact Sales
+              </button>
+            </motion.div>
           </div>
         </div>
       </div>
+
+      {/* FAQ Preview */}
+      <div className="mt-20 text-center">
+        <p className="text-gray-400 mb-4">Have questions? Check our FAQ</p>
+        <motion.button
+          whileHover={{ scale: 1.05 }}
+          className="text-[#F4A261] hover:text-[#E76F51] transition-colors"
+        >
+          View FAQ →
+        </motion.button>
+      </div>
+
+      {/* Demo Modal */}
+      {showDemo && (
+        <motion.div
+          className="mt-16 bg-white p-10 rounded-lg shadow-lg max-w-4xl relative"
+          initial={{ opacity: 0, y: 50 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8 }}
+        >
+          {/* Close Button */}
+          <button
+            onClick={() => setShowDemo(false)}
+            className="absolute top-3 right-3 bg-red-500 text-white p-2 rounded-full shadow-md hover:bg-red-600 transition"
+          >
+            <FaTimes />
+          </button>
+
+          <h2 className="text-3xl font-bold text-[#3A2E2B] mb-6">Live Demo</h2>
+          <p className="text-gray-700 mb-4">
+            Experience how the interactive 3D floor plan looks and functions before implementing it.
+          </p>
+
+          {/* DEMO IMAGE OR VIDEO (Replace with actual content later) */}
+          <div className="w-full h-64 bg-gray-200 rounded-lg flex items-center justify-center shadow-md">
+            <span className="text-gray-600 text-lg">[Demo Preview Placeholder]</span>
+          </div>
+
+          <p className="text-gray-700 mt-6">
+            Interested in creating your own? <strong>Sign up now</strong> and start designing your restaurant layout!
+          </p>
+
+          <div className="flex gap-4 justify-center mt-6">
+            <button
+              onClick={() => router.push("/owner/register")}
+              className="bg-[#F4A261] text-white px-6 py-3 rounded-lg font-semibold shadow-md hover:bg-[#E07B5D] transition"
+            >
+              Get Started
+            </button>
+            <button
+              onClick={() => router.push("/owner/login")}
+              className="bg-gray-700 text-white px-6 py-3 rounded-lg font-semibold shadow-md hover:bg-gray-900 transition"
+            >
+              Log In
+            </button>
+          </div>
+        </motion.div>
+      )}
+
       <RestaurantOwnerLoginModal
         isOpen={showLoginModal}
         onClose={() => setShowLoginModal(false)}

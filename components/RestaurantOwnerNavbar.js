@@ -13,10 +13,7 @@ const RestaurantOwnerNavbar = ({ onLoginClick }) => {
   const router = useRouter();
 
   const navItems = [
-    { name: 'Dashboard', href: '/restaurant-owner/dashboard', icon: <FaChartBar /> },
-    { name: 'Floor Plan', href: '/restaurant-owner/floor-plan', icon: <FaUtensils /> },
-    { name: 'Reservations', href: '/restaurant-owner/reservations', icon: <FaCalendarAlt /> },
-    { name: 'Settings', href: '/restaurant-owner/settings', icon: <FaCog /> },
+    { name: 'Restaurant Portal', href: '/restaurant-owner/dashboard', icon: <FaUtensils /> },
   ];
 
   // Add badge text for restaurant owner interface
@@ -96,21 +93,21 @@ const RestaurantOwnerNavbar = ({ onLoginClick }) => {
           <div className="hidden md:flex items-center space-x-6">
             {user ? (
               <>
-                {navItems.map((item) => (
-                  <Link
-                    key={item.name}
-                    href={item.href}
-                    className={`flex items-center space-x-2 px-3 py-2 rounded-lg transition-colors ${
-                      pathname === item.href
-                        ? 'text-[#F4A261] bg-orange-50'
-                        : 'text-gray-600 hover:text-[#F4A261] hover:bg-orange-50'
-                    }`}
-                  >
-                    <span className="text-lg">{item.icon}</span>
-                    <span>{item.name}</span>
-                  </Link>
-                ))}
+                <Link
+                  href="/restaurant-owner/setup/dashboard"
+                  className={`flex items-center space-x-2 px-3 py-2 rounded-lg transition-colors ${
+                    pathname === '/restaurant-owner/setup/dashboard'
+                      ? 'text-[#F4A261] bg-orange-50'
+                      : 'text-gray-600 hover:text-[#F4A261] hover:bg-orange-50'
+                  }`}
+                >
+                  <span className="text-lg"><FaUtensils /></span>
+                  <span>Restaurant Portal</span>
+                </Link>
                 <div className="flex items-center space-x-4 border-l pl-4">
+                  <div className="text-gray-600">
+                    Welcome, {user.firstName} {user.lastName}
+                  </div>
                   <Link
                     href="/"
                     className="text-gray-600 hover:text-[#F4A261]"
@@ -176,21 +173,21 @@ const RestaurantOwnerNavbar = ({ onLoginClick }) => {
           className="md:hidden bg-white shadow-lg"
         >
           <div className="px-2 pt-2 pb-3 space-y-1">
-            {navItems.map((item) => (
-              <Link
-                key={item.name}
-                href={item.href}
-                className={`flex items-center space-x-2 px-3 py-2 rounded-lg transition-colors ${
-                  pathname === item.href
-                    ? 'text-[#F4A261] bg-orange-50'
-                    : 'text-gray-600 hover:text-[#F4A261] hover:bg-orange-50'
-                }`}
-                onClick={() => setIsOpen(false)}
-              >
-                <span className="text-lg">{item.icon}</span>
-                <span>{item.name}</span>
-              </Link>
-            ))}
+            <div className="px-3 py-2 text-gray-600">
+              Welcome, {user.firstName} {user.lastName}
+            </div>
+            <Link
+              href="/restaurant-owner/dashboard"
+              className={`flex items-center space-x-2 px-3 py-2 rounded-lg transition-colors ${
+                pathname === '/restaurant-owner/dashboard'
+                  ? 'text-[#F4A261] bg-orange-50'
+                  : 'text-gray-600 hover:text-[#F4A261] hover:bg-orange-50'
+              }`}
+              onClick={() => setIsOpen(false)}
+            >
+              <span className="text-lg"><FaUtensils /></span>
+              <span>Restaurant Portal</span>
+            </Link>
             <div className="flex items-center justify-between px-3 py-2 border-t">
               <Link
                 href="/"

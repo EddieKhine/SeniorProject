@@ -68,7 +68,7 @@ export default function Navbar() {
 
   return (
     <>
-      <nav className="bg-gradient-to-r from-[#3A2E2B] to-[#4a3834] backdrop-blur-lg shadow-lg py-6 px-6 fixed w-full top-0 z-50">
+      <nav className="bg-gradient-to-r from-[#2b2929] to-[#1a1919] backdrop-blur-lg shadow-lg py-6 px-6 fixed w-full top-0 z-50">
         <div className="max-w-7xl mx-auto flex justify-between items-center">
           {/* Left Side - Logo & Links */}
           <div className="flex items-center space-x-6">
@@ -86,12 +86,12 @@ export default function Navbar() {
             
             <div className="hidden md:flex space-x-1">
               <Link href="/" passHref>
-                <button className="text-white px-4 py-2 rounded-full hover:bg-[#F4A261] hover:text-white transition-all duration-300 ease-in-out">
+                <button className="text-white px-4 py-2 rounded-full hover:bg-white/10 hover:text-white transition-all duration-300 ease-in-out">
                   Customers
                 </button>
               </Link>
               <Link href="/restaurant-owner">
-                <button className="text-white px-4 py-2 rounded-full hover:bg-[#F4A261] hover:text-white transition-all duration-300 ease-in-out">
+                <button className="text-white px-4 py-2 rounded-full hover:bg-white/10 hover:text-white transition-all duration-300 ease-in-out">
                   For Restaurants
                 </button>
               </Link>

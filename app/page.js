@@ -96,10 +96,23 @@ export default function HomePage() {
     <>
       {/* Loading Screen */}
       {isLoading && (
-        <div className="fixed inset-0 bg-white z-50 flex items-center justify-center">
-          <div className="relative w-24 h-24">
-            <div className="absolute animate-ping w-full h-full rounded-full bg-orange-400 opacity-75"></div>
-            <div className="relative animate-spin rounded-full h-24 w-24 border-t-2 border-b-2 border-orange-500"></div>
+        <div className="fixed inset-0 bg-white z-50 flex flex-col items-center justify-center">
+          <div className="relative">
+            {/* Plate animation */}
+            <div className="w-32 h-32 rounded-full border-4 border-gray-200 relative">
+              {/* Fork and knife animation */}
+              <div className="absolute inset-0 animate-spin">
+                <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+                  <div className="flex items-center gap-4">
+                    <div className="w-1 h-16 bg-orange-500 rounded-full transform -rotate-45"></div>
+                    <div className="w-1 h-16 bg-orange-500 rounded-full transform rotate-45"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="mt-8 text-lg font-medium text-gray-600">
+            <span className="inline-block animate-pulse">Preparing your table...</span>
           </div>
         </div>
       )}
