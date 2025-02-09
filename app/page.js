@@ -29,19 +29,33 @@ export default function HomePage() {
   const router = useRouter();
 
   useEffect(() => {
-    fetch("/data/restaurants.json")
-      .then((response) => {
+    const fetchRestaurants = async () => {
+      try {
+        const response = await fetch("/api/restaurants/all");
         if (!response.ok) {
           throw new Error(`Network response was not ok: ${response.status}`);
         }
-        return response.json();
-      })
-      .then((data) => {
-        setRestaurants(data.restaurants);
-      })
-      .catch((error) => {
+        const data = await response.json();
+        
+        // Transform the data to match the expected format
+        const transformedRestaurants = data.restaurants.map((restaurant) => ({
+          id: restaurant._id,
+          name: restaurant.restaurantName,
+          location: restaurant.location,
+          description: restaurant.description,
+          categories: [restaurant.cuisineType], // Using cuisineType as a category
+          rating: 4.5, // You might want to add this to your schema later
+          "opening-hours": formatOpeningHours(restaurant.openingHours),
+          availableSeats: "20", // You might want to add this to your schema later
+        }));
+
+        setRestaurants(transformedRestaurants);
+      } catch (error) {
         console.error("Error fetching restaurant data:", error);
-      });
+      }
+    };
+
+    fetchRestaurants();
   }, []);
 
   useEffect(() => {
@@ -90,6 +104,12 @@ export default function HomePage() {
     } else {
       setFavorites([...favorites, restaurant]);
     }
+  };
+
+  // Helper function to format opening hours
+  const formatOpeningHours = (hours) => {
+    if (!hours || !hours.monday) return "Hours not available";
+    return `${hours.monday.open} - ${hours.monday.close}`;
   };
 
   return (
@@ -260,7 +280,7 @@ export default function HomePage() {
                 >
                   <div className="relative aspect-[16/9] overflow-hidden">
                     <img
-                      src={restaurant.image}
+                      src={restaurant.image || "/images/restaurant-images/default-restaurant.jpg"}
                       alt={restaurant.name}
                       className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                     />
@@ -276,11 +296,6 @@ export default function HomePage() {
                         className={`text-lg ${favorites.some((fav) => fav.id === restaurant.id) ? 'text-red-500' : 'text-gray-400'}`}
                       />
                     </button>
-                    <div className="absolute bottom-4 left-4">
-                      <span className="bg-gradient-to-r from-orange-400 to-red-500 text-white px-4 py-1.5 rounded-full text-xs font-medium">
-                        Interactive Floor Plan
-                      </span>
-                    </div>
                   </div>
 
                   <div className="p-5">
@@ -288,7 +303,7 @@ export default function HomePage() {
                       <h3 className="text-lg font-bold text-gray-900">{restaurant.name}</h3>
                       <div className="flex items-center bg-orange-50 px-2 py-1 rounded-lg">
                         <FontAwesomeIcon icon={faStar} className="text-orange-500 text-sm mr-1" />
-                        <span className="text-sm font-medium text-gray-900">4.5</span>
+                        <span className="text-sm font-medium text-gray-900">{restaurant.rating || "N/A"}</span>
                       </div>
                     </div>
 
@@ -303,7 +318,7 @@ export default function HomePage() {
                       </div>
                       <div className="flex items-center text-gray-600">
                         <FontAwesomeIcon icon={faChair} className="w-4 mr-2" />
-                        <span className="text-sm">{restaurant.availableSeats} seats available</span>
+                        <span className="text-sm">{restaurant.availableSeats || "N/A"} seats available</span>
                       </div>
                     </div>
 
@@ -319,11 +334,11 @@ export default function HomePage() {
                     </div>
 
                     <button
-                      onClick={() => router.push(`/restaurants/${restaurant.id}/reserve`)}
+                      onClick={() => router.push(`/restaurants/${restaurant.id}/floorplan`)}
                       className="w-full py-2.5 bg-gradient-to-r from-orange-400 to-red-500 text-white rounded-lg 
                                hover:opacity-90 transition-opacity duration-300 font-medium text-sm"
                     >
-                      Reserve a Table
+                      View Floor Plan & Reserve
                     </button>
                   </div>
                 </div>
