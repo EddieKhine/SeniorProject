@@ -1,78 +1,191 @@
 "use client";
- 
-import { useEffect, useState } from "react";
-import { useRouter } from 'next/navigation';
+
+import { useEffect, useRef } from "react";
+import { useRouter, useSearchParams } from 'next/navigation';
 import Head from "next/head";
+import * as THREE from 'three';
+import { createScene, createFloor, initializeOrbitControls } from '@/scripts/floor';
+import { UIManager } from '@/scripts/managers/UIManager';
+import { DragManager } from '@/scripts/managers/DragManager';
+import { WallManager } from '@/scripts/wallManager';
+import { FaBoxOpen, FaTrash, FaArrowsAltH, FaSave, FaFolderOpen } from "react-icons/fa";
+import { RiLayoutGridFill } from "react-icons/ri";
 import styles from "@/css/ui.css";
- 
-// Importing React Icons from react-icons/fa
-import { FaBoxOpen, FaTrash, FaArrowsAltH ,FaSave, FaFolderOpen} from "react-icons/fa";
- 
-import { RiLayoutGridFill } from "react-icons/ri"; // Scene
+
 export default function FloorplanEditor() {
   const router = useRouter();
-  const [restaurantData, setRestaurantData] = useState(null);
+  const searchParams = useSearchParams();
+  const containerRef = useRef(null);
+  const managersRef = useRef(null);
+  const sceneRef = useRef(null);
 
   useEffect(() => {
-    // Get restaurant data from localStorage
+    if (!containerRef.current || sceneRef.current) return;
+
     const token = localStorage.getItem("restaurantOwnerToken");
-    const restaurantData = localStorage.getItem("restaurantData");
-    
-    if (!token || !restaurantData) {
-      router.push('/restaurant-owner/login');
-      return;
-    }
+    const storedRestaurantData = localStorage.getItem("restaurantData");
 
-    setRestaurantData(JSON.parse(restaurantData));
-
-    // Initialize Three.js editor
-    import("@/scripts/main.js");
-  }, []);
-
-  const handleSave = async (sceneData) => {
-    const token = localStorage.getItem("restaurantOwnerToken");
-    
-    if (!token) {
-      console.error('No authentication token found');
+    if (!token || !storedRestaurantData) {
+      console.error('Missing token or restaurant data');
       router.push('/restaurant-owner');
       return;
     }
 
-    try {
-      const response = await fetch('/api/scenes', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`  // Make sure the format matches exactly
-        },
-        body: JSON.stringify({
-          name: restaurantData?.restaurantName || 'Restaurant Floor Plan',
-          restaurantId: restaurantData?.id,
-          data: sceneData
-        }),
-      });
+    const restaurantData = JSON.parse(storedRestaurantData);
+    console.log('Restaurant Data:', restaurantData);
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to save scene');
-      }
+    // Scene Setup
+    const renderer = new THREE.WebGLRenderer({ 
+      antialias: true,
+      powerPreference: "high-performance"
+    });
+    renderer.setSize(containerRef.current.clientWidth, containerRef.current.clientHeight);
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    containerRef.current.appendChild(renderer.domElement);
 
-      const data = await response.json();
-      
-      if (response.ok) {
-        localStorage.setItem('floorplanData', JSON.stringify(data.floorplan));
-        localStorage.setItem('floorplanToken', data.token);
+    // Scene Initialization
+    const scene = createScene();
+    sceneRef.current = scene;
+    
+    const gridSize = 2;
+    const floor = createFloor(20, 20, gridSize);
+    scene.add(floor);
+    
+    // Add lighting
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+    scene.add(ambientLight);
+
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+    directionalLight.position.set(10, 15, 10);
+    directionalLight.castShadow = true;
+    directionalLight.shadow.mapSize.width = 2048;
+    directionalLight.shadow.mapSize.height = 2048;
+    scene.add(directionalLight);
+
+    // Camera Setup
+    const camera = new THREE.PerspectiveCamera(
+      75,
+      containerRef.current.clientWidth / containerRef.current.clientHeight,
+      0.1,
+      1000
+    );
+    camera.position.set(8, 8, 8);
+    camera.lookAt(0, 0, 0);
+
+    // Controls Setup
+    const controls = initializeOrbitControls(camera, renderer);
+
+    // Initialize Managers with save callback
+    const handleSave = async (sceneData) => {
+      try {
+        console.log('Saving scene data:', sceneData); // Debug log
+
+        const response = await fetch('/api/scenes', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            name: 'Restaurant Floor Plan',
+            restaurantId: restaurantData.id,
+            data: {
+              objects: sceneData.objects || [],
+              version: sceneData.version || 1
+            }
+          }),
+        });
+
+        const responseData = await response.json();
+        console.log('API Response:', responseData); // Debug log
+
+        if (!response.ok) {
+          throw new Error(responseData.error || 'Failed to save scene');
+        }
+        
+        // Update the restaurant with the new floorplan ID
+        const updateResponse = await fetch(`/api/restaurants/${restaurantData.id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            floorplanId: responseData._id || responseData.floorplan._id
+          }),
+        });
+
+        if (!updateResponse.ok) {
+          const updateError = await updateResponse.json();
+          throw new Error(updateError.error || 'Failed to update restaurant with floorplan');
+        }
+
         alert('Floor plan saved successfully!');
+        router.push('/restaurant-owner/setup/dashboard');
+      } catch (error) {
+        console.error('Error details:', error); // Detailed error logging
+        if (error.message.includes('Unauthorized')) {
+          router.push('/restaurant-owner');
+        } else {
+          alert('Failed to save floor plan: ' + error.message);
+        }
       }
-    } catch (error) {
-      console.error('Error saving floor plan:', error);
-      if (error.message.includes('Unauthorized')) {
-        router.push('/restaurant-owner');
-      } else {
-        alert('Failed to save floor plan: ' + error.message);
+    };
+
+    const uiManager = new UIManager(scene, floor, gridSize, camera, renderer, controls);
+    uiManager.onSave = handleSave; // Pass the save callback to UIManager
+    uiManager.restaurantData = restaurantData;
+    
+    const dragManager = new DragManager(uiManager);
+    uiManager.dragManager = dragManager;
+    const wallManager = new WallManager(scene, floor, gridSize, renderer);
+
+    managersRef.current = {
+      uiManager,
+      dragManager,
+      wallManager
+    };
+
+    // Animation Loop
+    const animate = () => {
+      requestAnimationFrame(animate);
+      controls.update();
+      renderer.render(scene, camera);
+    };
+    animate();
+
+    // Handle window resize
+    const handleResize = () => {
+      if (!containerRef.current) return;
+      camera.aspect = containerRef.current.clientWidth / containerRef.current.clientHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(containerRef.current.clientWidth, containerRef.current.clientHeight);
+    };
+    window.addEventListener('resize', handleResize);
+
+    // Cleanup
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      if (containerRef.current && containerRef.current.contains(renderer.domElement)) {
+        containerRef.current.removeChild(renderer.domElement);
       }
-    }
-  };
+      renderer.dispose();
+      if (sceneRef.current) {
+        sceneRef.current.traverse((object) => {
+          if (object.geometry) object.geometry.dispose();
+          if (object.material) {
+            if (Array.isArray(object.material)) {
+              object.material.forEach(material => material.dispose());
+            } else {
+              object.material.dispose();
+            }
+          }
+        });
+        sceneRef.current = null;
+      }
+    };
+  }, [searchParams, router]);
 
   return (
     <>
@@ -81,13 +194,9 @@ export default function FloorplanEditor() {
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>3D Room Editor</title>
         <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.3/font/bootstrap-icons.css" />
- 
-        {/* Global UI CSS from the public folder */}
-        <link rel="stylesheet" href="/css/ui.css?v=1" />
+        <link rel="stylesheet" href={styles} />
       </Head>
       <div>
-        {/* Sidebar Toggle */}
- 
         <button
           className="sidebar-toggle"
           id="sidebar-toggle"
@@ -96,26 +205,26 @@ export default function FloorplanEditor() {
           <i className="bi bi-layout-sidebar"></i>
         </button>
  
-        {/* Sidebar */}
         <aside className="sidebar" id="sidebar">
           <h2 className="sidebar-title">
-            {/* Using React Icon for the sidebar title */}
             <FaBoxOpen size={22} style={{ marginRight: "8px" }} />
             Object Library
           </h2>
           <div className="library-content" id="library-items"></div>
         </aside>
  
-        {/* Main Content */}
         <main className="main-content">
-          {/* Toolbar */}
+          <div 
+            ref={containerRef} 
+            className="scene-container w-full h-[calc(100vh-120px)] border-2 border-gray-200 rounded-lg bg-gray-50"
+          />
+ 
           <div className="toolbar">
             <button
               className="toolbar-btn"
               id="remove-object"
               data-tooltip="Remove Object"
             >
-              {/* Replace Bootstrap icon with React Icon */}
               <FaTrash size={20} color="#de350b" style={{ marginRight: "4px" }} />
               <span>Remove</span>
             </button>
@@ -124,7 +233,6 @@ export default function FloorplanEditor() {
               id="switch-direction"
               data-tooltip="Switch Direction"
             >
-              {/* Replace Bootstrap icon with React Icon */}
               <FaArrowsAltH size={20} style={{ marginRight: "4px" }} />
               <span>Direction</span>
             </button>
@@ -138,8 +246,6 @@ export default function FloorplanEditor() {
             </a>
           </div>
  
- 
-          {/* File Controls */}
           <div className="file-controls">
             <button
               className="toolbar-btn"
@@ -148,7 +254,6 @@ export default function FloorplanEditor() {
             >
               <FaSave size={20} style={{ marginRight: "4px" }} />
               <span>Save</span>
- 
             </button>
             <button
               className="toolbar-btn"
@@ -158,11 +263,9 @@ export default function FloorplanEditor() {
               <FaFolderOpen size={20} style={{ marginRight: "4px" }} />
               <span>Load</span>
             </button>
- 
           </div>
         </main>
  
-        {/* Scale Panel */}
         <div id="scale-panel" className="tool-panel">
           <div className="preset-sizes">
             <button className="size-btn small" data-scale="0.5">S</button>
@@ -182,7 +285,6 @@ export default function FloorplanEditor() {
           </div>
         </div>
  
-        {/* Loading Overlay */}
         <div className="loading-overlay" id="loading-overlay">
           <div className="spinner">
             <i className="bi bi-arrow-repeat"></i>

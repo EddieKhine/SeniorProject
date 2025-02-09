@@ -1,254 +1,304 @@
-'use client'
+import { useEffect, useRef, useState } from 'react';
+import * as THREE from 'three';
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
+import { useRouter } from 'next/navigation';
+import { createScene, createFloor, initializeOrbitControls } from '@/scripts/floor';
+import { chair, table, sofa, roundTable } from '@/scripts/asset';
 
-import { useState, useEffect, useRef } from 'react'
-import { useRouter } from 'next/navigation'
-import * as THREE from 'three'
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls'
-import { FileManager } from '@/scripts/managers/FileManager'
-import { UIManager } from '@/scripts/managers/UIManager'
-import { chair, table, sofa, roundTable } from '../scripts/asset.js'
-import { createFloor } from '../scripts/floor.js'
-import { WallManager } from '../scripts/wallManager.js'
-import { DoorManager } from '../scripts/managers/DoorManager.js'
-import { WindowManager } from '../scripts/managers/WindowManager.js'
+export default function RestaurantFloorPlan({ token, restaurantId }) {
+  const containerRef = useRef(null);
+  const router = useRouter();
+  const [floorplanId, setFloorplanId] = useState(null);
 
-export default function RestaurantFloorPlan() {
-  const [loading, setLoading] = useState(true)
-  const [floorplan, setFloorplan] = useState(null)
-  const containerRef = useRef(null)
-  const sceneRef = useRef(null)
-  const router = useRouter()
-
+  // First fetch the floorplan ID for the restaurant
   useEffect(() => {
-    const fetchFloorplan = async () => {
-      const token = localStorage.getItem("restaurantOwnerToken");
-      const restaurantDataStr = localStorage.getItem("restaurantData");
-      
-      console.log("Token exists:", !!token);
-      console.log("Restaurant data exists:", !!restaurantDataStr);
-      
-      if (!token || !restaurantDataStr) {
-        console.log("Missing required data:", { token: !!token, restaurantData: !!restaurantDataStr });
-        setLoading(false);
-        return;
-      }
-
+    const fetchFloorplanId = async () => {
       try {
-        const restaurantData = JSON.parse(restaurantDataStr);
-        console.log("Restaurant data:", restaurantData);
-        
-        if (!restaurantData.floorplanId) {  // Changed from floorPlanId to floorplanId
-          console.log("No floor plan ID found in restaurant data");
-          setLoading(false);
-          return;
-        }
-
-        console.log("Fetching floorplan with ID:", restaurantData.floorplanId);
-        
-        const response = await fetch(`/api/scenes/${restaurantData.floorplanId}`, {
+        const response = await fetch(`/api/restaurants/${restaurantId}/floorplan`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }
         });
 
-        console.log("Response status:", response.status);
+        if (!response.ok) throw new Error('Failed to fetch floorplan');
         
-        if (!response.ok) {
-          const errorData = await response.json();
-          console.error("Error response:", errorData);
-          throw new Error(`Failed to fetch floorplan: ${errorData.error || 'Unknown error'}`);
-        }
-
         const data = await response.json();
-        console.log("Successfully fetched floorplan data:", data);
-        setFloorplan(data);
+        if (data.floorplanId) {
+          console.log('Found floorplan ID:', data.floorplanId);
+          setFloorplanId(data.floorplanId);
+        }
       } catch (error) {
-        console.error("Error in fetchFloorplan:", error.message);
-      } finally {
-        setLoading(false);
+        console.error('Error fetching floorplan:', error);
       }
     };
 
-    fetchFloorplan();
-  }, []);
+    if (restaurantId && token) {
+      fetchFloorplanId();
+    }
+  }, [restaurantId, token]);
 
   useEffect(() => {
-    if (!containerRef.current || !floorplan?.data?.objects) return;
+    if (!containerRef.current || !floorplanId) return;
 
-    const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0xf3f4f6);
-    
+    // Scene Setup with high performance settings
+    const renderer = new THREE.WebGLRenderer({ 
+      antialias: true,
+      powerPreference: "high-performance"
+    });
+    renderer.setSize(containerRef.current.clientWidth, containerRef.current.clientHeight);
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    containerRef.current.appendChild(renderer.domElement);
+
+    // Scene Initialization
+    const scene = createScene();
+    const gridSize = 2;
+    const floor = createFloor(20, 20, gridSize);
+    scene.add(floor);
+
+    // Camera Setup
     const camera = new THREE.PerspectiveCamera(
       75,
       containerRef.current.clientWidth / containerRef.current.clientHeight,
       0.1,
       1000
     );
+    camera.position.set(8, 8, 8);
+    camera.lookAt(0, 0, 0);
     
-    const renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setSize(containerRef.current.clientWidth, containerRef.current.clientHeight);
-    containerRef.current.innerHTML = '';
-    containerRef.current.appendChild(renderer.domElement);
 
-    // Add lights
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+    // Lighting Setup
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
     scene.add(ambientLight);
 
     const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
-    directionalLight.position.set(10, 10, 10);
+    directionalLight.position.set(10, 15, 10);
+    directionalLight.castShadow = true;
+    directionalLight.shadow.mapSize.width = 2048;
+    directionalLight.shadow.mapSize.height = 2048;
     scene.add(directionalLight);
 
-    // Create and add floor
-    const floor = createFloor(20, 20); // Adjust size as needed
-    scene.add(floor);
-
-    camera.position.set(5, 5, 5);
-    camera.lookAt(0, 0, 0);
-
-    const controls = new OrbitControls(camera, renderer.domElement);
+    // Controls Setup
+    const controls = initializeOrbitControls(camera, renderer);
     controls.enableDamping = true;
     controls.dampingFactor = 0.05;
 
-    // Initialize managers
-    const wallManager = new WallManager(scene, floor, 1, renderer);
-    const doorManager = new DoorManager(scene, wallManager, renderer);
-    const windowManager = new WindowManager(scene, wallManager, renderer);
+    // Load Scene Data
+    const loadScene = async () => {
+      try {
+        console.log('Loading scene with ID:', floorplanId);
+        const response = await fetch(`/api/scenes/${floorplanId}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
 
-    // Create a simplified version of UIManager for view-only mode
-    const uiManager = {
-      scene,
-      camera,
-      renderer,
-      controls,
-      floor,
-      wallManager,
-      doorManager,
-      windowManager,
-      isViewOnly: true,
-      
-      // Asset creation methods
-      async createChair() {
-        return await chair(scene);
-      },
-      async createTable() {
-        return await table(scene);
-      },
-      async createSofa() {
-        return await sofa(scene);
-      },
-      async createRoundTable() {
-        return await roundTable(scene);
-      },
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
 
-      // Wall methods
-      createWall(start, end) {
-        return wallManager.createWall(start, end);
-      },
+        const floorplanData = await response.json();
+        console.log('Raw floorplan data:', floorplanData);
 
-      // Door methods
-      createDoor(wall, position) {
-        return doorManager.createDoor(wall, position);
-      },
+        if (!floorplanData.data || !floorplanData.data.objects) {
+          console.error('Invalid data structure:', floorplanData);
+          throw new Error('Invalid floor plan data structure');
+        }
 
-      // Window methods
-      createWindow(wall, position) {
-        return windowManager.createWindow(wall, position);
+        const wallMap = new Map();
+
+        // First pass - create walls
+        const wallData = floorplanData.data.objects.filter(o => o.type === 'wall');
+        console.log('Processing wall objects:', wallData.length);
+
+        for (const objectData of wallData) {
+          const wall = await recreateObject(objectData, true, wallMap);
+          if (wall) {
+            wallMap.set(objectData.userData.uuid, wall);
+          }
+        }
+
+        // Second pass - create furniture and other objects
+        const nonWallData = floorplanData.data.objects.filter(o => o.type !== 'wall');
+        console.log('Processing furniture objects:', nonWallData.length);
+
+        for (const objectData of nonWallData) {
+          await recreateObject(objectData, true, wallMap);
+        }
+
+        setupViewOnlyMode();
+
+      } catch (error) {
+        console.error('Load failed:', error);
       }
     };
 
-    // Initialize FileManager with our simplified UIManager
-    const fileManager = new FileManager(uiManager);
-
-    // Create a Map to store walls for reference when creating doors and windows
-    const wallMap = new Map();
-
-    // Load objects
-    floorplan.data.objects.forEach(async (obj) => {
+    const recreateObject = async (data, isViewOnly = true, wallMap = new Map()) => {
       try {
-        // Pass the wallMap to recreateObject for door/window parent reference
-        await fileManager.recreateObject(obj, true, wallMap);
+        let model;
+        if (data.type === 'wall') {
+          const geometry = new THREE.BoxGeometry(gridSize, 2, 0.2);
+          const material = new THREE.MeshPhongMaterial({ color: 0x808080 });
+          
+          model = new THREE.Mesh(geometry, material);
+          model.userData = {
+            isWall: true,
+            isInteractable: !isViewOnly,
+            uuid: data.userData.uuid
+          };
+          scene.add(model);
+        } else if (data.type === 'door' || data.type === 'window') {
+          const parentWall = wallMap.get(data.userData.parentWallId);
+          if (parentWall) {
+            const geometry = new THREE.BoxGeometry(1, 1.5, 0.2);
+            const material = new THREE.MeshPhongMaterial({
+              color: data.type === 'door' ? 0x8B4513 : 0x87CEEB,
+              transparent: true,
+              opacity: 0.8
+            });
+            model = new THREE.Mesh(geometry, material);
+            model.userData = {
+              ...data.userData,
+              isInteractable: !isViewOnly,
+              [data.type === 'door' ? 'isDoor' : 'isWindow']: true,
+              parentWall
+            };
+            scene.add(model);
+          }
+        } else {
+          if (data.userData.isChair) {
+            model = await chair(scene);
+          } else if (data.userData.isFurniture) {
+            model = await table(scene);
+          } else if (data.userData.isSofa) {
+            model = await sofa(scene);
+          } else if (data.userData.isTable) {
+            model = await roundTable(scene);
+          }
+        }
+
+        if (model) {
+          model.position.fromArray(data.position);
+          model.rotation.set(
+            data.rotation.x,
+            data.rotation.y,
+            data.rotation.z
+          );
+          model.scale.fromArray(data.scale);
+          model.userData = {
+            ...data.userData,
+            isInteractable: !isViewOnly
+          };
+
+          if (data.type === 'wall') {
+            model.castShadow = true;
+            model.receiveShadow = true;
+          } else if (model.material) {
+            if (data.userData.isBooked) {
+              if (Array.isArray(model.material)) {
+                model.material.forEach(mat => mat.color.setHex(0xff0000));
+              } else {
+                model.material.color.setHex(0xff0000);
+              }
+            } else if (data.userData.isChair || data.userData.isFurniture) {
+              if (Array.isArray(model.material)) {
+                model.material.forEach(mat => mat.color.setHex(0x00ff00));
+              } else {
+                model.material.color.setHex(0x00ff00);
+              }
+            }
+          }
+        }
+
+        return model;
       } catch (error) {
         console.error('Error recreating object:', error);
+        throw error;
       }
-    });
+    };
 
-    function animate() {
+    const setupViewOnlyMode = () => {
+      controls.enableRotate = true;
+      controls.enableZoom = true;
+      controls.enablePan = true;
+    };
+
+
+    // Animation Loop
+    const animate = () => {
       requestAnimationFrame(animate);
       controls.update();
       renderer.render(scene, camera);
-    }
+    };
     animate();
 
+    // Window Resize Handler
     const handleResize = () => {
-      if (!containerRef.current) return;
-      camera.aspect = containerRef.current.clientWidth / containerRef.current.clientHeight;
+      const width = containerRef.current.clientWidth;
+      const height = containerRef.current.clientHeight;
+      camera.aspect = width / height;
       camera.updateProjectionMatrix();
-      renderer.setSize(containerRef.current.clientWidth, containerRef.current.clientHeight);
+      renderer.setSize(width, height);
     };
     window.addEventListener('resize', handleResize);
 
+    // Load scene immediately if sceneId is provided
+    if (floorplanId) {
+      console.log('Starting scene load with ID:', floorplanId);
+      loadScene();
+    } else {
+      console.warn('No sceneId provided to RestaurantFloorPlan component');
+    }
+
+    // Cleanup
     return () => {
       window.removeEventListener('resize', handleResize);
-      renderer.dispose();
       if (containerRef.current) {
-        containerRef.current.innerHTML = '';
+        containerRef.current.removeChild(renderer.domElement);
       }
+      renderer.dispose();
+      scene.traverse((object) => {
+        if (object.geometry) object.geometry.dispose();
+        if (object.material) {
+          if (Array.isArray(object.material)) {
+            object.material.forEach(material => material.dispose());
+          } else {
+            object.material.dispose();
+          }
+        }
+      });
     };
-  }, [floorplan]);
+  }, [floorplanId, token, router]);
 
-  if (loading) {
-    return (
-      <div className="bg-white rounded-3xl shadow-xl p-10 border border-gray-100">
-        <div className="flex items-center justify-center h-[500px]">
-          <div className="text-xl text-gray-600">Loading floor plan...</div>
-        </div>
-      </div>
-    )
-  }
-
-  if (!floorplan) {
-    return (
-      <div className="bg-white rounded-3xl shadow-xl p-10 border border-gray-100">
-        <div className="flex flex-col items-center justify-center h-[500px] gap-4">
-          <div className="text-xl text-gray-600">No floor plan found</div>
+  return (
+    <div className="w-full">
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-xl font-semibold text-[#3A2E2B]">Restaurant Floor Plan</h2>
+        <div className="flex gap-4">
           <button
-            onClick={() => router.push('/floorplan')}
-            className="bg-gray-900 text-white px-6 py-3 rounded-xl hover:bg-gray-800 transition-colors"
+            onClick={() => {
+              const restaurantData = {
+                id: restaurantId,
+                floorplanId: floorplanId
+              };
+              localStorage.setItem("restaurantData", JSON.stringify(restaurantData));
+              if (floorplanId) {
+                router.push(`/floorplan?edit=${floorplanId}`);
+              } else {
+                router.push("/floorplan");
+              }
+            }}
+            className="px-4 py-2 bg-[#F4A261] text-white rounded-lg hover:bg-[#F4A261]/90 transition-all duration-200"
           >
-            Create Floor Plan
+            {floorplanId ? 'Edit Floor Plan' : 'Create Floor Plan'}
           </button>
         </div>
       </div>
-    )
-  }
-
-  return (
-    <div className="bg-white rounded-3xl shadow-xl p-10 border border-gray-100">
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-4xl font-bold text-gray-900">Floor Plan</h1>
-          <p className="text-gray-500 mt-2">3D Restaurant Layout</p>
-        </div>
-        <button
-          onClick={() => {
-            const restaurantData = JSON.parse(localStorage.getItem("restaurantData"));
-            if (restaurantData?.floorplanId) {
-              router.push(`/floorplan?edit=${restaurantData.floorplanId}`);
-            } else {
-              router.push('/floorplan');
-            }
-          }}
-          className="flex items-center gap-2 bg-gray-900 text-white py-2.5 px-5 rounded-xl font-semibold hover:bg-gray-800"
-        >
-          Edit Floor Plan
-        </button>
-      </div>
-
       <div 
         ref={containerRef} 
-        className="aspect-video bg-gray-50 rounded-2xl overflow-hidden"
-        style={{ minHeight: '500px' }}
+        className="relative w-full h-[600px] border-2 border-gray-200 rounded-lg bg-gray-50"
       />
     </div>
-  )
+);
 } 

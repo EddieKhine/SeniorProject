@@ -71,7 +71,7 @@ export async function table(scene) {
 export async function sofa(scene) {
     const loader = new OBJLoader();
     try {
-        const group = await loader.loadAsync('/models/sofa/sofa.obj');
+        const group = await loader.loadAsync('/models/couch/sofa.obj');
         if (group.children.length > 0) {
             const material = new THREE.MeshPhongMaterial({
                 color: 0xffffff,
@@ -104,7 +104,7 @@ export async function sofa(scene) {
 export async function roundTable(scene) {
     const loader = new OBJLoader();
     try {
-        const group = await loader.loadAsync('/models/roundTable/roundTable.obj');
+        const group = await loader.loadAsync('/models/table/roundTable/roundTable.obj');
         if (group.children.length > 0) {
             const material = new THREE.MeshPhongMaterial({
                 color: 0xffffff,

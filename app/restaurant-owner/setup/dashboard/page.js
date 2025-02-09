@@ -19,46 +19,43 @@ export default function RestaurantSetupDashboard() {
   const [activeSection, setActiveSection] = useState('owner-profile')
   const [isCreatingNew, setIsCreatingNew] = useState(false)
   const [floorplan, setFloorplan] = useState(null)
+  const [token, setToken] = useState(null)
 
   useEffect(() => {
-    console.log('Active section changed to:', activeSection);
-  }, [activeSection]);
-
-  const fetchRestaurantProfiles = async () => {
-    const token = localStorage.getItem("restaurantOwnerToken");
-    if (!token) {
-      alert("Unauthorized! Please log in.");
-      router.push('/login');
+    const storedToken = localStorage.getItem("restaurantOwnerToken");
+    if (!storedToken) {
+      router.push('/restaurant-owner/login');
       return;
     }
+    setToken(storedToken);
 
-    try {
-      const response = await fetch("/api/restaurants", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+    const fetchRestaurantProfiles = async () => {
+      try {
+        const response = await fetch("/api/restaurants", {
+          headers: {
+            Authorization: `Bearer ${storedToken}`,
+          },
+        });
 
-      if (response.ok) {
-        const data = await response.json();
-        setRestaurants(data.restaurants);
-        if (data.restaurants.length > 0) {
-          setSelectedRestaurant(data.restaurants[0]);
+        if (response.ok) {
+          const data = await response.json();
+          setRestaurants(data.restaurants);
+          if (data.restaurants.length > 0) {
+            setSelectedRestaurant(data.restaurants[0]);
+          }
         }
-      } else {
-        alert("Failed to fetch restaurant profiles");
+      } catch (error) {
+        console.error("Error:", error);
+      } finally {
+        setLoading(false);
       }
-    } catch (error) {
-      console.error("Error fetching restaurant profiles:", error);
-      alert("An error occurred while fetching the profiles");
-    } finally {
-      setLoading(false);
-    }
-  };
+    };
+
+    fetchRestaurantProfiles();
+  }, [router]);
 
   const fetchFloorplan = async () => {
-    const token = localStorage.getItem("restaurantOwnerToken");
-    if (!token || !selectedRestaurant?.floorplanId) return;
+    if (!selectedRestaurant?.floorplanId) return;
 
     try {
       const response = await fetch(`/api/scenes/${selectedRestaurant.floorplanId}`, {
@@ -77,14 +74,10 @@ export default function RestaurantSetupDashboard() {
   };
 
   useEffect(() => {
-    fetchRestaurantProfiles();
-  }, [router]);
-
-  useEffect(() => {
     if (selectedRestaurant?.floorplanId && activeSection === 'floorplan') {
       fetchFloorplan();
     }
-  }, [selectedRestaurant, activeSection]);
+  }, [selectedRestaurant, activeSection, token]);
 
   const handleCreateNewRestaurant = () => {
     setIsCreatingNew(true);
@@ -274,17 +267,14 @@ export default function RestaurantSetupDashboard() {
             )}
             {activeSection === 'floorplan' && (
               <div>
-                {floorplan ? (
-                  <RestaurantFloorPlan floorplanData={floorplan} />
+                {selectedRestaurant ? (
+                  <RestaurantFloorPlan 
+                    token={token}
+                    restaurantId={selectedRestaurant._id}
+                  />
                 ) : (
                   <div className="text-center py-8">
-                    <p className="mb-4">No floor plan created yet.</p>
-                    <button
-                      onClick={() => router.push('/floorplan')}
-                      className="px-6 py-3 bg-gradient-to-r from-[#F4A261] to-[#E76F51] text-white rounded-md"
-                    >
-                      Create Floor Plan
-                    </button>
+                    <p className="mb-4">No restaurant selected.</p>
                   </div>
                 )}
               </div>

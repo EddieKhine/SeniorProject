@@ -40,8 +40,16 @@ export class FileManager {
     async saveScene() {
         try {
             this.ui.showLoading(true);
+            const token = localStorage.getItem("restaurantOwnerToken");
+            const restaurantData = JSON.parse(localStorage.getItem("restaurantData"));
+            
+            if (!token || !restaurantData) {
+                throw new Error('No authentication token or restaurant data found');
+            }
+
             const sceneData = {
-                name: `Scene ${Date.now()}`,
+                name: `${restaurantData.name || 'Restaurant'} Floor Plan`,
+                restaurantId: restaurantData.id,
                 data: {
                     objects: [],
                     version: 2
@@ -78,34 +86,49 @@ export class FileManager {
                 }
             });
 
-            return fetch(this.API_URL, {
+            console.log('Saving scene data:', sceneData);
+
+            const response = await fetch(this.API_URL, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Accept': 'application/json'
+                    'Accept': 'application/json',
+                    'Authorization': `Bearer ${token}`
                 },
                 body: JSON.stringify(sceneData)
-            })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Failed to save scene');
-                }
-                return response.json();
-            })
-            .then(result => {
-                console.log('Save result:', result);
-                alert('Scene saved successfully!');
-            })
-            .catch(error => {
-                console.error('Save failed:', error);
-                alert(`Save failed: ${error.message}`);
-            })
-            .finally(() => {
-                this.ui.showLoading(false);
             });
+
+            const responseData = await response.json();
+            console.log('Save result:', responseData);
+
+            if (!response.ok) {
+                throw new Error(responseData.error || 'Failed to save scene');
+            }
+
+            // Update the restaurant with the new floorplan ID
+            const updateResponse = await fetch(`/api/restaurants/${restaurantData.id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    floorplanId: responseData.floorplan._id
+                })
+            });
+
+            if (!updateResponse.ok) {
+                const updateError = await updateResponse.json();
+                throw new Error(updateError.error || 'Failed to update restaurant with floorplan');
+            }
+
+            alert('Floor plan saved successfully!');
+            window.location.href = '/restaurant-owner/setup/dashboard';
+            
         } catch (error) {
             console.error('Save failed:', error);
             alert(`Save failed: ${error.message}`);
+        } finally {
             this.ui.showLoading(false);
         }
     }
