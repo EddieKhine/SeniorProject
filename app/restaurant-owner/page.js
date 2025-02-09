@@ -26,6 +26,11 @@ export default function RestaurantOwnerHome() {
   const handleLoginClick = () => {
     setShowLoginModal(true);
   };
+
+  const handleRegisterClick = () => {
+    router.push('/restaurant-owner/register');
+  };
+
   return (
     <>
       <RestaurantOwnerNavbar onLoginClick={handleLoginClick} />
@@ -68,8 +73,9 @@ export default function RestaurantOwnerHome() {
                 <motion.button
                   whileHover={{ scale: 1.02 }}
                   className="bg-[#F4A261] text-white px-8 py-4 rounded-lg font-medium"
+                  onClick={handleRegisterClick}
                 >
-                  Start Free Trial
+                  Register Now
                 </motion.button>
                 <motion.button
                   whileHover={{ scale: 1.02 }}

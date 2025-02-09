@@ -2,22 +2,24 @@
 
 import { useState } from "react";
 
-export default function RestaurantProfileForm({ onProfileSubmit, authToken }) {
-  const [formData, setFormData] = useState({
-    restaurantName: "",
-    cuisineType: "",
-    location: "",
-    description: "",
-    openingHours: {
-      monday: { open: "", close: "" },
-      tuesday: { open: "", close: "" },
-      wednesday: { open: "", close: "" },
-      thursday: { open: "", close: "" },
-      friday: { open: "", close: "" },
-      saturday: { open: "", close: "" },
-      sunday: { open: "", close: "" },
-    },
-  });
+export default function RestaurantProfileForm({ onProfileSubmit, authToken, existingRestaurant = null }) {
+  const [formData, setFormData] = useState(
+    existingRestaurant || {
+      restaurantName: "",
+      cuisineType: "",
+      location: "",
+      description: "",
+      openingHours: {
+        monday: { open: "", close: "" },
+        tuesday: { open: "", close: "" },
+        wednesday: { open: "", close: "" },
+        thursday: { open: "", close: "" },
+        friday: { open: "", close: "" },
+        saturday: { open: "", close: "" },
+        sunday: { open: "", close: "" },
+      },
+    }
+  );
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -59,11 +61,13 @@ export default function RestaurantProfileForm({ onProfileSubmit, authToken }) {
       });
 
       const result = await response.json();
+      
       if (response.ok) {
-        // Store restaurant data
-        localStorage.setItem('restaurantData', JSON.stringify(result.restaurant));
         alert("Restaurant profile created successfully!");
-        onProfileSubmit();
+        // Pass the new restaurant data back to the parent component
+        if (onProfileSubmit) {
+          onProfileSubmit(result.restaurant);
+        }
       } else {
         setError(result.message || "Failed to save profile.");
       }
