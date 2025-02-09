@@ -8,6 +8,7 @@ export default function RestaurantProfile() {
   const [restaurants, setRestaurants] = useState([])
   const [selectedRestaurant, setSelectedRestaurant] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [isEditing, setIsEditing] = useState(false)
 
   useEffect(() => {
     const fetchRestaurantProfiles = async () => {
@@ -111,7 +112,7 @@ export default function RestaurantProfile() {
               Add Restaurant
             </button>
             <button
-              onClick={() => router.push(`/restaurant-owner/setup/edit/${selectedRestaurant?._id}`)}
+              onClick={() => setIsEditing(true)}
               className="flex items-center gap-2 bg-gray-900 text-white py-2.5 px-5 rounded-xl font-semibold hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-700 focus:ring-offset-2 transition-all duration-200"
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">

@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
+import { FaUser, FaEnvelope, FaLock, FaPhone } from "react-icons/fa";
 
 export default function RestaurantOwnerRegister() {
   const router = useRouter();
@@ -49,93 +50,89 @@ export default function RestaurantOwnerRegister() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-r from-[#f3e7e9] to-[#e3eeff] p-8">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#2D3436] to-[#1A1C1E] p-8">
       <motion.div
-        className="bg-white p-10 rounded-xl shadow-2xl max-w-2xl w-full"
+        className="bg-white/10 backdrop-blur-md p-10 rounded-3xl shadow-2xl max-w-2xl w-full border border-white/20"
         initial={{ opacity: 0, y: -50 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, ease: "easeOut" }}
       >
-        <h2 className="text-3xl font-bold text-[#3A2E2B] mb-2 text-center">Register as a Restaurant Owner</h2>
-        <p className="text-gray-600 text-center mb-8">Join our platform and start managing your restaurant today</p>
+        <h2 className="text-4xl font-bold text-white mb-2 text-center">Join FoodLoft</h2>
+        <p className="text-gray-400 text-center mb-8">Create your restaurant owner account</p>
         
-        <form onSubmit={handleSubmit} className="space-y-6 text-black">
-          {/* Owner Info */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 mb-1">First Name</label>
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="grid grid-cols-2 gap-6">
+            <div className="relative">
+              <FaUser className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
               <input 
                 type="text" 
-                id="firstName"
                 name="firstName" 
-                placeholder="Enter your first name" 
+                placeholder="First Name" 
                 value={formData.firstName} 
                 onChange={handleChange} 
                 required 
-                className="p-3 border border-gray-300 rounded-lg w-full focus:ring-2 focus:ring-[#F4A261] focus:border-transparent transition-all outline-none" 
+                className="w-full pl-12 pr-4 py-4 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-400 focus:ring-2 focus:ring-[#F4A261] focus:border-transparent transition-all outline-none" 
               />
             </div>
-            <div>
-              <label htmlFor="lastName" className="block text-sm font-medium text-gray-700 mb-1">Last Name</label>
+            <div className="relative">
+              <FaUser className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
               <input 
                 type="text" 
-                id="lastName"
                 name="lastName" 
-                placeholder="Enter your last name" 
+                placeholder="Last Name" 
                 value={formData.lastName} 
                 onChange={handleChange} 
                 required 
-                className="p-3 border border-gray-300 rounded-lg w-full focus:ring-2 focus:ring-[#F4A261] focus:border-transparent transition-all outline-none" 
+                className="w-full pl-12 pr-4 py-4 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-400 focus:ring-2 focus:ring-[#F4A261] focus:border-transparent transition-all outline-none" 
               />
             </div>
           </div>
 
-          <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
+          <div className="relative">
+            <FaEnvelope className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
             <input 
               type="email" 
-              id="email"
               name="email" 
-              placeholder="your@email.com" 
+              placeholder="Email Address" 
               value={formData.email} 
               onChange={handleChange} 
               required 
-              className="p-3 border border-gray-300 rounded-lg w-full focus:ring-2 focus:ring-[#F4A261] focus:border-transparent transition-all outline-none" 
+              className="w-full pl-12 pr-4 py-4 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-400 focus:ring-2 focus:ring-[#F4A261] focus:border-transparent transition-all outline-none" 
             />
           </div>
 
-          <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+          <div className="relative">
+            <FaLock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
             <input 
               type="password" 
-              id="password"
               name="password" 
-              placeholder="Create a strong password" 
+              placeholder="Create Password" 
               value={formData.password} 
               onChange={handleChange} 
               required 
-              className="p-3 border border-gray-300 rounded-lg w-full focus:ring-2 focus:ring-[#F4A261] focus:border-transparent transition-all outline-none" 
+              className="w-full pl-12 pr-4 py-4 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-400 focus:ring-2 focus:ring-[#F4A261] focus:border-transparent transition-all outline-none" 
             />
           </div>
 
-          <div>
-            <label htmlFor="contactNumber" className="block text-sm font-medium text-gray-700 mb-1">Contact Number</label>
+          <div className="relative">
+            <FaPhone className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
             <input 
               type="text" 
-              id="contactNumber"
               name="contactNumber" 
-              placeholder="Enter your contact number" 
+              placeholder="Contact Number" 
               value={formData.contactNumber} 
               onChange={handleChange} 
               required 
-              className="p-3 border border-gray-300 rounded-lg w-full focus:ring-2 focus:ring-[#F4A261] focus:border-transparent transition-all outline-none" 
+              className="w-full pl-12 pr-4 py-4 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-400 focus:ring-2 focus:ring-[#F4A261] focus:border-transparent transition-all outline-none" 
             />
           </div>
 
-          <button 
+          <motion.button 
             type="submit" 
-            className="w-full py-4 bg-[#F4A261] text-white font-semibold rounded-lg hover:bg-[#E07B5D] transition-all transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+            className="w-full py-4 bg-gradient-to-r from-[#F4A261] to-[#E76F51] text-white font-semibold rounded-xl hover:opacity-90 transition-all transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
             disabled={loading}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
           >
             {loading ? (
               <span className="flex items-center justify-center">
@@ -143,19 +140,19 @@ export default function RestaurantOwnerRegister() {
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
-                Registering...
+                Creating Account...
               </span>
-            ) : "Sign Up"}
-          </button>
+            ) : "Create Account"}
+          </motion.button>
 
           {message && (
             <motion.p 
               initial={{ opacity: 0 }} 
               animate={{ opacity: 1 }} 
-              className={`text-center p-3 rounded-lg ${
+              className={`text-center p-4 rounded-xl ${
                 message.includes("successful") 
-                  ? "bg-green-50 text-green-800" 
-                  : "bg-red-50 text-red-800"
+                  ? "bg-green-500/20 text-green-300" 
+                  : "bg-red-500/20 text-red-300"
               }`}
             >
               {message}

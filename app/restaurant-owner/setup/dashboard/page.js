@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import RestaurantOwnerNavbar from '@/components/RestaurantOwnerNavbar'
 import RestaurantInformation from '@/components/RestaurantInformation'
+import RestaurantProfileForm from '@/components/RestaurantProfileForm'
 import SubscriptionPlans from '@/components/SubscriptionPlans'
 import RestaurantFloorPlan from '@/components/RestaurantFloorPlan'
 import { RiRestaurantLine, RiLayoutLine, RiCalendarLine, RiVipCrownLine, RiUserLine } from 'react-icons/ri'
@@ -13,68 +14,63 @@ import OwnerProfile from '@/components/OwnerProfile'
 
 export default function RestaurantSetupDashboard() {
   const router = useRouter()
-  const [restaurant, setRestaurant] = useState(null)
-  const [floorplan, setFloorplan] = useState(null)
+  const [restaurants, setRestaurants] = useState([])
+  const [selectedRestaurant, setSelectedRestaurant] = useState(null)
   const [loading, setLoading] = useState(true)
   const [activeSection, setActiveSection] = useState('owner-profile')
+  const [isCreatingNew, setIsCreatingNew] = useState(false)
 
   useEffect(() => {
     console.log('Active section changed to:', activeSection);
   }, [activeSection]);
 
-  useEffect(() => { 
-    const fetchRestaurantProfile = async () => {
-      const token = localStorage.getItem("restaurantOwnerToken");
-      const userId = localStorage.getItem("restaurantOwnerUser");
-      if (!token) {
-        alert("Unauthorized! Please log in.");
-        router.push('/login');
-        return;
-      }
+  const fetchRestaurantProfiles = async () => {
+    const token = localStorage.getItem("restaurantOwnerToken");
+    if (!token) {
+      alert("Unauthorized! Please log in.");
+      router.push('/login');
+      return;
+    }
 
-      try {
-        // Fetch restaurant data
-        const restaurantResponse = await fetch("/api/restaurants", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
+    try {
+      const response = await fetch("/api/restaurants", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
-        if (restaurantResponse.ok) {
-          const restaurantData = await restaurantResponse.json();
-          setRestaurant(restaurantData);
-          localStorage.setItem("restaurantData", JSON.stringify(restaurantData));
-
-          // If restaurant has an ID, fetch its floorplan
-          if (restaurantData._id) {
-            const floorplanResponse = await fetch(`/api/restaurants/${restaurantData._id}/floorplan`, {
-              headers: {
-                Authorization: `Bearer ${token}`,
-              },
-            });
-
-            if (floorplanResponse.ok) {
-              const floorplanData = await floorplanResponse.json();
-              console.log("Fetched floorplan data:", floorplanData);
-              setFloorplan(floorplanData);
-              localStorage.setItem("floorplanData", JSON.stringify(floorplanData));
-            } else {
-              console.log("No floorplan found for restaurant");
-            }
-          }
-        } else {
-          alert("Failed to fetch restaurant profile");
+      if (response.ok) {
+        const data = await response.json();
+        setRestaurants(data.restaurants);
+        if (data.restaurants.length > 0) {
+          setSelectedRestaurant(data.restaurants[0]);
         }
-      } catch (error) {
-        console.error("Error fetching data:", error);
-        alert("An error occurred while fetching the data");
-      } finally {
-        setLoading(false);
+      } else {
+        alert("Failed to fetch restaurant profiles");
       }
-    };
+    } catch (error) {
+      console.error("Error fetching restaurant profiles:", error);
+      alert("An error occurred while fetching the profiles");
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    fetchRestaurantProfile();
+  useEffect(() => {
+    fetchRestaurantProfiles();
   }, [router]);
+
+  const handleCreateNewRestaurant = () => {
+    setIsCreatingNew(true);
+  };
+
+  const handleFormSuccess = (newRestaurant) => {
+    setRestaurants(prev => [...prev, newRestaurant]);
+    setSelectedRestaurant(newRestaurant);
+    setIsCreatingNew(false);
+    // Fetch updated list of restaurants
+    fetchRestaurantProfiles();
+  };
 
   if (loading) {
     return (
@@ -87,12 +83,12 @@ export default function RestaurantSetupDashboard() {
     );
   }
 
-  if (!restaurant) {
+  if (!restaurants.length) {
     return (
       <>
         <RestaurantOwnerNavbar />
         <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-          <div className="text-xl">No restaurant profile found</div>
+          <div className="text-xl">No restaurants found</div>
         </div>
       </>
     );
@@ -182,10 +178,73 @@ export default function RestaurantSetupDashboard() {
             className="max-w-4xl mx-auto"
           >
             {activeSection === 'profile' && (
-              <RestaurantInformation 
-                restaurant={restaurant} 
-                onEditClick={() => router.push('/restaurant-owner/setup/edit')}
-              />
+              <div className="space-y-6">
+                {/* Restaurant Profile Selector */}
+                <div className="bg-white p-6 rounded-xl shadow-sm mb-6">
+                  <h2 className="text-xl font-semibold text-[#3A2E2B] mb-4">Your Restaurant Profiles</h2>
+                  <div className="flex flex-wrap gap-4">
+                    {restaurants.map((rest) => (
+                      <button
+                        key={rest._id}
+                        onClick={() => setSelectedRestaurant(rest)}
+                        className={`px-4 py-2 rounded-lg transition-all duration-200 ${
+                          selectedRestaurant?._id === rest._id
+                            ? 'bg-[#F4A261] text-white'
+                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        }`}
+                      >
+                        {rest.restaurantName}
+                      </button>
+                    ))}
+                    <button
+                      onClick={handleCreateNewRestaurant}
+                      className="px-4 py-2 rounded-lg bg-[#E76F51] text-white hover:bg-[#E76F51]/90 transition-all duration-200 flex items-center gap-2"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
+                      </svg>
+                      Add New Restaurant
+                    </button>
+                  </div>
+                </div>
+
+                {/* Restaurant Form or Information */}
+                {isCreatingNew ? (
+                  <div>
+                    <div className="flex justify-between items-center mb-4">
+                      <h2 className="text-xl font-semibold">Create New Restaurant</h2>
+                      <button 
+                        onClick={() => setIsCreatingNew(false)}
+                        className="text-gray-600 hover:text-gray-800"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                    <RestaurantProfileForm 
+                      mode="create"
+                      onSubmitSuccess={handleFormSuccess}
+                      authToken={localStorage.getItem("restaurantOwnerToken")}
+                      onProfileSubmit={() => {
+                        setIsCreatingNew(false);
+                        fetchRestaurantProfiles();
+                      }}
+                    />
+                  </div>
+                ) : (
+                  selectedRestaurant && (
+                    <RestaurantInformation 
+                      restaurant={selectedRestaurant}
+                      onEditClick={(updatedRestaurant) => {
+                        setRestaurants(prev => 
+                          prev.map(r => r._id === updatedRestaurant._id ? updatedRestaurant : r)
+                        );
+                        setSelectedRestaurant(updatedRestaurant);
+                        fetchRestaurantProfiles(); // Refresh the list after update
+                      }}
+                    />
+                  )
+                )}
+              </div>
             )}
             {activeSection === 'floorplan' && (
               <div>
