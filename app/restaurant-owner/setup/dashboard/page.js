@@ -6,11 +6,10 @@ import RestaurantOwnerNavbar from '@/components/RestaurantOwnerNavbar'
 import RestaurantInformation from '@/components/RestaurantInformation'
 import RestaurantProfileForm from '@/components/RestaurantProfileForm'
 import SubscriptionPlans from '@/components/SubscriptionPlans'
-import RestaurantFloorPlan from '@/components/RestaurantFloorPlan'
 import { RiRestaurantLine, RiLayoutLine, RiCalendarLine, RiVipCrownLine, RiUserLine } from 'react-icons/ri'
 import { motion } from 'framer-motion'
 import OwnerProfile from '@/components/OwnerProfile'
-
+import RestaurantFloorPlan from '@/components/RestaurantFloorPlan'
 
 export default function RestaurantSetupDashboard() {
   const router = useRouter()
@@ -19,6 +18,7 @@ export default function RestaurantSetupDashboard() {
   const [loading, setLoading] = useState(true)
   const [activeSection, setActiveSection] = useState('owner-profile')
   const [isCreatingNew, setIsCreatingNew] = useState(false)
+  const [floorplan, setFloorplan] = useState(null)
 
   useEffect(() => {
     console.log('Active section changed to:', activeSection);
@@ -56,9 +56,35 @@ export default function RestaurantSetupDashboard() {
     }
   };
 
+  const fetchFloorplan = async () => {
+    const token = localStorage.getItem("restaurantOwnerToken");
+    if (!token || !selectedRestaurant?.floorplanId) return;
+
+    try {
+      const response = await fetch(`/api/scenes/${selectedRestaurant.floorplanId}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setFloorplan(data);
+      }
+    } catch (error) {
+      console.error("Error fetching floorplan:", error);
+    }
+  };
+
   useEffect(() => {
     fetchRestaurantProfiles();
   }, [router]);
+
+  useEffect(() => {
+    if (selectedRestaurant?.floorplanId && activeSection === 'floorplan') {
+      fetchFloorplan();
+    }
+  }, [selectedRestaurant, activeSection]);
 
   const handleCreateNewRestaurant = () => {
     setIsCreatingNew(true);
