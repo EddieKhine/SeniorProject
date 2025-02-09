@@ -172,7 +172,14 @@ export default function RestaurantOwnerOnboarding() {
                 <p className="text-gray-600 mb-6">Design your restaurant's layout using our interactive 3D floor plan editor.</p>
                 <div className="flex space-x-4">
                   <button
-                    onClick={() => router.push("/floorplan")}
+                    onClick={async () => {
+                      const restaurantData = JSON.parse(localStorage.getItem("restaurantData"));
+                      if (restaurantData?.floorplanId) {
+                        router.push(`/floorplan?edit=${restaurantData.floorplanId}`);
+                      } else {
+                        router.push("/floorplan");
+                      }
+                    }}
                     className="px-6 py-3 bg-gradient-to-r from-[#F4A261] to-[#E76F51] text-white rounded-md 
                     hover:shadow-lg transition-all duration-300"
                   >

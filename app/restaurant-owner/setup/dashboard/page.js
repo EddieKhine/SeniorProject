@@ -5,13 +5,16 @@ import { useRouter } from 'next/navigation'
 import RestaurantOwnerNavbar from '@/components/RestaurantOwnerNavbar'
 import RestaurantInformation from '@/components/RestaurantInformation'
 import SubscriptionPlans from '@/components/SubscriptionPlans'
+import RestaurantFloorPlan from '@/components/RestaurantFloorPlan'
 import { RiRestaurantLine, RiLayoutLine, RiCalendarLine, RiVipCrownLine, RiUserLine } from 'react-icons/ri'
 import { motion } from 'framer-motion'
 import OwnerProfile from '@/components/OwnerProfile'
 
+
 export default function RestaurantSetupDashboard() {
   const router = useRouter()
   const [restaurant, setRestaurant] = useState(null)
+  const [floorplan, setFloorplan] = useState(null)
   const [loading, setLoading] = useState(true)
   const [activeSection, setActiveSection] = useState('owner-profile')
 
@@ -19,7 +22,7 @@ export default function RestaurantSetupDashboard() {
     console.log('Active section changed to:', activeSection);
   }, [activeSection]);
 
-  useEffect(() => {
+  useEffect(() => { 
     const fetchRestaurantProfile = async () => {
       const token = localStorage.getItem("restaurantOwnerToken");
       const userId = localStorage.getItem("restaurantOwnerUser");
@@ -30,21 +33,41 @@ export default function RestaurantSetupDashboard() {
       }
 
       try {
-        const response = await fetch("/api/restaurants", {
+        // Fetch restaurant data
+        const restaurantResponse = await fetch("/api/restaurants", {
           headers: {
             Authorization: `Bearer ${token}`,
           },
         });
 
-        if (response.ok) {
-          const data = await response.json();
-          setRestaurant(data);
+        if (restaurantResponse.ok) {
+          const restaurantData = await restaurantResponse.json();
+          setRestaurant(restaurantData);
+          localStorage.setItem("restaurantData", JSON.stringify(restaurantData));
+
+          // If restaurant has an ID, fetch its floorplan
+          if (restaurantData._id) {
+            const floorplanResponse = await fetch(`/api/restaurants/${restaurantData._id}/floorplan`, {
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+            });
+
+            if (floorplanResponse.ok) {
+              const floorplanData = await floorplanResponse.json();
+              console.log("Fetched floorplan data:", floorplanData);
+              setFloorplan(floorplanData);
+              localStorage.setItem("floorplanData", JSON.stringify(floorplanData));
+            } else {
+              console.log("No floorplan found for restaurant");
+            }
+          }
         } else {
           alert("Failed to fetch restaurant profile");
         }
       } catch (error) {
-        console.error("Error fetching restaurant profile:", error);
-        alert("An error occurred while fetching the profile");
+        console.error("Error fetching data:", error);
+        alert("An error occurred while fetching the data");
       } finally {
         setLoading(false);
       }
@@ -165,7 +188,21 @@ export default function RestaurantSetupDashboard() {
               />
             )}
             {activeSection === 'floorplan' && (
-              <div>Floor Plan Component</div>
+              <div>
+                {floorplan ? (
+                  <RestaurantFloorPlan floorplanData={floorplan} />
+                ) : (
+                  <div className="text-center py-8">
+                    <p className="mb-4">No floor plan created yet.</p>
+                    <button
+                      onClick={() => router.push('/floorplan')}
+                      className="px-6 py-3 bg-gradient-to-r from-[#F4A261] to-[#E76F51] text-white rounded-md"
+                    >
+                      Create Floor Plan
+                    </button>
+                  </div>
+                )}
+              </div>
             )}
             {activeSection === 'reservation' && (
               <div>Reservation Component</div>

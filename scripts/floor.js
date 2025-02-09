@@ -23,12 +23,18 @@ export function createFloor(width, height) {
     return floor;
 }
 export function initializeOrbitControls(camera, renderer) {
+    if (!renderer || !renderer.domElement) {
+        console.error('Renderer not properly initialized');
+        return null;
+    }
+    
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     controls.dampingFactor = 0.05;
+    controls.screenSpacePanning = false;
     controls.minDistance = 5;
     controls.maxDistance = 50;
-    controls.target.set(0, 0, 0);
-    controls.update();
+    controls.maxPolarAngle = Math.PI / 2;
+    
     return controls;
 }
