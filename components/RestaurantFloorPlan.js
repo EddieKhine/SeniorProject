@@ -284,7 +284,7 @@ export default function RestaurantFloorPlan({ token, restaurantId }) {
               };
               localStorage.setItem("restaurantData", JSON.stringify(restaurantData));
               if (floorplanId) {
-                router.push(`/floorplan?edit=${floorplanId}`);
+                router.push(`/floorplan/edit/${floorplanId}`);
               } else {
                 router.push("/floorplan");
               }

@@ -71,7 +71,7 @@ export async function table(scene) {
 export async function sofa(scene) {
     const loader = new OBJLoader();
     try {
-        const group = await loader.loadAsync('/models/couch/sofa.obj');
+        const group = await loader.loadAsync('/models/chair/couch/couch.obj');
         if (group.children.length > 0) {
             const material = new THREE.MeshPhongMaterial({
                 color: 0xffffff,

@@ -56,11 +56,11 @@ export class FileManager {
                 }
             };
 
-            // Collect scene data including doors and windows
+            // Collect scene data
             this.ui.scene.traverse(obj => {
                 if (obj.userData?.isMovable || obj.userData?.isWall || 
                     obj.userData?.isDoor || obj.userData?.isWindow) {
-                    const objData = {
+                    sceneData.data.objects.push({
                         type: obj.userData.isWall ? 'wall' : 
                               obj.userData.isDoor ? 'door' :
                               obj.userData.isWindow ? 'window' : 'furniture',
@@ -68,58 +68,41 @@ export class FileManager {
                         rotation: {
                             x: obj.rotation.x,
                             y: obj.rotation.y,
-                            z: obj.rotation.z,
-                            order: obj.rotation.order
+                            z: obj.rotation.z
                         },
                         scale: obj.scale.toArray(),
-                        userData: {
-                            ...Object.fromEntries(
-                                Object.entries(obj.userData).filter(
-                                    ([key]) => !['parentWall', 'openings'].includes(key)
-                                )
-                            ),
-                            uuid: obj.uuid,
-                            parentWallId: obj.userData.parentWall?.uuid
-                        }
-                    };
-                    sceneData.data.objects.push(objData);
+                        userData: obj.userData
+                    });
                 }
             });
 
-            console.log('Saving scene data:', sceneData);
-
-            const response = await fetch(this.API_URL, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify(sceneData)
-            });
-
-            const responseData = await response.json();
-            console.log('Save result:', responseData);
-
-            if (!response.ok) {
-                throw new Error(responseData.error || 'Failed to save scene');
+            let response;
+            // Check if we're editing an existing floorplan
+            if (restaurantData.floorplanId) {
+                // Update existing floorplan
+                response = await fetch(`/api/scenes/${restaurantData.floorplanId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify(sceneData)
+                });
+            } else {
+                // Create new floorplan
+                response = await fetch('/api/scenes', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify(sceneData)
+                });
             }
 
-            // Update the restaurant with the new floorplan ID
-            const updateResponse = await fetch(`/api/restaurants/${restaurantData.id}`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify({
-                    floorplanId: responseData.floorplan._id
-                })
-            });
-
-            if (!updateResponse.ok) {
-                const updateError = await updateResponse.json();
-                throw new Error(updateError.error || 'Failed to update restaurant with floorplan');
+            const responseData = await response.json();
+            if (!response.ok) {
+                throw new Error(responseData.error || 'Failed to save floorplan');
             }
 
             alert('Floor plan saved successfully!');

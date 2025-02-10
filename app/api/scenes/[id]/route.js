@@ -8,7 +8,7 @@ import jwt from 'jsonwebtoken';
 export async function GET(request, { params }) {
   try {
     await dbConnect();
-    const { id } = params;
+    const id = await params.id; // Await the params
 
     // Get authorization token
     const authHeader = request.headers.get('authorization');
@@ -19,30 +19,16 @@ export async function GET(request, { params }) {
     const token = authHeader.split(' ')[1];
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    // Find the floor plan by ID
+    // Find the floorplan
     const floorplan = await Floorplan.findById(id);
-
     if (!floorplan) {
-      return NextResponse.json(
-        { error: 'Floor plan not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'Floor plan not found' }, { status: 404 });
     }
 
-    // Return the raw floorplan data
-    return NextResponse.json({
-      id: floorplan._id.toString(),
-      name: floorplan.name,
-      restaurantId: floorplan.restaurantId.toString(),
-      data: floorplan.data // This contains the raw objects array with positions, rotations, etc.
-    });
-
+    return NextResponse.json(floorplan);
   } catch (error) {
     console.error('Error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
 
@@ -50,7 +36,7 @@ export async function GET(request, { params }) {
 export async function PUT(request, { params }) {
   try {
     await dbConnect();
-    const { id } = params;
+    const id = await params.id; // Await the params
 
     const authHeader = request.headers.get('authorization');
     if (!authHeader || !authHeader.startsWith('Bearer ')) {

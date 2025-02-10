@@ -1,23 +1,33 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 import Head from "next/head";
 import * as THREE from 'three';
 import { createScene, createFloor, initializeOrbitControls } from '@/scripts/floor';
 import { UIManager } from '@/scripts/managers/UIManager';
 import { DragManager } from '@/scripts/managers/DragManager';
 import { WallManager } from '@/scripts/wallManager';
+import { DoorManager } from '@/scripts/managers/DoorManager';
+import { WindowManager } from '@/scripts/managers/WindowManager';
+import { chair, table, sofa, roundTable } from '@/scripts/asset';
 import { FaBoxOpen, FaTrash, FaArrowsAltH, FaSave, FaFolderOpen } from "react-icons/fa";
 import { RiLayoutGridFill } from "react-icons/ri";
 import styles from "@/css/ui.css";
 
-export default function FloorplanEditor() {
+export default function EditFloorplan() {
   const router = useRouter();
-  const searchParams = useSearchParams();
+  const params = useParams();
   const containerRef = useRef(null);
   const managersRef = useRef(null);
   const sceneRef = useRef(null);
+
+  useEffect(() => {
+    if (!window.location.hash) {
+      window.location.hash = 'loaded';
+      window.location.reload();
+    }
+  }, []);
 
   useEffect(() => {
     if (!containerRef.current || sceneRef.current) return;
@@ -79,11 +89,11 @@ export default function FloorplanEditor() {
     // Initialize Managers with save callback
     const handleSave = async (sceneData) => {
       try {
-        console.log('Creating new floorplan:', sceneData);
-        const restaurantData = JSON.parse(localStorage.getItem("restaurantData"));
+        console.log('Updating floorplan:', sceneData);
+        const floorplanId = params.id;
 
-        const response = await fetch('/api/scenes', {
-          method: 'POST',
+        const response = await fetch(`/api/scenes/${floorplanId}`, {
+          method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${token}`
@@ -93,7 +103,7 @@ export default function FloorplanEditor() {
             restaurantId: restaurantData.id,
             data: {
               objects: sceneData.objects || [],
-              version: 1
+              version: sceneData.version || 1
             }
           }),
         });
@@ -102,38 +112,17 @@ export default function FloorplanEditor() {
         console.log('API Response:', responseData);
 
         if (!response.ok) {
-          throw new Error(responseData.error || 'Failed to create scene');
+          throw new Error(responseData.error || 'Failed to update scene');
         }
 
-        // Update restaurant with new floorplanId
-        const updateResponse = await fetch(`/api/restaurants/${restaurantData.id}`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify({
-            floorplanId: responseData._id || responseData.floorplan._id
-          }),
-        });
-
-        if (!updateResponse.ok) {
-          const updateError = await updateResponse.json();
-          throw new Error(updateError.error || 'Failed to update restaurant with floorplan');
-        }
-
-        // Update local storage with new floorplanId
-        restaurantData.floorplanId = responseData._id || responseData.floorplan._id;
-        localStorage.setItem("restaurantData", JSON.stringify(restaurantData));
-
-        alert('New floor plan created successfully!');
+        alert('Floor plan updated successfully!');
         router.push('/restaurant-owner/setup/dashboard');
       } catch (error) {
         console.error('Error details:', error);
         if (error.message.includes('Unauthorized')) {
           router.push('/restaurant-owner');
         } else {
-          alert('Failed to create floor plan: ' + error.message);
+          alert('Failed to update floor plan: ' + error.message);
         }
       }
     };
@@ -143,8 +132,129 @@ export default function FloorplanEditor() {
     uiManager.restaurantData = restaurantData;
     
     const dragManager = new DragManager(uiManager);
-    uiManager.dragManager = dragManager;
     const wallManager = new WallManager(scene, floor, gridSize, renderer);
+    const doorManager = new DoorManager(scene, wallManager, renderer);
+    const windowManager = new WindowManager(scene, wallManager, renderer);
+
+    uiManager.dragManager = dragManager;
+    uiManager.wallManager = wallManager;
+    uiManager.doorManager = doorManager;
+    uiManager.windowManager = windowManager;
+
+    // Load existing floorplan data
+    const loadFloorplan = async () => {
+      try {
+        const response = await fetch(`/api/scenes/${params.id}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to load floorplan');
+        }
+
+        const floorplanData = await response.json();
+        console.log('Loaded floorplan data:', floorplanData);
+
+        if (!floorplanData.data || !floorplanData.data.objects) {
+          throw new Error('Invalid floor plan data structure');
+        }
+
+        const wallMap = new Map();
+
+        // First pass - create walls
+        const wallData = floorplanData.data.objects.filter(o => o.type === 'wall');
+        console.log('Processing wall objects:', wallData.length);
+
+        for (const objectData of wallData) {
+          const wall = await recreateObject(objectData, false, wallMap);
+          if (wall) {
+            wallMap.set(objectData.userData.uuid, wall);
+          }
+        }
+
+        // Second pass - create furniture and other objects
+        const nonWallData = floorplanData.data.objects.filter(o => o.type !== 'wall');
+        console.log('Processing furniture objects:', nonWallData.length);
+
+        for (const objectData of nonWallData) {
+          await recreateObject(objectData, false, wallMap);
+        }
+      } catch (error) {
+        console.error('Error loading floorplan:', error);
+        alert('Failed to load floorplan: ' + error.message);
+      }
+    };
+
+    // Add the recreateObject function from RestaurantFloorPlan component
+    const recreateObject = async (data, isViewOnly = false, wallMap = new Map()) => {
+      try {
+        let model;
+        if (data.type === 'wall') {
+          const geometry = new THREE.BoxGeometry(gridSize, 2, 0.2);
+          const material = new THREE.MeshPhongMaterial({ color: 0x808080 });
+          
+          model = new THREE.Mesh(geometry, material);
+          model.userData = {
+            isWall: true,
+            isInteractable: !isViewOnly,
+            uuid: data.userData.uuid
+          };
+          scene.add(model);
+        } else if (data.type === 'door' || data.type === 'window') {
+          const parentWall = wallMap.get(data.userData.parentWallId);
+          if (parentWall) {
+            const geometry = new THREE.BoxGeometry(1, 1.5, 0.2);
+            const material = new THREE.MeshPhongMaterial({
+              color: data.type === 'door' ? 0x8B4513 : 0x87CEEB,
+              transparent: true,
+              opacity: 0.8
+            });
+            model = new THREE.Mesh(geometry, material);
+            model.userData = {
+              ...data.userData,
+              isInteractable: !isViewOnly,
+              [data.type === 'door' ? 'isDoor' : 'isWindow']: true,
+              parentWall
+            };
+            scene.add(model);
+          }
+        } else {
+          if (data.userData.isChair) {
+            model = await chair(scene);
+          } else if (data.userData.isFurniture) {
+            model = await table(scene);
+          } else if (data.userData.isSofa) {
+            model = await sofa(scene);
+          } else if (data.userData.isTable) {
+            model = await roundTable(scene);
+          }
+        }
+
+        if (model) {
+          model.position.fromArray(data.position);
+          model.rotation.set(
+            data.rotation.x,
+            data.rotation.y,
+            data.rotation.z
+          );
+          model.scale.fromArray(data.scale);
+          model.userData = {
+            ...data.userData,
+            isInteractable: !isViewOnly
+          };
+        }
+
+        return model;
+      } catch (error) {
+        console.error('Error recreating object:', error);
+        throw error;
+      }
+    };
+
+    // Call loadFloorplan after setting up the scene
+    loadFloorplan();
 
     // Add to managersRef for cleanup
     managersRef.current = {
@@ -191,14 +301,14 @@ export default function FloorplanEditor() {
         sceneRef.current = null;
       }
     };
-  }, [searchParams, router]);
+  }, [params.id, router]);
 
   return (
     <>
       <Head>
         <meta charSet="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>3D Room Editor</title>
+        <title>Edit Floor Plan</title>
         <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.3/font/bootstrap-icons.css" />
         <link rel="stylesheet" href={styles} />
       </Head>
@@ -242,14 +352,6 @@ export default function FloorplanEditor() {
               <FaArrowsAltH size={20} style={{ marginRight: "4px" }} />
               <span>Direction</span>
             </button>
-            <a
-              href="scenes.html"
-              className="toolbar-btn"
-              data-tooltip="View Saved Scenes"
-            >
-              <RiLayoutGridFill size={20} style={{ marginRight: "4px" }} />
-              <span>Scenes</span>
-            </a>
             <button
               className="toolbar-btn"
               onClick={() => {
@@ -272,14 +374,6 @@ export default function FloorplanEditor() {
             >
               <FaSave size={20} style={{ marginRight: "4px" }} />
               <span>Save</span>
-            </button>
-            <button
-              className="toolbar-btn"
-              id="load-btn"
-              data-tooltip="Load Scene"
-            >
-              <FaFolderOpen size={20} style={{ marginRight: "4px" }} />
-              <span>Load</span>
             </button>
           </div>
         </main>

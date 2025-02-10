@@ -73,15 +73,18 @@ export class DoorManager {
         }
     }
 
-    createDoor(parentWall, localPosition) {
+    createDoor(parentWall, position) {
         const door = new THREE.Mesh(
             new THREE.BoxGeometry(0.8, 2, 0.1),
-            new THREE.MeshPhongMaterial({ color: 0x8B4513 })
+            new THREE.MeshPhongMaterial({ 
+                color: 0x8B4513,
+                transparent: true,
+                opacity: 0.8 
+            })
         );
         
-        // Attach to parent wall's coordinate system
-        parentWall.add(door);
-        door.position.copy(localPosition);
+        door.position.copy(position);
+        door.rotation.copy(parentWall.rotation);
         
         door.userData = {
             isDoor: true,
@@ -90,6 +93,7 @@ export class DoorManager {
             isInteractable: true
         };
         
+        this.scene.add(door);
         return door;
     }
 
@@ -99,19 +103,9 @@ export class DoorManager {
         return door;
     }
 
-    createDoorFromData(positionArray, rotationData, parentWall) {
-        // Get LOCAL position from saved data
-        const localPosition = new THREE.Vector3().fromArray(positionArray);
-        
-        // Create door directly in parent wall's space
-        const door = this.createDoor(parentWall, localPosition);
-        door.rotation.set(rotationData.x, rotationData.y, rotationData.z);
-        
-        // Position relative to parent wall
-        door.position.copy(localPosition);
-        
-        console.log('Door local position:', localPosition);
-        console.log('World position:', door.getWorldPosition(new THREE.Vector3()));
+    createDoorFromData(position, rotation, parentWall) {
+        const door = this.createDoor(parentWall, position);
+        door.rotation.set(rotation.x, rotation.y, rotation.z);
         return door;
     }
 } 

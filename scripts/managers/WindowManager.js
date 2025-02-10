@@ -70,16 +70,24 @@ export class WindowManager {
     createWindow(parentWall, position) {
         const window = new THREE.Mesh(
             new THREE.BoxGeometry(1.2, 1, 0.1),
-            new THREE.MeshPhongMaterial({ color: 0x87CEEB })
+            new THREE.MeshPhongMaterial({ 
+                color: 0x87CEEB,
+                transparent: true,
+                opacity: 0.8 
+            })
         );
-        window.userData = {
-            isWindow: true,
-            parentWall: parentWall,
-            isInteractable: true
-        };
+        
         window.position.copy(position);
         window.rotation.copy(parentWall.rotation);
         
+        window.userData = {
+            isWindow: true,
+            parentWall: parentWall,
+            parentWallId: parentWall.uuid,
+            isInteractable: true
+        };
+        
+        this.scene.add(window);
         return window;
     }
 
@@ -92,12 +100,6 @@ export class WindowManager {
     createWindowFromData(position, rotation, parentWall) {
         const window = this.createWindow(parentWall, position);
         window.rotation.set(rotation.x, rotation.y, rotation.z);
-        
-        // Ensure window is added to scene
-        if (!this.scene.children.includes(window)) {
-            this.scene.add(window);
-        }
-        
         return window;
     }
 } 
