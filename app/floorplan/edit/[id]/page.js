@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter, useParams } from 'next/navigation';
 import Head from "next/head";
 import * as THREE from 'three';
@@ -14,6 +14,7 @@ import { chair, table, sofa, roundTable } from '@/scripts/asset';
 import { FaBoxOpen, FaTrash, FaArrowsAltH, FaSave, FaFolderOpen } from "react-icons/fa";
 import { RiLayoutGridFill } from "react-icons/ri";
 import styles from "@/css/ui.css";
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 
 export default function EditFloorplan() {
   const router = useRouter();
@@ -21,6 +22,8 @@ export default function EditFloorplan() {
   const containerRef = useRef(null);
   const managersRef = useRef(null);
   const sceneRef = useRef(null);
+  const uiManagerRef = useRef(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     if (!window.location.hash) {
@@ -44,271 +47,196 @@ export default function EditFloorplan() {
     const restaurantData = JSON.parse(storedRestaurantData);
     console.log('Restaurant Data:', restaurantData);
 
-    // Scene Setup
-    const renderer = new THREE.WebGLRenderer({ 
-      antialias: true,
-      powerPreference: "high-performance"
-    });
-    renderer.setSize(containerRef.current.clientWidth, containerRef.current.clientHeight);
-    renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-    containerRef.current.appendChild(renderer.domElement);
-
-    // Scene Initialization
-    const scene = createScene();
-    sceneRef.current = scene;
-    
-    const gridSize = 2;
-    const floor = createFloor(20, 20, gridSize);
-    scene.add(floor);
-    
-    // Add lighting
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
-    scene.add(ambientLight);
-
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
-    directionalLight.position.set(10, 15, 10);
-    directionalLight.castShadow = true;
-    directionalLight.shadow.mapSize.width = 2048;
-    directionalLight.shadow.mapSize.height = 2048;
-    scene.add(directionalLight);
-
-    // Camera Setup
-    const camera = new THREE.PerspectiveCamera(
-      75,
-      containerRef.current.clientWidth / containerRef.current.clientHeight,
-      0.1,
-      1000
-    );
-    camera.position.set(8, 8, 8);
-    camera.lookAt(0, 0, 0);
-
-    // Controls Setup
-    const controls = initializeOrbitControls(camera, renderer);
-
-    // Initialize Managers with save callback
-    const handleSave = async (sceneData) => {
+    const initScene = async () => {
       try {
-        console.log('Updating floorplan:', sceneData);
-        const floorplanId = params.id;
-
-        const response = await fetch(`/api/scenes/${floorplanId}`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify({
-            name: 'Restaurant Floor Plan',
-            restaurantId: restaurantData.id,
-            data: {
-              objects: sceneData.objects || [],
-              version: sceneData.version || 1
-            }
-          }),
+        setIsLoading(true);
+        
+        // Initialize Three.js scene
+        const renderer = new THREE.WebGLRenderer({ 
+          antialias: true,
+          powerPreference: "high-performance"
         });
+        
+        renderer.setSize(containerRef.current.clientWidth, containerRef.current.clientHeight);
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        containerRef.current.appendChild(renderer.domElement);
 
-        const responseData = await response.json();
-        console.log('API Response:', responseData);
+        // Scene Initialization
+        const scene = createScene();
+        
+        // Add lighting
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+        scene.add(ambientLight);
 
-        if (!response.ok) {
-          throw new Error(responseData.error || 'Failed to update scene');
-        }
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        directionalLight.position.set(10, 15, 10);
+        directionalLight.castShadow = true;
+        directionalLight.shadow.mapSize.width = 2048;
+        directionalLight.shadow.mapSize.height = 2048;
+        scene.add(directionalLight);
 
-        alert('Floor plan updated successfully!');
-        router.push('/restaurant-owner/setup/dashboard');
-      } catch (error) {
-        console.error('Error details:', error);
-        if (error.message.includes('Unauthorized')) {
-          router.push('/restaurant-owner');
-        } else {
-          alert('Failed to update floor plan: ' + error.message);
-        }
-      }
-    };
+        const hemisphereLight = new THREE.HemisphereLight(0xffffff, 0x080820, 0.5);
+        scene.add(hemisphereLight);
+        
+        // Camera Setup
+        const camera = new THREE.PerspectiveCamera(
+          75,
+          containerRef.current.clientWidth / containerRef.current.clientHeight,
+          0.1,
+          1000
+        );
+        camera.position.set(8, 8, 8);
+        camera.lookAt(0, 0, 0);
 
-    const uiManager = new UIManager(scene, floor, gridSize, camera, renderer, controls);
-    uiManager.onSave = handleSave;
-    uiManager.restaurantData = restaurantData;
-    
-    const dragManager = new DragManager(uiManager);
-    const wallManager = new WallManager(scene, floor, gridSize, renderer);
-    const doorManager = new DoorManager(scene, wallManager, renderer);
-    const windowManager = new WindowManager(scene, wallManager, renderer);
+        // Initialize OrbitControls
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.screenSpacePanning = true;
 
-    uiManager.dragManager = dragManager;
-    uiManager.wallManager = wallManager;
-    uiManager.doorManager = doorManager;
-    uiManager.windowManager = windowManager;
+        // Add floor
+        const floor = createFloor(20, 20, 2);
+        scene.add(floor);
 
-    // Add scale event listener
-    renderer.domElement.addEventListener('click', (e) => {
-        if (dragManager.scaleMode) dragManager.handleScaleStart(e);
-    });
+        // Initialize UI Manager with all required managers
+        const uiManager = new UIManager(
+          scene,
+          floor,
+          2, // gridSize
+          camera,
+          renderer,
+          controls
+        );
 
-    // Initialize scale controls
-    uiManager.initScaleControls();
-
-    // Load existing floorplan data
-    const loadFloorplan = async () => {
-      try {
-        const response = await fetch(`/api/scenes/${params.id}`, {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-
-        if (!response.ok) {
-          throw new Error('Failed to load floorplan');
-        }
-
-        const floorplanData = await response.json();
-        console.log('Loaded floorplan data:', floorplanData);
-
-        if (!floorplanData.data || !floorplanData.data.objects) {
-          throw new Error('Invalid floor plan data structure');
-        }
-
-        const wallMap = new Map();
-
-        // First pass - create walls
-        const wallData = floorplanData.data.objects.filter(o => o.type === 'wall');
-        console.log('Processing wall objects:', wallData.length);
-
-        for (const objectData of wallData) {
-          const wall = await recreateObject(objectData, false, wallMap);
-          if (wall) {
-            wallMap.set(objectData.userData.uuid, wall);
-          }
-        }
-
-        // Second pass - create furniture and other objects
-        const nonWallData = floorplanData.data.objects.filter(o => o.type !== 'wall');
-        console.log('Processing furniture objects:', nonWallData.length);
-
-        for (const objectData of nonWallData) {
-          await recreateObject(objectData, false, wallMap);
-        }
-      } catch (error) {
-        console.error('Error loading floorplan:', error);
-        alert('Failed to load floorplan: ' + error.message);
-      }
-    };
-
-    // Add the recreateObject function from RestaurantFloorPlan component
-    const recreateObject = async (data, isViewOnly = false, wallMap = new Map()) => {
-      try {
-        let model;
-        if (data.type === 'wall') {
-          const geometry = new THREE.BoxGeometry(gridSize, 2, 0.2);
-          const material = new THREE.MeshPhongMaterial({ color: 0x808080 });
-          
-          model = new THREE.Mesh(geometry, material);
-          model.userData = {
-            isWall: true,
-            isInteractable: !isViewOnly,
-            uuid: data.userData.uuid
-          };
-          scene.add(model);
-        } else if (data.type === 'door' || data.type === 'window') {
-          const parentWall = wallMap.get(data.userData.parentWallId);
-          if (parentWall) {
-            const geometry = new THREE.BoxGeometry(1, 1.5, 0.2);
-            const material = new THREE.MeshPhongMaterial({
-              color: data.type === 'door' ? 0x8B4513 : 0x87CEEB,
-              transparent: true,
-              opacity: 0.8
+        // Load the scene data
+        if (params.id) {
+          try {
+            const response = await fetch(`/api/scenes/${params.id}`, {
+              headers: {
+                'Authorization': `Bearer ${token}`
+              }
             });
-            model = new THREE.Mesh(geometry, material);
-            model.userData = {
-              ...data.userData,
-              isInteractable: !isViewOnly,
-              [data.type === 'door' ? 'isDoor' : 'isWindow']: true,
-              parentWall
-            };
-            scene.add(model);
-          }
-        } else {
-          if (data.userData.isChair) {
-            model = await chair(scene);
-          } else if (data.userData.isFurniture) {
-            model = await table(scene);
-          } else if (data.userData.isSofa) {
-            model = await sofa(scene);
-          } else if (data.userData.isTable) {
-            model = await roundTable(scene);
-          }
-        }
 
-        if (model) {
-          model.position.fromArray(data.position);
-          model.rotation.set(
-            data.rotation.x,
-            data.rotation.y,
-            data.rotation.z
-          );
-          model.scale.fromArray(data.scale);
-          model.userData = {
-            ...data.userData,
-            isInteractable: !isViewOnly
-          };
-        }
-
-        return model;
-      } catch (error) {
-        console.error('Error recreating object:', error);
-        throw error;
-      }
-    };
-
-    // Call loadFloorplan after setting up the scene
-    loadFloorplan();
-
-    // Add to managersRef for cleanup
-    managersRef.current = {
-      uiManager,
-      dragManager,
-      wallManager
-    };
-
-    // Animation Loop
-    const animate = () => {
-      requestAnimationFrame(animate);
-      controls.update();
-      renderer.render(scene, camera);
-    };
-    animate();
-
-    // Handle window resize
-    const handleResize = () => {
-      if (!containerRef.current) return;
-      camera.aspect = containerRef.current.clientWidth / containerRef.current.clientHeight;
-      camera.updateProjectionMatrix();
-      renderer.setSize(containerRef.current.clientWidth, containerRef.current.clientHeight);
-    };
-    window.addEventListener('resize', handleResize);
-
-    // Cleanup
-    return () => {
-      window.removeEventListener('resize', handleResize);
-      if (containerRef.current && containerRef.current.contains(renderer.domElement)) {
-        containerRef.current.removeChild(renderer.domElement);
-      }
-      renderer.dispose();
-      if (sceneRef.current) {
-        sceneRef.current.traverse((object) => {
-          if (object.geometry) object.geometry.dispose();
-          if (object.material) {
-            if (Array.isArray(object.material)) {
-              object.material.forEach(material => material.dispose());
-            } else {
-              object.material.dispose();
+            if (!response.ok) {
+              throw new Error('Failed to load scene');
             }
+
+            const sceneData = await response.json();
+            
+            // Clear existing scene first
+            uiManager.fileManager.clearScene();
+            
+            // Create a map to store walls and their UUIDs
+            const wallMap = new Map();
+            
+            // First pass: Create walls
+            const wallObjects = sceneData.data.objects.filter(obj => obj.type === 'wall');
+            for (const objData of wallObjects) {
+              const wall = await uiManager.fileManager.recreateObject(objData, false, wallMap);
+              if (wall) {
+                wallMap.set(objData.userData.uuid, wall);
+                wall.userData.isWall = true;
+                wall.userData.uuid = objData.userData.uuid;
+                uiManager.wallManager.walls.push(wall);
+              }
+            }
+
+            // Second pass: Create doors and windows
+            const openingsObjects = sceneData.data.objects.filter(obj => 
+              obj.type === 'door' || obj.type === 'window'
+            );
+            for (const objData of openingsObjects) {
+              const opening = await uiManager.fileManager.recreateObject(objData, false, wallMap);
+              if (opening) {
+                const parentWall = wallMap.get(objData.userData.parentWallId);
+                if (parentWall) {
+                  parentWall.userData.openings = parentWall.userData.openings || [];
+                  parentWall.userData.openings.push(opening);
+                  opening.userData.parentWall = parentWall;
+                }
+              }
+            }
+
+            // Third pass: Create furniture
+            const furnitureObjects = sceneData.data.objects.filter(obj => 
+              obj.type === 'furniture'
+            );
+            for (const objData of furnitureObjects) {
+              const furniture = await uiManager.fileManager.recreateObject(objData, false, wallMap);
+              if (furniture) {
+                // Preserve furniture properties
+                furniture.userData = {
+                  ...objData.userData,
+                  isMovable: true,
+                  isRotatable: true,
+                  isInteractable: true
+                };
+                scene.add(furniture);
+              }
+            }
+
+          } catch (error) {
+            console.error('Error loading scene:', error);
           }
-        });
-        sceneRef.current = null;
+        }
+
+        // Animation loop
+        const animate = () => {
+          requestAnimationFrame(animate);
+          controls.update();
+          renderer.render(scene, camera);
+        };
+        animate();
+
+        // Handle window resize
+        const handleResize = () => {
+          if (!containerRef.current) return;
+          camera.aspect = containerRef.current.clientWidth / containerRef.current.clientHeight;
+          camera.updateProjectionMatrix();
+          renderer.setSize(containerRef.current.clientWidth, containerRef.current.clientHeight);
+        };
+        window.addEventListener('resize', handleResize);
+
+        // Instead, just initialize the dragManager
+        const dragManager = new DragManager(uiManager);
+        uiManager.dragManager = dragManager;
+
+        // Add to managersRef for cleanup
+        managersRef.current = {
+          uiManager,
+          dragManager
+        };
+
+        setIsLoading(false);
+
+        return () => {
+          window.removeEventListener('resize', handleResize);
+          if (containerRef.current && containerRef.current.contains(renderer.domElement)) {
+            containerRef.current.removeChild(renderer.domElement);
+          }
+          renderer.dispose();
+          if (sceneRef.current) {
+            sceneRef.current.traverse((object) => {
+              if (object.geometry) object.geometry.dispose();
+              if (object.material) {
+                if (Array.isArray(object.material)) {
+                  object.material.forEach(material => material.dispose());
+                } else {
+                  object.material.dispose();
+                }
+              }
+            });
+            sceneRef.current = null;
+          }
+        };
+      } catch (error) {
+        console.error('Error initializing scene:', error);
+        setIsLoading(false);
       }
     };
+
+    initScene();
   }, [params.id, router]);
 
   return (

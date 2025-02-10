@@ -28,18 +28,12 @@ export class UIManager {
         this.loadingOverlay = document.getElementById('loading-overlay');
         this.switchDirectionButton = document.getElementById('switch-direction');
 
-        // Initialize managers with proper parameters
-        this.wallManager = new WallManager(
-            this.scene,
-            this.floor,
-            this.gridSize,
-            this.renderer
-        );
-        this.dragManager = new DragManager(this);
-        this.sidebarManager = new SidebarManager(this);
+        // Initialize managers
+        this.wallManager = new WallManager(scene, floor, gridSize, renderer);
+        this.doorManager = new DoorManager(scene, this.wallManager, renderer);
+        this.windowManager = new WindowManager(scene, this.wallManager, renderer);
         this.fileManager = new FileManager(this);
-        this.doorManager = new DoorManager(this.scene, this.wallManager, this.renderer);
-        this.windowManager = new WindowManager(this.scene, this.wallManager, this.renderer);
+        // dragManager will be set later
 
         // If view-only mode, load the specified scene
         const sceneId = urlParams.get('scene');

@@ -105,9 +105,10 @@ export class WallManager {
             
             this.scene.add(wall);
             this.walls.push(wall);
-            this.previewWall.visible = false; // Add this line
+            this.previewWall.visible = false;
         }
     }
+
     createWall(x, z) {
         const wallGeometry = new THREE.BoxGeometry(this.gridSize, 2, 0.2);
         const wallMaterial = new THREE.MeshPhongMaterial({ color: 0x8b8b8b });
@@ -117,10 +118,17 @@ export class WallManager {
         wall.rotation.copy(this.previewWall.rotation);
         wall.castShadow = true;
         wall.receiveShadow = true;
-        wall.userData.isWall = true;
+        
+        // Ensure wall has UUID and openings array
+        wall.userData = {
+            isWall: true,
+            uuid: THREE.MathUtils.generateUUID(),
+            openings: []
+        };
 
         return wall;
     }
+
     reset() {
         this.walls.forEach(wall => {
             this.scene.remove(wall);
@@ -130,7 +138,8 @@ export class WallManager {
         this.previewWall.visible = false; // Add this line
         this.isAddWallMode = false; // Add this line
     }
-      createWallFromData(data) {
+
+    createWallFromData(data) {
         if (!data.start || !data.end) {
             console.error('Missing wall data:', data);
             return null;
@@ -156,6 +165,7 @@ export class WallManager {
             Math.abs(wall.position.z - z) < 0.1
         );
     }
+
     disposeObject(object) {
         if (object === this.previewWall) return; // Prevent disposing preview wall
         object.traverse(child => {
@@ -169,8 +179,6 @@ export class WallManager {
             }
         });
     }
-
-
 
     initPreviews() {
         // Door preview
@@ -245,18 +253,27 @@ export class WallManager {
     }
 
     addDoorToWall(wall, position) {
-        // Create door relative to wall's coordinate system
         const door = this.ui.doorManager.createDoor(wall, position);
         
-        // Explicitly store parent reference using consistent casing
+        // Ensure door has UUID
+        door.uuid = THREE.MathUtils.generateUUID();
         door.userData.parentWall = wall;
-        door.userData.parentWallId = wall.uuid; 
+        door.userData.parentWallId = wall.userData.uuid;
         
-        // Add to wall's openings
         wall.userData.openings = wall.userData.openings || [];
         wall.userData.openings.push(door);
+    }
+
+    addWindowToWall(wall, position) {
+        const window = this.ui.windowManager.createWindow(wall, position);
         
-        console.log('Added door to wall:', wall.uuid);
+        // Ensure window has UUID
+        window.uuid = THREE.MathUtils.generateUUID();
+        window.userData.parentWall = wall;
+        window.userData.parentWallId = wall.userData.uuid;
+        
+        wall.userData.openings = wall.userData.openings || [];
+        wall.userData.openings.push(window);
     }
 }
 

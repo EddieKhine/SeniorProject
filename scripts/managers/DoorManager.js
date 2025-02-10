@@ -10,17 +10,40 @@ export class DoorManager {
     }
 
     createPreviewDoor() {
-        const geometry = new THREE.BoxGeometry(1.2, 2.4, 0.2);
-        const material = new THREE.MeshBasicMaterial({
-            color: 0x8B4513,
+        // Create preview frame
+        const frameGeometry = new THREE.BoxGeometry(1.0, 2.2, 0.4);
+        const frameMaterial = new THREE.MeshBasicMaterial({
+            color: 0x4a3623,
             transparent: true,
             opacity: 0.5,
             depthTest: false
         });
-        const door = new THREE.Mesh(geometry, material);
-        door.visible = false;
-        this.scene.add(door);
-        return door;
+        const frame = new THREE.Mesh(frameGeometry, frameMaterial);
+
+        // Create preview doors (both sides)
+        const doorGeometry = new THREE.BoxGeometry(0.8, 2.0, 0.05);
+        const doorMaterial = new THREE.MeshBasicMaterial({
+            color: 0x8B4513,
+            transparent: true,
+            opacity: 0.3,
+            depthTest: false
+        });
+        const frontDoor = new THREE.Mesh(doorGeometry, doorMaterial);
+        const backDoor = new THREE.Mesh(doorGeometry, doorMaterial.clone());
+
+        // Create preview group
+        const previewGroup = new THREE.Group();
+        previewGroup.add(frame);
+        previewGroup.add(frontDoor);
+        previewGroup.add(backDoor);
+        
+        // Position preview doors
+        frontDoor.position.z = 0.2;
+        backDoor.position.z = -0.2;
+        
+        previewGroup.visible = false;
+        this.scene.add(previewGroup);
+        return previewGroup;
     }
 
     updatePreview(camera, event) {
@@ -62,11 +85,7 @@ export class DoorManager {
 
         if (intersects.length > 0) {
             const wall = intersects[0].object;
-            const point = intersects[0].point;
-            
-            // Convert to wall's local space
-            wall.worldToLocal(point);
-            const door = this.createDoor(wall, point);
+            const door = this.createDoor(wall, intersects[0].point);
             
             wall.userData.openings = wall.userData.openings || [];
             wall.userData.openings.push(door);
@@ -74,27 +93,50 @@ export class DoorManager {
     }
 
     createDoor(parentWall, position) {
-        const door = new THREE.Mesh(
-            new THREE.BoxGeometry(0.8, 2, 0.1),
-            new THREE.MeshPhongMaterial({ 
-                color: 0x8B4513,
-                transparent: true,
-                opacity: 0.8 
-            })
-        );
+        // Create door frame (slightly larger than the door)
+        const frameGeometry = new THREE.BoxGeometry(1.0, 2.2, 0.4); // Increased depth to match wall thickness
+        const frameMaterial = new THREE.MeshPhongMaterial({ 
+            color: 0x4a3623,
+            transparent: false,
+            opacity: 1.0 
+        });
+        const frame = new THREE.Mesh(frameGeometry, frameMaterial);
+
+        // Create the door itself (two panels for both sides)
+        const doorGeometry = new THREE.BoxGeometry(0.8, 2.0, 0.05);
+        const doorMaterial = new THREE.MeshPhongMaterial({ 
+            color: 0x8B4513,
+            transparent: true,
+            opacity: 0.8 
+        });
+        const frontDoor = new THREE.Mesh(doorGeometry, doorMaterial);
+        const backDoor = new THREE.Mesh(doorGeometry, doorMaterial.clone());
         
-        door.position.copy(position);
-        door.rotation.copy(parentWall.rotation);
+        // Create a group to hold frame and doors
+        const doorGroup = new THREE.Group();
+        doorGroup.add(frame);
+        doorGroup.add(frontDoor);
+        doorGroup.add(backDoor);
         
-        door.userData = {
+        // Position doors on both sides of the frame
+        frontDoor.position.z = 0.2;  // Front side
+        backDoor.position.z = -0.2;  // Back side
+        
+        // Center the entire group on the wall
+        doorGroup.position.copy(position);
+        doorGroup.position.y = 1.1; // Center vertically
+        doorGroup.quaternion.copy(parentWall.quaternion);
+        
+        doorGroup.userData = {
             isDoor: true,
             parentWall: parentWall,
-            parentWallId: parentWall.uuid,
+            parentWallId: parentWall.userData.uuid,
             isInteractable: true
         };
         
-        this.scene.add(door);
-        return door;
+        doorGroup.uuid = THREE.MathUtils.generateUUID();
+        this.scene.add(doorGroup);
+        return doorGroup;
     }
 
     createDoorFromSave(wall, position, rotation) {

@@ -4,6 +4,9 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 import { useRouter } from 'next/navigation';
 import { createScene, createFloor } from '@/scripts/floor';
 import { chair, table, roundTable } from '@/scripts/asset';
+import { DoorManager} from '@/scripts/managers/DoorManager';
+import { WindowManager } from '@/scripts/managers/WindowManager';
+
 
 export default function RestaurantFloorPlan({ token, restaurantId, isCustomerView = false }) {
   const containerRef = useRef(null);
@@ -14,6 +17,8 @@ export default function RestaurantFloorPlan({ token, restaurantId, isCustomerVie
   const [isInitialized, setIsInitialized] = useState(false);
   const [floorplanId, setFloorplanId] = useState(null);
   const router = useRouter();
+  const doorManagerRef = useRef(null);
+  const windowManagerRef = useRef(null);
 
   // Cleanup function to properly dispose of Three.js resources
   const cleanup = () => {
@@ -188,6 +193,10 @@ export default function RestaurantFloorPlan({ token, restaurantId, isCustomerVie
         const floor = createFloor(20, 20, 2);
         scene.add(floor);
 
+        // Initialize managers
+        doorManagerRef.current = new DoorManager(scene, { walls: [] }, renderer);
+        windowManagerRef.current = new WindowManager(scene, { walls: [] }, renderer);
+
         // Add this after scene setup but before the animation loop
         const loadFloorplanData = async () => {
           try {
@@ -197,7 +206,6 @@ export default function RestaurantFloorPlan({ token, restaurantId, isCustomerVie
               response = await fetch(`/api/scenes/${floorplanId}/public`);
             } else {
               const token = localStorage.getItem("restaurantOwnerToken");
-              console.log('Using token:', token ? 'Token exists' : 'No token');
               response = await fetch(`/api/scenes/${floorplanId}`, {
                 headers: {
                   'Content-Type': 'application/json',
@@ -206,27 +214,18 @@ export default function RestaurantFloorPlan({ token, restaurantId, isCustomerVie
               });
             }
             
-            if (!response.ok) {
-              console.error('API response not OK:', response.status);
-              throw new Error('Failed to load floorplan');
-            }
+            if (!response.ok) throw new Error('Failed to load floorplan');
             
             const floorplanData = await response.json();
-            console.log('Received floorplan data:', floorplanData);
             
-            // Check if we have objects to render
             if (floorplanData.data && floorplanData.data.objects) {
-              console.log('Number of objects to render:', floorplanData.data.objects.length);
-              
               const wallMap = new Map();
 
               // First pass: Create walls
               const wallObjects = floorplanData.data.objects.filter(obj => obj.type === 'wall');
-              console.log('Number of walls:', wallObjects.length);
-
               for (const objData of wallObjects) {
                 const wallGeometry = new THREE.BoxGeometry(2, 2, 0.2);
-                const wallMaterial = new THREE.MeshPhongMaterial({ color: 0x8b8b8b });
+                const wallMaterial = new THREE.MeshPhongMaterial({ color: 0x808080 });
                 const wall = new THREE.Mesh(wallGeometry, wallMaterial);
                 
                 wall.position.fromArray(objData.position);
@@ -236,48 +235,89 @@ export default function RestaurantFloorPlan({ token, restaurantId, isCustomerVie
                   objData.rotation.z
                 );
                 wall.scale.fromArray(objData.scale);
-                wall.userData = { ...objData.userData, isWall: true };
+                wall.userData = { 
+                  ...objData.userData,
+                  isWall: true,
+                  openings: [] // Initialize openings array
+                };
                 
                 scene.add(wall);
-                wallMap.set(wall.userData.uuid, wall);
+                wallMap.set(objData.userData.uuid, wall);
               }
 
-              // Second pass: Create furniture and other objects
-              for (const objData of floorplanData.data.objects) {
-                if (objData.type !== 'wall') {
-                  let model;
-                  
-                  if (objData.userData.isChair) {
-                    model = await chair(scene);
-                  } else if (objData.userData.isFurniture) {
-                    model = await table(scene);
-                  } else if (objData.userData.isTable) {
-                    model = await roundTable(scene);
+              // Second pass: Create doors and windows
+              const openingsObjects = floorplanData.data.objects.filter(obj => 
+                obj.type === 'door' || obj.type === 'window'
+              );
+
+              for (const objData of openingsObjects) {
+                const parentWall = wallMap.get(objData.userData.parentWallId);
+                if (parentWall) {
+                  let opening;
+                  if (objData.type === 'door') {
+                    opening = doorManagerRef.current.createDoor(
+                      parentWall, 
+                      new THREE.Vector3().fromArray(objData.position)
+                    );
+                  } else {
+                    opening = windowManagerRef.current.createWindow(
+                      parentWall, 
+                      new THREE.Vector3().fromArray(objData.position)
+                    );
                   }
 
-                  if (model) {
-                    model.position.fromArray(objData.position);
-                    model.rotation.set(
+                  if (opening) {
+                    opening.rotation.set(
                       objData.rotation.x,
                       objData.rotation.y,
                       objData.rotation.z
                     );
-                    model.scale.fromArray(objData.scale);
-                    model.userData = { ...objData.userData };
+                    opening.scale.fromArray(objData.scale);
                     
-                    // Set color based on booking status
-                    if (model.material) {
-                      if (objData.userData.isBooked) {
-                        if (Array.isArray(model.material)) {
-                          model.material.forEach(mat => mat.color.setHex(0xff0000));
-                        } else {
-                          model.material.color.setHex(0xff0000);
-                        }
+                    // Add to parent wall's openings
+                    parentWall.userData.openings.push(opening);
+                  }
+                }
+              }
+
+              // Third pass: Create furniture
+              const furnitureObjects = floorplanData.data.objects.filter(obj => 
+                !['wall', 'door', 'window'].includes(obj.type)
+              );
+
+              for (const objData of furnitureObjects) {
+                let model;
+                
+                if (objData.userData.isChair) {
+                  model = await chair(scene);
+                } else if (objData.userData.isFurniture) {
+                  model = await table(scene);
+                } else if (objData.userData.isTable) {
+                  model = await roundTable(scene);
+                }
+
+                if (model) {
+                  model.position.fromArray(objData.position);
+                  model.rotation.set(
+                    objData.rotation.x,
+                    objData.rotation.y,
+                    objData.rotation.z
+                  );
+                  model.scale.fromArray(objData.scale);
+                  model.userData = { ...objData.userData };
+                  
+                  // Set color based on booking status
+                  if (model.material) {
+                    if (objData.userData.isBooked) {
+                      if (Array.isArray(model.material)) {
+                        model.material.forEach(mat => mat.color.setHex(0xff0000));
+                      } else {
+                        model.material.color.setHex(0xff0000);
                       }
                     }
-                    
-                    scene.add(model);
                   }
+                  
+                  scene.add(model);
                 }
               }
             }

@@ -56,11 +56,13 @@ export class FileManager {
                 }
             };
 
-            // Collect scene data
+            // Collect scene data with sanitized objects
             this.ui.scene.traverse(obj => {
                 if (obj.userData?.isMovable || obj.userData?.isWall || 
                     obj.userData?.isDoor || obj.userData?.isWindow) {
-                    sceneData.data.objects.push({
+                    
+                    // Create a clean object without circular references
+                    const cleanObject = {
                         type: obj.userData.isWall ? 'wall' : 
                               obj.userData.isDoor ? 'door' :
                               obj.userData.isWindow ? 'window' : 'furniture',
@@ -71,8 +73,35 @@ export class FileManager {
                             z: obj.rotation.z
                         },
                         scale: obj.scale.toArray(),
-                        userData: obj.userData
-                    });
+                        userData: { ...obj.userData }
+                    };
+
+                    // Ensure wall has UUID
+                    if (obj.userData.isWall) {
+                        if (!obj.userData.uuid) {
+                            obj.userData.uuid = THREE.MathUtils.generateUUID();
+                        }
+                        cleanObject.userData.uuid = obj.userData.uuid;
+                        
+                        // Store opening UUIDs
+                        if (obj.userData.openings) {
+                            cleanObject.userData.openingIds = obj.userData.openings.map(opening => opening.uuid);
+                        }
+                        delete cleanObject.userData.openings;
+                    }
+
+                    // Handle doors and windows
+                    if (obj.userData.isDoor || obj.userData.isWindow) {
+                        if (!obj.uuid) {
+                            obj.uuid = THREE.MathUtils.generateUUID();
+                        }
+                        if (obj.userData.parentWall) {
+                            cleanObject.userData.parentWallId = obj.userData.parentWall.userData.uuid;
+                        }
+                        delete cleanObject.userData.parentWall;
+                    }
+
+                    sceneData.data.objects.push(cleanObject);
                 }
             });
 
@@ -267,8 +296,11 @@ export class FileManager {
                 model = new THREE.Mesh(geometry, material);
                 model.userData = {
                     isWall: true,
+                    isMovable: true,
                     isInteractable: !isViewOnly,
-                    uuid: data.userData.uuid // Preserve original UUID
+                    uuid: data.userData.uuid,
+                    openings: [],
+                    type: 'wall'
                 };
 
                 model.position.fromArray(data.position);
@@ -277,56 +309,48 @@ export class FileManager {
 
                 this.ui.scene.add(model);
                 wallMap.set(data.userData.uuid, model);
-                console.log('Created wall with UUID:', data.userData.uuid);
+                this.ui.wallManager.walls.push(model);
 
             } else if (data.type === 'door') {
                 const parentWall = wallMap.get(data.userData.parentWallId);
                 if (parentWall) {
-                    console.log('Creating door on wall:', parentWall.userData.uuid);
+                    model = this.ui.doorManager.createDoor(parentWall, new THREE.Vector3().fromArray(data.position));
                     
-                    // Use absolute position from saved data
-                    model = this.ui.doorManager.createDoorFromData(
-                        data.position, // This should be world coordinates
-                        data.rotation,
-                        parentWall
-                    );
-                    
-                    // Ensure proper material
-                    model.material = new THREE.MeshPhongMaterial({
-                        color: 0x8B4513,
-                        transparent: true,
-                        opacity: 0.8
-                    });
-                    
-                    model.userData = {
-                        ...data.userData,
-                        isInteractable: !isViewOnly,
-                        isDoor: true,
-                        parentWall: parentWall // Re-establish reference
-                    };
-                    
-                    parentWall.userData.openings = parentWall.userData.openings || [];
-                    parentWall.userData.openings.push(model);
-                } else {
-                    console.error('Parent wall not found for door:', data.userData.parentWallId);
+                    if (model) {
+                        model.rotation.set(data.rotation.x, data.rotation.y, data.rotation.z);
+                        model.scale.fromArray(data.scale);
+                        model.userData = {
+                            ...data.userData,
+                            isDoor: true,
+                            parentWall: parentWall,
+                            parentWallId: parentWall.userData.uuid,
+                            isInteractable: !isViewOnly,
+                            type: 'door'
+                        };
+                        parentWall.userData.openings.push(model);
+                    }
                 }
+
             } else if (data.type === 'window') {
                 const parentWall = wallMap.get(data.userData.parentWallId);
                 if (parentWall) {
-                    model = this.ui.windowManager.createWindowFromData(
-                        data.position,
-                        data.rotation,
-                        parentWall
-                    );
-                    model.userData = {
-                        ...data.userData,
-                        isInteractable: !isViewOnly,
-                        isWindow: true
-                    };
-                    this.ui.scene.add(model);
-                    parentWall.userData.openings = parentWall.userData.openings || [];
-                    parentWall.userData.openings.push(model);
+                    model = this.ui.windowManager.createWindow(parentWall, new THREE.Vector3().fromArray(data.position));
+                    
+                    if (model) {
+                        model.rotation.set(data.rotation.x, data.rotation.y, data.rotation.z);
+                        model.scale.fromArray(data.scale);
+                        model.userData = {
+                            ...data.userData,
+                            isWindow: true,
+                            parentWall: parentWall,
+                            parentWallId: parentWall.userData.uuid,
+                            isInteractable: !isViewOnly,
+                            type: 'window'
+                        };
+                        parentWall.userData.openings.push(model);
+                    }
                 }
+
             } else {
                 if (data.userData.isChair) {
                     model = await this.ui.createChair();
@@ -337,41 +361,15 @@ export class FileManager {
                 } else if (data.userData.isTable) {
                     model = await this.ui.createRoundTable();
                 }
-            }
 
-            if (model) {
-                model.position.fromArray(data.position);
-                model.rotation.set(
-                    data.rotation.x,
-                    data.rotation.y,
-                    data.rotation.z
-                );
-                model.scale.fromArray(data.scale);
-                model.userData = {
-                    ...data.userData,
-                    isInteractable: !isViewOnly
-                };
-
-                // Set up shadows for walls
-                if (data.type === 'wall') {
-                    model.castShadow = true;
-                    model.receiveShadow = true;
-                }
-                // Handle furniture materials
-                else if (model.material) {
-                    if (data.userData.isBooked) {
-                        if (Array.isArray(model.material)) {
-                            model.material.forEach(mat => mat.color.setHex(0xff0000)); // Red for booked
-                        } else {
-                            model.material.color.setHex(0xff0000); // Red for booked
-                        }
-                    } else if (data.userData.isChair || data.userData.isFurniture) {
-                        if (Array.isArray(model.material)) {
-                            model.material.forEach(mat => mat.color.setHex(0x00ff00)); // Green for available
-                        } else {
-                            model.material.color.setHex(0x00ff00); // Green for available
-                        }
-                    }
+                if (model) {
+                    model.position.fromArray(data.position);
+                    model.rotation.set(data.rotation.x, data.rotation.y, data.rotation.z);
+                    model.scale.fromArray(data.scale);
+                    model.userData = {
+                        ...data.userData,
+                        isInteractable: !isViewOnly
+                    };
                 }
             }
 

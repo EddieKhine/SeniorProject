@@ -10,17 +10,40 @@ export class WindowManager {
     }
 
     createPreviewWindow() {
-        const geometry = new THREE.BoxGeometry(1.5, 1.2, 0.2);
-        const material = new THREE.MeshBasicMaterial({
-            color: 0x87CEEB,
+        // Create preview frame
+        const frameGeometry = new THREE.BoxGeometry(1.4, 1.2, 0.4);
+        const frameMaterial = new THREE.MeshBasicMaterial({
+            color: 0x4a4a4a,
             transparent: true,
             opacity: 0.5,
             depthTest: false
         });
-        const window = new THREE.Mesh(geometry, material);
-        window.visible = false;
-        this.scene.add(window);
-        return window;
+        const frame = new THREE.Mesh(frameGeometry, frameMaterial);
+
+        // Create preview panes (both sides)
+        const windowGeometry = new THREE.BoxGeometry(1.2, 1.0, 0.05);
+        const windowMaterial = new THREE.MeshBasicMaterial({
+            color: 0x87CEEB,
+            transparent: true,
+            opacity: 0.3,
+            depthTest: false
+        });
+        const frontPane = new THREE.Mesh(windowGeometry, windowMaterial);
+        const backPane = new THREE.Mesh(windowGeometry, windowMaterial.clone());
+
+        // Create preview group
+        const previewGroup = new THREE.Group();
+        previewGroup.add(frame);
+        previewGroup.add(frontPane);
+        previewGroup.add(backPane);
+        
+        // Position preview panes
+        frontPane.position.z = 0.2;
+        backPane.position.z = -0.2;
+        
+        previewGroup.visible = false;
+        this.scene.add(previewGroup);
+        return previewGroup;
     }
 
     updatePreview(camera, event) {
@@ -68,27 +91,53 @@ export class WindowManager {
     }
 
     createWindow(parentWall, position) {
-        const window = new THREE.Mesh(
-            new THREE.BoxGeometry(1.2, 1, 0.1),
-            new THREE.MeshPhongMaterial({ 
-                color: 0x87CEEB,
-                transparent: true,
-                opacity: 0.8 
-            })
-        );
+        // Create window frame
+        const frameGeometry = new THREE.BoxGeometry(1.4, 1.2, 0.4); // Increased depth to match wall thickness
+        const frameMaterial = new THREE.MeshPhongMaterial({ 
+            color: 0x4a4a4a,
+            transparent: false,
+            opacity: 1.0 
+        });
+        const frame = new THREE.Mesh(frameGeometry, frameMaterial);
+
+        // Create window panes (both sides)
+        const windowGeometry = new THREE.BoxGeometry(1.2, 1.0, 0.05);
+        const windowMaterial = new THREE.MeshPhongMaterial({ 
+            color: 0x87CEEB,
+            transparent: true,
+            opacity: 0.4,
+            envMap: null,
+            reflectivity: 1.0,
+            refractionRatio: 0.98
+        });
+        const frontPane = new THREE.Mesh(windowGeometry, windowMaterial);
+        const backPane = new THREE.Mesh(windowGeometry, windowMaterial.clone());
         
-        window.position.copy(position);
-        window.rotation.copy(parentWall.rotation);
+        // Create a group to hold frame and panes
+        const windowGroup = new THREE.Group();
+        windowGroup.add(frame);
+        windowGroup.add(frontPane);
+        windowGroup.add(backPane);
         
-        window.userData = {
+        // Position panes on both sides
+        frontPane.position.z = 0.2;  // Front side
+        backPane.position.z = -0.2;  // Back side
+        
+        // Center the entire group on the wall
+        windowGroup.position.copy(position);
+        windowGroup.position.y = 1.0; // Center vertically
+        windowGroup.quaternion.copy(parentWall.quaternion);
+        
+        windowGroup.userData = {
             isWindow: true,
             parentWall: parentWall,
-            parentWallId: parentWall.uuid,
+            parentWallId: parentWall.userData.uuid,
             isInteractable: true
         };
         
-        this.scene.add(window);
-        return window;
+        windowGroup.uuid = THREE.MathUtils.generateUUID();
+        this.scene.add(windowGroup);
+        return windowGroup;
     }
 
     createWindowFromSave(wall, position, rotation) {
