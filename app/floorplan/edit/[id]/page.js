@@ -257,7 +257,10 @@ export default function EditFloorplan() {
           <i className="bi bi-layout-sidebar"></i>
         </button>
  
-        <aside className="sidebar" id="sidebar">
+        <aside 
+          className="sidebar"
+          id="sidebar"
+        >
           <h2 className="sidebar-title">
             <FaBoxOpen size={22} style={{ marginRight: "8px" }} />
             Object Library

@@ -33,6 +33,7 @@ export class UIManager {
         this.doorManager = new DoorManager(scene, this.wallManager, renderer);
         this.windowManager = new WindowManager(scene, this.wallManager, renderer);
         this.fileManager = new FileManager(this);
+        this.sidebarManager = new SidebarManager(this);
         // dragManager will be set later
 
         // If view-only mode, load the specified scene
@@ -54,6 +55,12 @@ export class UIManager {
                 this.dragManager.handleScaleStart(e);
             }
         });
+
+        // Initialize asset creation methods
+        this.createChair = () => chair(scene);
+        this.createTable = () => table(scene);
+        this.createSofa = () => sofa(scene);
+        this.createRoundTable = () => roundTable(scene);
     }
 
     initializeUI() {
