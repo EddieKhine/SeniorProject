@@ -50,6 +50,16 @@ export class UIManager {
         this.initializeUI();
         this.initializeEventListeners();
         this.initStructureControls();
+        this.initScaleControls();
+
+        // Add canvas click handler here instead of in initScaleControls
+        this.renderer.domElement.addEventListener('click', (e) => {
+            console.log('Canvas clicked, scale mode:', this.dragManager?.scaleMode); // Debug log
+            if (this.dragManager?.scaleMode) {
+                console.log('Attempting to start scale'); // Debug log
+                this.dragManager.handleScaleStart(e);
+            }
+        });
     }
 
     initializeUI() {
@@ -230,27 +240,29 @@ export class UIManager {
         const scaleBtn = document.createElement('button');
         scaleBtn.className = 'toolbar-btn';
         scaleBtn.innerHTML = '<i class="bi bi-arrows-angle-expand"></i> Size';
+        scaleBtn.setAttribute('data-tooltip', 'Adjust Size');
+        
         scaleBtn.addEventListener('click', () => {
-            this.toggleScaleMode(!this.dragManager.scaleMode);
-        });
-        document.querySelector('.toolbar').appendChild(scaleBtn);
-
-        // Updated click handler
-        document.addEventListener('click', (e) => {
-            const panel = document.getElementById('scale-panel');
-            const isScaleRelated = panel.contains(e.target) || e.target === scaleBtn;
+            this.dragManager.scaleMode = !this.dragManager.scaleMode;
+            scaleBtn.classList.toggle('active', this.dragManager.scaleMode);
+            this.renderer.domElement.style.cursor = this.dragManager.scaleMode ? 'crosshair' : 'default';
             
-            if (!isScaleRelated) {
-                this.toggleScaleMode(false);
+            // Reset any existing selection when toggling mode off
+            if (!this.dragManager.scaleMode) {
                 this.dragManager.hideScalePanel();
             }
         });
+
+        document.querySelector('.toolbar').appendChild(scaleBtn);
     }
 
     toggleScaleMode(enable) {
         this.dragManager.scaleMode = enable;
-        this.renderer.domElement.style.cursor = enable ? 'pointer' : 'default';
-        if (!enable) this.dragManager.hideScalePanel();
+        const scaleBtn = document.querySelector('.toolbar-btn[data-tooltip="Adjust Size"]');
+        if (scaleBtn) {
+            scaleBtn.classList.toggle('active', enable);
+        }
+        this.renderer.domElement.classList.toggle('scale-mode', enable);
     }
 
     initStructureControls() {
@@ -297,4 +309,6 @@ export class UIManager {
             this.windowManager.previewWindow.visible = false;
         }
     }
+
+
 }

@@ -13,11 +13,13 @@ export class DragManager {
         this.scaleMode = false;
         this.scaleStartPosition = new THREE.Vector2();
         this.originalScale = new THREE.Vector3();
+        this.currentScaledObject = null;
 
         // Bind methods
         this.handleMouseMove = this.handleMouseMove.bind(this);
         this.handleMouseDown = this.handleMouseDown.bind(this);
         this.stopDragging = this.stopDragging.bind(this);
+        this.handleScaleStart = this.handleScaleStart.bind(this);
     }
 
     handleMouseMove(event) {
@@ -123,8 +125,10 @@ export class DragManager {
     }
 
     findMovableParent(object) {
+        console.log('Finding movable parent for:', object); // Debug log
         let current = object;
         while (current) {
+            console.log('Checking object:', current.userData); // Debug log
             if (current.userData && (current.userData.isMovable || current.userData.isChair || current.userData.isFurniture)) {
                 return current;
             }
@@ -204,56 +208,87 @@ export class DragManager {
     }
 
     handleScaleStart(event) {
-        event.stopPropagation();
+        console.log('Scale Start Called', this.scaleMode); // Debug log
+        if (!this.scaleMode) return;
         
-        const raycaster = createRaycaster(event, this.ui.camera, this.ui.renderer.domElement);
+        const raycaster = this.createRaycaster(event);
         const intersects = raycaster.intersectObjects(this.ui.scene.children, true);
         
+        console.log('Intersects found:', intersects.length); // Debug log
+        console.log('Scene children:', this.ui.scene.children.length); // Debug log
+        
         if (intersects.length > 0) {
-            this.selectedObject = this.findMovableParent(intersects[0].object);
-            if (this.selectedObject) {
+            const object = this.findMovableParent(intersects[0].object);
+            console.log('Found movable object:', object); // Debug log
+            if (object) {
+                this.selectedObject = object;
                 this.showScalePanel();
-                this.highlightObject(this.selectedObject);
+                this.highlightObject(object);
             }
         }
     }
 
+    createRaycaster(event) {
+        const rect = this.ui.renderer.domElement.getBoundingClientRect();
+        const mouse = new THREE.Vector2(
+            ((event.clientX - rect.left) / rect.width) * 2 - 1,
+            -((event.clientY - rect.top) / rect.height) * 2 + 1
+        );
+        const raycaster = new THREE.Raycaster();
+        raycaster.setFromCamera(mouse, this.ui.camera);
+        return raycaster;
+    }
+
     showScalePanel() {
         const panel = document.getElementById('scale-panel');
+        if (!panel) return;
+        
         panel.style.display = 'block';
         
         // Keep reference to current object
         this.currentScaledObject = this.selectedObject;
         
         // Set initial slider value
-        document.getElementById('scale-slider').value = this.selectedObject.scale.x;
+        const slider = document.getElementById('scale-slider');
+        if (slider) {
+            slider.value = this.selectedObject.scale.x;
+        }
         
         // Add event listeners
-        panel.querySelectorAll('.size-btn').forEach(btn => {
+        const sizeBtns = panel.querySelectorAll('.size-btn');
+        sizeBtns.forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const scale = parseFloat(e.target.dataset.scale);
                 this.applyScale(scale);
             });
         });
 
-        document.getElementById('scale-slider').addEventListener('input', (e) => {
-            this.applyScale(parseFloat(e.target.value));
-        });
+        if (slider) {
+            slider.addEventListener('input', (e) => {
+                this.applyScale(parseFloat(e.target.value));
+            });
+        }
     }
 
     applyScale(scale) {
+        if (!this.selectedObject) return;
+        
         this.selectedObject.scale.set(scale, scale, scale);
+        
+        // Update geometry bounds
         this.selectedObject.traverse(child => {
             if (child.isMesh) {
                 child.geometry.computeBoundingBox();
             }
         });
-        this.resetHighlight();
     }
 
     highlightObject(object) {
         object.traverse(child => {
             if (child.isMesh) {
+                if (!child.material.originalEmissive) {
+                    child.material.originalEmissive = child.material.emissive.clone();
+                }
                 child.material.emissive = new THREE.Color(0x007bff);
                 child.material.emissiveIntensity = 0.3;
             }
@@ -263,23 +298,26 @@ export class DragManager {
     resetHighlight() {
         if (this.selectedObject) {
             this.selectedObject.traverse(child => {
-                if (child.isMesh) {
-                    child.material.emissive.setHex(0x000000);
+                if (child.isMesh && child.material.originalEmissive) {
+                    child.material.emissive.copy(child.material.originalEmissive);
                     child.material.emissiveIntensity = 0;
                 }
             });
         }
     }
 
+    hideScalePanel() {
+        const panel = document.getElementById('scale-panel');
+        if (panel) {
+            panel.style.display = 'none';
+        }
+        this.resetHighlight();
+        this.currentScaledObject = null;
+        this.selectedObject = null;
+    }
+
     toggleScaleMode(enable) {
         this.scaleMode = enable;
         this.ui.renderer.domElement.style.cursor = enable ? 'ew-resize' : 'default';
-    }
-
-    hideScalePanel() {
-        const panel = document.getElementById('scale-panel');
-        panel.style.display = 'none';
-        this.resetHighlight();
-        this.currentScaledObject = null;
     }
 }

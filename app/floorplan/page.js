@@ -250,18 +250,6 @@ export default function FloorplanEditor() {
               <RiLayoutGridFill size={20} style={{ marginRight: "4px" }} />
               <span>Scenes</span>
             </a>
-            <button
-              className="toolbar-btn"
-              onClick={() => {
-                if (managersRef.current?.dragManager) {
-                  managersRef.current.dragManager.toggleScaleMode(true);
-                }
-              }}
-              data-tooltip="Adjust Size"
-            >
-              <FaArrowsAltH size={20} style={{ marginRight: "4px" }} />
-              <span>Size</span>
-            </button>
           </div>
  
           <div className="file-controls">

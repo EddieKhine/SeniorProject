@@ -141,6 +141,14 @@ export default function EditFloorplan() {
     uiManager.doorManager = doorManager;
     uiManager.windowManager = windowManager;
 
+    // Add scale event listener
+    renderer.domElement.addEventListener('click', (e) => {
+        if (dragManager.scaleMode) dragManager.handleScaleStart(e);
+    });
+
+    // Initialize scale controls
+    uiManager.initScaleControls();
+
     // Load existing floorplan data
     const loadFloorplan = async () => {
       try {
@@ -352,18 +360,7 @@ export default function EditFloorplan() {
               <FaArrowsAltH size={20} style={{ marginRight: "4px" }} />
               <span>Direction</span>
             </button>
-            <button
-              className="toolbar-btn"
-              onClick={() => {
-                if (managersRef.current?.dragManager) {
-                  managersRef.current.dragManager.toggleScaleMode(true);
-                }
-              }}
-              data-tooltip="Adjust Size"
-            >
-              <FaArrowsAltH size={20} style={{ marginRight: "4px" }} />
-              <span>Size</span>
-            </button>
+
           </div>
  
           <div className="file-controls">
@@ -379,24 +376,24 @@ export default function EditFloorplan() {
         </main>
  
         <div id="scale-panel" className="tool-panel">
-          <div className="preset-sizes">
-            <button className="size-btn small" data-scale="0.5">S</button>
-            <button className="size-btn medium" data-scale="1">M</button>
-            <button className="size-btn large" data-scale="1.5">L</button>
-          </div>
-          <div className="size-slider">
-            <input
-              type="range"
-              min="0.5"
-              max="2"
-              step="0.1"
-              defaultValue="1"
-              id="scale-slider"
-            />
-            <label htmlFor="scale-slider">Size Adjust</label>
-          </div>
+            <div className="preset-sizes">
+                <button className="size-btn small" data-scale="0.5">S</button>
+                <button className="size-btn medium" data-scale="1">M</button>
+                <button className="size-btn large" data-scale="1.5">L</button>
+            </div>
+            <div className="size-slider">
+                <input
+                    type="range"
+                    min="0.5"
+                    max="2"
+                    step="0.1"
+                    defaultValue="1"
+                    id="scale-slider"
+                />
+                <label htmlFor="scale-slider">Size Adjust</label>
+            </div>
         </div>
- 
+
         <div className="loading-overlay" id="loading-overlay">
           <div className="spinner">
             <i className="bi bi-arrow-repeat"></i>
