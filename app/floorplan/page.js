@@ -1,15 +1,14 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from 'next/navigation';
 import Head from "next/head";
 import * as THREE from 'three';
 import { createScene, createFloor, initializeOrbitControls } from '@/scripts/floor';
 import { UIManager } from '@/scripts/managers/UIManager';
 import { DragManager } from '@/scripts/managers/DragManager';
-import { WallManager } from '@/scripts/wallManager';
-import { FaBoxOpen, FaTrash, FaArrowsAltH, FaSave, FaFolderOpen } from "react-icons/fa";
-import { RiLayoutGridFill } from "react-icons/ri";
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
+import { FaBoxOpen, FaTrash, FaArrowsAltH, FaSave } from "react-icons/fa";
 import styles from "@/css/ui.css";
 
 export default function FloorplanEditor() {
@@ -18,6 +17,7 @@ export default function FloorplanEditor() {
   const containerRef = useRef(null);
   const managersRef = useRef(null);
   const sceneRef = useRef(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     if (!containerRef.current || sceneRef.current) return;
@@ -34,163 +34,202 @@ export default function FloorplanEditor() {
     const restaurantData = JSON.parse(storedRestaurantData);
     console.log('Restaurant Data:', restaurantData);
 
-    // Scene Setup
-    const renderer = new THREE.WebGLRenderer({ 
-      antialias: true,
-      powerPreference: "high-performance"
-    });
-    renderer.setSize(containerRef.current.clientWidth, containerRef.current.clientHeight);
-    renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-    containerRef.current.appendChild(renderer.domElement);
-
-    // Scene Initialization
-    const scene = createScene();
-    sceneRef.current = scene;
-    
-    const gridSize = 2;
-    const floor = createFloor(20, 20, gridSize);
-    scene.add(floor);
-    
-    // Add lighting
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
-    scene.add(ambientLight);
-
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
-    directionalLight.position.set(10, 15, 10);
-    directionalLight.castShadow = true;
-    directionalLight.shadow.mapSize.width = 2048;
-    directionalLight.shadow.mapSize.height = 2048;
-    scene.add(directionalLight);
-
-    // Camera Setup
-    const camera = new THREE.PerspectiveCamera(
-      75,
-      containerRef.current.clientWidth / containerRef.current.clientHeight,
-      0.1,
-      1000
-    );
-    camera.position.set(8, 8, 8);
-    camera.lookAt(0, 0, 0);
-
-    // Controls Setup
-    const controls = initializeOrbitControls(camera, renderer);
-
-    // Initialize Managers with save callback
-    const handleSave = async (sceneData) => {
+    const initScene = async () => {
       try {
-        console.log('Creating new floorplan:', sceneData);
-        const restaurantData = JSON.parse(localStorage.getItem("restaurantData"));
+        setIsLoading(true);
+        
+        // Initialize Three.js scene
+        const renderer = new THREE.WebGLRenderer({ 
+          antialias: true,
+          powerPreference: "high-performance"
+        });
+        
+        renderer.setSize(containerRef.current.clientWidth, containerRef.current.clientHeight);
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        containerRef.current.appendChild(renderer.domElement);
 
-        const response = await fetch('/api/scenes', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify({
-            name: 'Restaurant Floor Plan',
-            restaurantId: restaurantData.id,
-            data: {
-              objects: sceneData.objects || [],
-              version: 1
+        // Scene Initialization
+        const scene = createScene();
+        sceneRef.current = scene;
+        
+        // Add lighting
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+        scene.add(ambientLight);
+
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        directionalLight.position.set(10, 15, 10);
+        directionalLight.castShadow = true;
+        directionalLight.shadow.mapSize.width = 2048;
+        directionalLight.shadow.mapSize.height = 2048;
+        scene.add(directionalLight);
+
+        const hemisphereLight = new THREE.HemisphereLight(0xffffff, 0x080820, 0.5);
+        scene.add(hemisphereLight);
+        
+        // Camera Setup
+        const camera = new THREE.PerspectiveCamera(
+          75,
+          containerRef.current.clientWidth / containerRef.current.clientHeight,
+          0.1,
+          1000
+        );
+        camera.position.set(8, 8, 8);
+        camera.lookAt(0, 0, 0);
+
+        // Initialize OrbitControls
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.screenSpacePanning = true;
+
+        // Add floor
+        const floor = createFloor(20, 20, 2);
+        scene.add(floor);
+
+        // Initialize UI Manager with save callback
+        const handleSave = async (sceneData) => {
+          try {
+            console.log('Creating new floorplan:', sceneData);
+            const restaurantData = JSON.parse(localStorage.getItem("restaurantData"));
+
+            const response = await fetch('/api/scenes', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+              },
+              body: JSON.stringify({
+                name: 'Restaurant Floor Plan',
+                restaurantId: restaurantData.id,
+                data: {
+                  objects: sceneData.objects || [],
+                  version: 2
+                }
+              }),
+            });
+
+            const responseData = await response.json();
+            console.log('API Response:', responseData);
+
+            if (!response.ok) {
+              throw new Error(responseData.error || 'Failed to create scene');
             }
-          }),
-        });
 
-        const responseData = await response.json();
-        console.log('API Response:', responseData);
+            // Update restaurant with new floorplanId
+            const updateResponse = await fetch(`/api/restaurants/${restaurantData.id}`, {
+              method: 'PUT',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+              },
+              body: JSON.stringify({
+                floorplanId: responseData._id
+              }),
+            });
 
-        if (!response.ok) {
-          throw new Error(responseData.error || 'Failed to create scene');
-        }
+            if (!updateResponse.ok) {
+              const updateError = await updateResponse.json();
+              throw new Error(updateError.error || 'Failed to update restaurant with floorplan');
+            }
 
-        // Update restaurant with new floorplanId
-        const updateResponse = await fetch(`/api/restaurants/${restaurantData.id}`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify({
-            floorplanId: responseData._id || responseData.floorplan._id
-          }),
-        });
+            // Get the updated restaurant data
+            const updatedRestaurantResponse = await fetch(`/api/restaurants/${restaurantData.id}`, {
+              headers: {
+                'Authorization': `Bearer ${token}`
+              }
+            });
 
-        if (!updateResponse.ok) {
-          const updateError = await updateResponse.json();
-          throw new Error(updateError.error || 'Failed to update restaurant with floorplan');
-        }
+            if (!updatedRestaurantResponse.ok) {
+              throw new Error('Failed to fetch updated restaurant data');
+            }
 
-        // Update local storage with new floorplanId
-        restaurantData.floorplanId = responseData._id || responseData.floorplan._id;
-        localStorage.setItem("restaurantData", JSON.stringify(restaurantData));
+            const updatedRestaurantData = await updatedRestaurantResponse.json();
+            
+            // Update localStorage with the fresh data
+            localStorage.setItem("restaurantData", JSON.stringify(updatedRestaurantData));
 
-        alert('New floor plan created successfully!');
-        router.push('/restaurant-owner/setup/dashboard');
-      } catch (error) {
-        console.error('Error details:', error);
-        if (error.message.includes('Unauthorized')) {
-          router.push('/restaurant-owner');
-        } else {
-          alert('Failed to create floor plan: ' + error.message);
-        }
-      }
-    };
-
-    const uiManager = new UIManager(scene, floor, gridSize, camera, renderer, controls);
-    uiManager.onSave = handleSave;
-    uiManager.restaurantData = restaurantData;
-    
-    const dragManager = new DragManager(uiManager);
-    uiManager.dragManager = dragManager;
-    const wallManager = new WallManager(scene, floor, gridSize, renderer);
-
-    // Add to managersRef for cleanup
-    managersRef.current = {
-      uiManager,
-      dragManager,
-      wallManager
-    };
-
-    // Animation Loop
-    const animate = () => {
-      requestAnimationFrame(animate);
-      controls.update();
-      renderer.render(scene, camera);
-    };
-    animate();
-
-    // Handle window resize
-    const handleResize = () => {
-      if (!containerRef.current) return;
-      camera.aspect = containerRef.current.clientWidth / containerRef.current.clientHeight;
-      camera.updateProjectionMatrix();
-      renderer.setSize(containerRef.current.clientWidth, containerRef.current.clientHeight);
-    };
-    window.addEventListener('resize', handleResize);
-
-    // Cleanup
-    return () => {
-      window.removeEventListener('resize', handleResize);
-      if (containerRef.current && containerRef.current.contains(renderer.domElement)) {
-        containerRef.current.removeChild(renderer.domElement);
-      }
-      renderer.dispose();
-      if (sceneRef.current) {
-        sceneRef.current.traverse((object) => {
-          if (object.geometry) object.geometry.dispose();
-          if (object.material) {
-            if (Array.isArray(object.material)) {
-              object.material.forEach(material => material.dispose());
+            alert('New floor plan created successfully!');
+            router.push('/restaurant-owner/setup/dashboard');
+          } catch (error) {
+            console.error('Error details:', error);
+            if (error.message.includes('Unauthorized')) {
+              router.push('/restaurant-owner');
             } else {
-              object.material.dispose();
+              alert('Failed to create floor plan: ' + error.message);
             }
           }
-        });
-        sceneRef.current = null;
+        };
+
+        // Initialize UI Manager with all required managers
+        const uiManager = new UIManager(
+          scene,
+          floor,
+          2, // gridSize
+          camera,
+          renderer,
+          controls
+        );
+        uiManager.onSave = handleSave;
+        uiManager.restaurantData = restaurantData;
+
+        // Initialize just the dragManager
+        const dragManager = new DragManager(uiManager);
+        uiManager.dragManager = dragManager;
+
+        // Add to managersRef for cleanup
+        managersRef.current = {
+          uiManager,
+          dragManager
+        };
+
+        // Animation Loop
+        const animate = () => {
+          requestAnimationFrame(animate);
+          controls.update();
+          renderer.render(scene, camera);
+        };
+        animate();
+
+        // Handle window resize
+        const handleResize = () => {
+          if (!containerRef.current) return;
+          camera.aspect = containerRef.current.clientWidth / containerRef.current.clientHeight;
+          camera.updateProjectionMatrix();
+          renderer.setSize(containerRef.current.clientWidth, containerRef.current.clientHeight);
+        };
+        window.addEventListener('resize', handleResize);
+
+        setIsLoading(false);
+
+        // Cleanup
+        return () => {
+          window.removeEventListener('resize', handleResize);
+          if (containerRef.current && containerRef.current.contains(renderer.domElement)) {
+            containerRef.current.removeChild(renderer.domElement);
+          }
+          renderer.dispose();
+          if (sceneRef.current) {
+            sceneRef.current.traverse((object) => {
+              if (object.geometry) object.geometry.dispose();
+              if (object.material) {
+                if (Array.isArray(object.material)) {
+                  object.material.forEach(material => material.dispose());
+                } else {
+                  object.material.dispose();
+                }
+              }
+            });
+            sceneRef.current = null;
+          }
+        };
+      } catch (error) {
+        console.error('Error initializing scene:', error);
+        setIsLoading(false);
       }
     };
+
+    initScene();
   }, [searchParams, router]);
 
   return (
@@ -198,7 +237,7 @@ export default function FloorplanEditor() {
       <Head>
         <meta charSet="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>3D Room Editor</title>
+        <title>Create Floor Plan</title>
         <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.3/font/bootstrap-icons.css" />
         <link rel="stylesheet" href={styles} />
       </Head>
@@ -242,14 +281,6 @@ export default function FloorplanEditor() {
               <FaArrowsAltH size={20} style={{ marginRight: "4px" }} />
               <span>Direction</span>
             </button>
-            <a
-              href="scenes.html"
-              className="toolbar-btn"
-              data-tooltip="View Saved Scenes"
-            >
-              <RiLayoutGridFill size={20} style={{ marginRight: "4px" }} />
-              <span>Scenes</span>
-            </a>
           </div>
  
           <div className="file-controls">
@@ -260,14 +291,6 @@ export default function FloorplanEditor() {
             >
               <FaSave size={20} style={{ marginRight: "4px" }} />
               <span>Save</span>
-            </button>
-            <button
-              className="toolbar-btn"
-              id="load-btn"
-              data-tooltip="Load Scene"
-            >
-              <FaFolderOpen size={20} style={{ marginRight: "4px" }} />
-              <span>Load</span>
             </button>
           </div>
         </main>

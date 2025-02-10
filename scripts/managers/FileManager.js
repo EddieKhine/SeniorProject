@@ -241,6 +241,19 @@ export class FileManager {
                 await this.recreateObject(objectData, isViewOnly, wallMap);
             }
 
+            // Reset wall manager state if not in view-only mode
+            if (!isViewOnly) {
+                // Reset wall manager state
+                this.ui.wallManager.isAddWallMode = true;
+                this.ui.wallManager.direction = 'horizontal';
+                
+                // Recreate preview wall if needed
+                this.ui.wallManager.createPreviewWall();
+                
+                // Reset wall building state
+                this.ui.wallManager.wallStartPosition = null;
+            }
+
             if (isViewOnly) this.setupViewOnlyMode();
             console.log('Scene loaded with', sceneData.data.objects.length, 'objects');
         } catch (error) {
@@ -296,7 +309,7 @@ export class FileManager {
                 model = new THREE.Mesh(geometry, material);
                 model.userData = {
                     isWall: true,
-                    isMovable: true,
+                    isMovable: false,
                     isInteractable: !isViewOnly,
                     uuid: data.userData.uuid,
                     openings: [],

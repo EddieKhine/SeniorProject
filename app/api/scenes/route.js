@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
 import Floorplan from '@/models/Floorplan';
+import Restaurant from '@/models/Restaurants';
 import jwt from 'jsonwebtoken';
 
 // GET /api/scenes - Get all scenes
@@ -66,7 +67,7 @@ export async function POST(request) {
       const floorplan = new Floorplan({
         name: data.name,
         restaurantId: data.restaurantId,
-        ownerId: ownerId, // Add owner reference
+        ownerId: ownerId,
         data: {
           objects: data.data.objects,
           version: data.data.version || 1
@@ -75,9 +76,26 @@ export async function POST(request) {
 
       await floorplan.save();
 
+      // Update the restaurant with the new floorplanId
+      const updatedRestaurant = await Restaurant.findByIdAndUpdate(
+        data.restaurantId,
+        { floorplanId: floorplan._id },
+        { new: true }
+      );
+
+      if (!updatedRestaurant) {
+        // If restaurant update fails, delete the created floorplan
+        await Floorplan.findByIdAndDelete(floorplan._id);
+        return NextResponse.json(
+          { error: 'Restaurant not found or update failed' },
+          { status: 404 }
+        );
+      }
+
       return NextResponse.json({
-        message: "Floorplan saved successfully",
+        message: "Floorplan saved and restaurant updated successfully",
         floorplan,
+        restaurant: updatedRestaurant,
         token: jwt.sign(
           { 
             floorplanId: floorplan._id,

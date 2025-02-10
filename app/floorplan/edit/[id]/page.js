@@ -64,6 +64,7 @@ export default function EditFloorplan() {
 
         // Scene Initialization
         const scene = createScene();
+        sceneRef.current = scene;
         
         // Add lighting
         const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
@@ -99,7 +100,7 @@ export default function EditFloorplan() {
         const floor = createFloor(20, 20, 2);
         scene.add(floor);
 
-        // Initialize UI Manager with all required managers
+        // Initialize UI Manager first
         const uiManager = new UIManager(
           scene,
           floor,
@@ -108,6 +109,15 @@ export default function EditFloorplan() {
           renderer,
           controls
         );
+        uiManagerRef.current = uiManager;
+
+        // Initialize wall preview properly
+        uiManager.wallManager.isAddWallMode = true;
+        uiManager.wallManager.createPreviewWall();
+        scene.add(uiManager.wallManager.previewWall);
+
+        // Initialize event listeners for wall preview
+        uiManager.initializeEventListeners();
 
         // Load the scene data
         if (params.id) {
@@ -208,6 +218,27 @@ export default function EditFloorplan() {
           dragManager
         };
 
+        // After initializing uiManager and wallManager, add:
+        const handleMouseMove = (event) => {
+          if (uiManager.wallManager.isAddWallMode) {
+            const rect = renderer.domElement.getBoundingClientRect();
+            const mouse = new THREE.Vector2(
+              ((event.clientX - rect.left) / rect.width) * 2 - 1,
+              -((event.clientY - rect.top) / rect.height) * 2 + 1
+            );
+
+            const raycaster = new THREE.Raycaster();
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObject(floor);
+
+            if (intersects.length > 0) {
+              uiManager.wallManager.updatePreviewWall(intersects[0].point);
+            }
+          }
+        };
+
+        renderer.domElement.addEventListener('mousemove', handleMouseMove);
+
         setIsLoading(false);
 
         return () => {
@@ -229,6 +260,7 @@ export default function EditFloorplan() {
             });
             sceneRef.current = null;
           }
+          renderer.domElement.removeEventListener('mousemove', handleMouseMove);
         };
       } catch (error) {
         console.error('Error initializing scene:', error);

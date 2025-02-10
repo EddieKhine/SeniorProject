@@ -159,7 +159,28 @@ export default function RestaurantOwnerOnboarding() {
             {step === 2 && (
               <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-8">
                 <RestaurantProfileForm 
-                  onProfileSubmit={() => setStep(3)}
+                  onProfileSubmit={async (restaurantData) => {
+                    try {
+                      // Store the complete restaurant data in localStorage
+                      localStorage.setItem("restaurantData", JSON.stringify({
+                        id: restaurantData._id || restaurantData.id,
+                        name: restaurantData.name,
+                        floorplanId: restaurantData.floorplanId,
+                        ownerId: restaurantData.ownerId,
+                        location: restaurantData.location,
+                        cuisineType: restaurantData.cuisineType,
+                        // Add any other necessary data
+                        description: restaurantData.description,
+                        openingHours: restaurantData.openingHours
+                      }));
+
+                      console.log('Stored restaurant data:', restaurantData);
+                      setStep(3);
+                    } catch (error) {
+                      console.error('Error storing restaurant data:', error);
+                      alert('Error saving restaurant data. Please try again.');
+                    }
+                  }}
                   className="text-[#3A2E2B]"
                   authToken={authToken}
                 />
@@ -174,10 +195,34 @@ export default function RestaurantOwnerOnboarding() {
                   <button
                     onClick={async () => {
                       const restaurantData = JSON.parse(localStorage.getItem("restaurantData"));
-                      if (restaurantData?.floorplanId) {
-                        router.push(`/floorplan?edit=${restaurantData.floorplanId}`);
-                      } else {
-                        router.push("/floorplan");
+                      // Get fresh restaurant data from API
+                      try {
+                        const response = await fetch(`/api/restaurants/${restaurantData.id}`);
+                        
+                        if (!response.ok) throw new Error('Failed to fetch restaurant data');
+                        
+                        const freshRestaurantData = await response.json();
+                        
+                        // Update localStorage with complete restaurant data
+                        localStorage.setItem("restaurantData", JSON.stringify({
+                          id: freshRestaurantData._id || freshRestaurantData.id,
+                          name: freshRestaurantData.name,
+                          floorplanId: freshRestaurantData.floorplanId,
+                          // Add any other necessary data
+                          ownerId: freshRestaurantData.ownerId,
+                          location: freshRestaurantData.location,
+                          cuisineType: freshRestaurantData.cuisineType
+                        }));
+
+                        // Navigate to appropriate page
+                        if (freshRestaurantData.floorplanId) {
+                          router.push(`/floorplan/edit/${freshRestaurantData.floorplanId}`);
+                        } else {
+                          router.push("/floorplan");
+                        }
+                      } catch (error) {
+                        console.error('Error fetching restaurant data:', error);
+                        alert('Error loading restaurant data. Please try again.');
                       }
                     }}
                     className="px-6 py-3 bg-gradient-to-r from-[#F4A261] to-[#E76F51] text-white rounded-md 
