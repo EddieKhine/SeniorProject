@@ -1,5 +1,4 @@
 import mongoose from 'mongoose';
-import { unique } from 'next/dist/build/utils';
 
 const userSchema = new mongoose.Schema({
   email: {
@@ -28,8 +27,12 @@ const userSchema = new mongoose.Schema({
     enum: ["customer", "restaurant owner"],
     default: "customer"
   },
+  createdAt: {
+    type: Date,
+    default: Date.now
+  }
 }, { timestamps: true });
 
+// Ensure model is only compiled once
 const User = mongoose.models.User || mongoose.model('User', userSchema);
-
 export default User;

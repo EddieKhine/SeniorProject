@@ -1,7 +1,29 @@
 import { motion } from 'framer-motion';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
-export default function RestaurantInformation({ restaurant, onEditClick }) {
+const RESTAURANT_CATEGORIES = [
+  "Buffet",
+  "Cafe",
+  "Casual Dining",
+  "Fine Dining",
+  "BBQ",
+  "Fast Food",
+  "Seafood",
+  "Steakhouse",
+  "Italian",
+  "Japanese",
+  "Thai",
+  "Chinese",
+  "Indian",
+  "Mexican",
+  "Vegetarian",
+  "Food Court",
+  "Bistro",
+  "Pub & Bar",
+  "Food Truck"
+];
+
+export default function RestaurantInformation({ restaurant, onEditClick, onUpdateSuccess }) {
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState(restaurant);
   
@@ -49,10 +71,10 @@ export default function RestaurantInformation({ restaurant, onEditClick }) {
       if (response.ok) {
         const data = await response.json();
         setIsEditing(false);
-        // Update the restaurant data in the parent component
         onEditClick(data.restaurant);
-        // Remove the page reload
-        // window.location.reload();
+        if (onUpdateSuccess) {
+          onUpdateSuccess();
+        }
       } else {
         const data = await response.json();
         alert(data.message || "Failed to update profile");
@@ -112,15 +134,21 @@ export default function RestaurantInformation({ restaurant, onEditClick }) {
               </div>
               
               <div>
-                <label className="block text-sm font-semibold text-[#3A2E2B] mb-2">Cuisine Type</label>
-                <input
-                  type="text"
+                <label className="block text-sm font-semibold text-[#3A2E2B] mb-2">Category</label>
+                <select
                   name="cuisineType"
                   value={formData.cuisineType}
                   onChange={handleInputChange}
-                  className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#F4A261] focus:border-transparent text-[#3A2E2B]"
+                  className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#F4A261] focus:border-transparent text-[#3A2E2B] bg-white"
                   required
-                />
+                >
+                  <option value="">Select a category</option>
+                  {RESTAURANT_CATEGORIES.map((category) => (
+                    <option key={category} value={category}>
+                      {category}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
 
@@ -211,7 +239,7 @@ export default function RestaurantInformation({ restaurant, onEditClick }) {
           </div>
 
           <div className="bg-gray-50 rounded-2xl p-6 hover:shadow-md transition-all duration-300">
-            <h3 className="text-sm font-semibold text-[#3A2E2B] uppercase tracking-wider mb-2">Cuisine Type</h3>
+            <h3 className="text-sm font-semibold text-[#3A2E2B] uppercase tracking-wider mb-2">Category</h3>
             <p className="text-xl font-medium text-[#3A2E2B]">{restaurant.cuisineType}</p>
           </div>
         </motion.div>

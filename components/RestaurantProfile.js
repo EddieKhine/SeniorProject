@@ -127,7 +127,7 @@ export default function RestaurantProfile() {
         <div className="space-y-10">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div className="bg-gray-50 rounded-2xl p-6 hover:shadow-md transition-shadow duration-200">
-              <h3 className="text-sm font-semibold text-gray-600 uppercase tracking-wider mb-3">Cuisine Type</h3>
+              <h3 className="text-sm font-semibold text-gray-600 uppercase tracking-wider mb-3">Category</h3>
               <p className="text-xl font-medium text-gray-800">{selectedRestaurant?.cuisineType}</p>
             </div>
 

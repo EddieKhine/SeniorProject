@@ -2,6 +2,28 @@
 
 import { useState } from "react";
 
+const RESTAURANT_CATEGORIES = [
+  "Buffet",
+  "Cafe",
+  "Casual Dining",
+  "Fine Dining",
+  "BBQ",
+  "Fast Food",
+  "Seafood",
+  "Steakhouse",
+  "Italian",
+  "Japanese",
+  "Thai",
+  "Chinese",
+  "Indian",
+  "Mexican",
+  "Vegetarian",
+  "Food Court",
+  "Bistro",
+  "Pub & Bar",
+  "Food Truck"
+];
+
 export default function RestaurantProfileForm({ onProfileSubmit, authToken, existingRestaurant = null }) {
   const [formData, setFormData] = useState(
     existingRestaurant || {
@@ -100,16 +122,22 @@ export default function RestaurantProfileForm({ onProfileSubmit, authToken, exis
           </div>
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Cuisine Type
+              Category
             </label>
-            <input
-              type="text"
+            <select
               name="cuisineType"
               value={formData.cuisineType}
               onChange={handleInputChange}
-              className="w-full px-4 py-3 text-black rounded-xl border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all outline-none"
+              className="w-full px-4 py-3 text-black rounded-xl border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all outline-none bg-white"
               required
-            />
+            >
+              <option value="">Select a category</option>
+              {RESTAURANT_CATEGORIES.map((category) => (
+                <option key={category} value={category}>
+                  {category}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
       </div>

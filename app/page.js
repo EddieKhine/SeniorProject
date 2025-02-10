@@ -11,9 +11,19 @@ import {
   faChair,
   faSearch,
   faStar,
+  faUtensils,
+  faBowlRice,
+  faFishFins,
+  faPepperHot,
+  faLeaf,
+  faBurger,
+  faPizzaSlice,
+  faWineGlass
 } from "@fortawesome/free-solid-svg-icons";
 import { config } from "@fortawesome/fontawesome-svg-core";
 import "@fortawesome/fontawesome-svg-core/styles.css";
+import Toast from "../components/Toast";
+import { motion } from "framer-motion";
 
 config.autoAddCss = false;
 
@@ -26,6 +36,9 @@ export default function HomePage() {
   const [favorites, setFavorites] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [scrollPosition, setScrollPosition] = useState(0);
+  const [cuisineTypes, setCuisineTypes] = useState([]);
+  const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState("");
   const router = useRouter();
 
   useEffect(() => {
@@ -39,16 +52,20 @@ export default function HomePage() {
         
         // Transform the data to match the expected format
         const transformedRestaurants = data.restaurants.map((restaurant) => ({
-          id: restaurant._id,
+          _id: restaurant._id,
           name: restaurant.restaurantName,
           location: restaurant.location,
           description: restaurant.description,
           categories: [restaurant.cuisineType], // Using cuisineType as a category
-          rating: 4.5, // You might want to add this to your schema later
+          cuisineType: restaurant.cuisineType,
+          rating: 4.5,
           "opening-hours": formatOpeningHours(restaurant.openingHours),
-          availableSeats: "20", // You might want to add this to your schema later
+          availableSeats: "20",
         }));
 
+        // Extract unique cuisine types
+        const uniqueCuisineTypes = [...new Set(transformedRestaurants.map(r => r.cuisineType))];
+        setCuisineTypes(uniqueCuisineTypes);
         setRestaurants(transformedRestaurants);
       } catch (error) {
         console.error("Error fetching restaurant data:", error);
@@ -71,13 +88,40 @@ export default function HomePage() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  useEffect(() => {
+    const fetchFavorites = async () => {
+      const token = localStorage.getItem("customerToken");
+      if (!token) return;
+
+      try {
+        const response = await fetch('/api/user/favorites', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch favorites');
+        }
+
+        const data = await response.json();
+        setFavorites(data.favorites);
+      } catch (error) {
+        console.error('Error fetching favorites:', error);
+      }
+    };
+
+    fetchFavorites();
+  }, []); // Run once when component mounts
+
   const filteredRestaurants = restaurants.filter((restaurant) => {
     const matchesSearchTerm = restaurant.name.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesLocation = selectedLocation
       ? restaurant.location.toLowerCase() === selectedLocation.toLowerCase()
       : true;
     const matchesCategory = selectedCategory
-      ? restaurant.categories.includes(selectedCategory)
+      ? restaurant.cuisineType.toLowerCase() === selectedCategory.toLowerCase() || 
+        restaurant.categories.includes(selectedCategory)
       : true;
 
     return matchesSearchTerm && matchesLocation && matchesCategory;
@@ -97,19 +141,69 @@ export default function HomePage() {
     setSelectedRestaurant(null);
   };
 
-  const handleFavorite = (restaurant) => {
-    const isFavorite = favorites.some((fav) => fav.id === restaurant.id);
-    if (isFavorite) {
-      setFavorites(favorites.filter((fav) => fav.id !== restaurant.id));
-    } else {
-      setFavorites([...favorites, restaurant]);
+  const handleFavorite = async (restaurant) => {
+    const token = localStorage.getItem("customerToken");
+    if (!token) {
+      setToastMessage("Please login to save restaurants");
+      setShowToast(true);
+      return;
     }
+
+    try {
+      const response = await fetch('/api/user/favorites', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ restaurantId: restaurant._id })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update favorite');
+      }
+      
+      const data = await response.json();
+      
+      if (data.isFavorite) {
+        setFavorites(prev => [...prev, restaurant._id]);
+        setToastMessage("Restaurant saved to favorites");
+      } else {
+        setFavorites(prev => prev.filter(id => id !== restaurant._id));
+        setToastMessage("Restaurant removed from favorites");
+      }
+      
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 3000);
+    } catch (error) {
+      console.error('Error updating favorite:', error);
+      setToastMessage("Failed to update favorites");
+      setShowToast(true);
+    }
+  };
+
+  const isFavorite = (restaurantId) => {
+    return favorites.includes(restaurantId);
   };
 
   // Helper function to format opening hours
   const formatOpeningHours = (hours) => {
     if (!hours || !hours.monday) return "Hours not available";
     return `${hours.monday.open} - ${hours.monday.close}`;
+  };
+
+  const getCuisineIcon = (cuisine) => {
+    const icons = {
+      Italian: faPizzaSlice,
+      Chinese: faBowlRice,
+      Japanese: faFishFins,
+      Indian: faPepperHot,
+      Mexican: faBurger,
+      Thai: faLeaf,
+      Wine: faWineGlass,
+      default: faUtensils
+    };
+    return icons[cuisine] || icons.default;
   };
 
   return (
@@ -190,8 +284,8 @@ export default function HomePage() {
           <div className="container mx-auto relative">
             <div className="flex justify-between items-end mb-12">
               <div>
-                <h2 className="text-4xl font-bold text-gray-900">Explore Categories</h2>
-                <p className="text-gray-600 mt-2 text-lg">Find your preferred dining experience</p>
+                <h2 className="text-4xl font-bold text-gray-900">Explore Cuisines</h2>
+                <p className="text-gray-600 mt-2 text-lg">Discover restaurants by cuisine type</p>
               </div>
               {selectedCategory && (
                 <button
@@ -204,51 +298,52 @@ export default function HomePage() {
               )}
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6">
-              {[
-                { 
-                  name: "Fine Dining", 
-                  image: "https://images.unsplash.com/photo-1550966871-3ed3cdb5ed0c" // elegant restaurant interior
-                },
-                { 
-                  name: "Casual Dining", 
-                  image: "https://images.unsplash.com/photo-1555396273-367ea4eb4db5" // casual restaurant setting
-                },
-                { 
-                  name: "Café", 
-                  image: "https://images.unsplash.com/photo-1445116572660-236099ec97a0" // cozy café interior
-                },
-                { 
-                  name: "Bar & Lounge", 
-                  image: "https://images.unsplash.com/photo-1470337458703-46ad1756a187" // modern bar setting
-                },
-                { 
-                  name: "Buffet", 
-                  image: "https://images.unsplash.com/photo-1574936145840-28808d77a0b6" // buffet spread
-                },
-                { 
-                  name: "Family Style", 
-                  image: "https://images.unsplash.com/photo-1559339352-11d035aa65de" // family restaurant setting
-                },
-              ].map((category, index) => (
-                <div
-                  key={category.name}
-                  onClick={() => setSelectedCategory(category.name)}
-                  className={`group cursor-pointer relative rounded-xl overflow-hidden aspect-[4/3]
-                            ${selectedCategory === category.name ? 'ring-2 ring-orange-500' : ''}
-                            hover:shadow-lg transition-all duration-300 animate-fade-in`}
-                  style={{ animationDelay: `${index * 100}ms` }}
+            <div className="flex flex-wrap gap-3">
+              {cuisineTypes.map((cuisine, index) => (
+                <button
+                  key={cuisine}
+                  onClick={() => setSelectedCategory(cuisine)}
+                  style={{ animationDelay: `${index * 50}ms` }}
+                  className={`
+                    relative group px-6 py-3 rounded-xl transition-all duration-300
+                    ${selectedCategory === cuisine
+                      ? 'bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-lg shadow-orange-500/20 scale-110'
+                      : 'bg-gradient-to-br from-white to-orange-50 hover:to-orange-100 text-gray-700 hover:text-gray-900 border border-orange-100/50 hover:border-orange-200'
+                    }
+                  `}
                 >
-                  <img
-                    src={category.image}
-                    alt={category.name}
-                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
-                  <div className="absolute bottom-0 left-0 right-0 p-4">
-                    <h3 className="text-white font-medium text-sm">{category.name}</h3>
+                  <div className="relative flex items-center gap-2">
+                    <FontAwesomeIcon 
+                      icon={getCuisineIcon(cuisine)} 
+                      className={`
+                        text-lg transition-all duration-300
+                        ${selectedCategory === cuisine ? 'text-white' : 'text-orange-400 group-hover:text-orange-500'}
+                      `}
+                    />
+                    <span className={`
+                      text-sm font-medium transition-all duration-300
+                      ${selectedCategory === cuisine ? 'text-white' : 'group-hover:text-gray-900'}
+                    `}>
+                      {cuisine}
+                    </span>
+                    
+                    {selectedCategory === cuisine && (
+                      <span className="flex h-2 w-2">
+                        <span className="animate-ping absolute inline-flex h-2 w-2 rounded-full bg-white opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-white"></span>
+                      </span>
+                    )}
                   </div>
-                </div>
+
+                  {/* Enhanced Hover Effect */}
+                  <div className={`
+                    absolute inset-0 rounded-xl transition-all duration-300
+                    ${selectedCategory === cuisine
+                      ? 'bg-gradient-to-r from-orange-500/10 to-red-500/10 blur-xl'
+                      : 'bg-gradient-to-br from-orange-50/50 to-orange-100/50 opacity-0 group-hover:opacity-100 blur-xl'
+                    }
+                  `} />
+                </button>
               ))}
             </div>
           </div>
@@ -257,110 +352,102 @@ export default function HomePage() {
         {/* Restaurants Section with Enhanced Cards */}
         <section className="py-20 px-6">
           <div className="container mx-auto">
+            {/* Section Header */}
             <div className="flex items-center justify-between mb-12">
-              <div>
+              <div className="relative">
                 <h2 className="text-4xl font-bold text-gray-900">
                   Featured Restaurants
                   {selectedCategory && (
-                    <span className="text-orange-500 ml-3">• {selectedCategory}</span>
+                    <span className="text-[#E76F51] ml-3">• {selectedCategory}</span>
                   )}
                 </h2>
-                <p className="text-gray-600 mt-2 text-lg">
+                <div className="absolute -bottom-4 left-0 w-1/3 h-1 bg-gradient-to-r from-[#F4A261] to-[#E76F51] rounded-full"></div>
+                <p className="text-gray-600 mt-6 text-lg">
                   {filteredRestaurants.length} restaurants available
                 </p>
               </div>
             </div>
 
+            {/* Restaurant Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {limitedRestaurants.map((restaurant, index) => (
-                <div
-                  key={restaurant.id}
-                  className="group bg-white/50 backdrop-blur-sm rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-500 border border-gray-100"
-                  style={{ animationDelay: `${index * 100}ms` }}
+                <motion.div
+                  key={restaurant._id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: index * 0.1 }}
+                  className="group relative bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-500"
                 >
-                  <div className="relative aspect-[16/9] overflow-hidden">
+                  {/* Restaurant Image Container */}
+                  <div className="relative h-64 overflow-hidden">
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent z-10"></div>
                     <img
                       src={restaurant.image || "/images/restaurant-images/default-restaurant.jpg"}
                       alt={restaurant.name}
-                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                      className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                     />
+                    {/* Favorite Button */}
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
                         handleFavorite(restaurant);
                       }}
-                      className="absolute top-4 right-4 p-2 bg-white/90 backdrop-blur-sm rounded-full shadow-lg hover:scale-110 transition-transform"
+                      className="absolute top-4 right-4 z-20 p-3 bg-white/90 backdrop-blur-sm rounded-full shadow-lg 
+                                 hover:scale-110 transition-transform duration-300"
                     >
                       <FontAwesomeIcon
-                        icon={favorites.some((fav) => fav.id === restaurant.id) ? faSolidHeart : faRegularHeart}
-                        className={`text-lg ${favorites.some((fav) => fav.id === restaurant.id) ? 'text-red-500' : 'text-gray-400'}`}
+                        icon={isFavorite(restaurant._id) ? faSolidHeart : faRegularHeart}
+                        className={`text-xl ${isFavorite(restaurant._id) ? 'text-[#E76F51]' : 'text-gray-400'}`}
                       />
                     </button>
-                  </div>
-
-                  <div className="p-5">
-                    <div className="flex justify-between items-start mb-3">
-                      <h3 className="text-lg font-bold text-gray-900">{restaurant.name}</h3>
-                      <div className="flex items-center bg-orange-50 px-2 py-1 rounded-lg">
-                        <FontAwesomeIcon icon={faStar} className="text-orange-500 text-sm mr-1" />
-                        <span className="text-sm font-medium text-gray-900">{restaurant.rating || "N/A"}</span>
+                    {/* Restaurant Quick Info Overlay */}
+                    <div className="absolute bottom-0 left-0 right-0 p-4 z-10">
+                      <h3 className="text-xl font-bold text-white mb-1">{restaurant.name}</h3>
+                      <div className="flex items-center space-x-2">
+                        <span className="px-2 py-1 bg-white/20 backdrop-blur-sm rounded-full text-white text-sm">
+                          {restaurant.cuisineType}
+                        </span>
+                        <div className="flex items-center bg-white/20 backdrop-blur-sm px-2 py-1 rounded-full">
+                          <FontAwesomeIcon icon={faStar} className="text-yellow-400 text-sm mr-1" />
+                          <span className="text-white text-sm">{restaurant.rating || "N/A"}</span>
+                        </div>
                       </div>
                     </div>
+                  </div>
 
-                    <div className="space-y-2 mb-4">
+                  {/* Restaurant Details */}
+                  <div className="p-6">
+                    <div className="space-y-3 mb-4">
                       <div className="flex items-center text-gray-600">
-                        <FontAwesomeIcon icon={faMapMarkerAlt} className="w-4 mr-2" />
+                        <FontAwesomeIcon icon={faMapMarkerAlt} className="w-4 mr-3 text-[#F4A261]" />
                         <span className="text-sm">{restaurant.location}</span>
                       </div>
                       <div className="flex items-center text-gray-600">
-                        <FontAwesomeIcon icon={faClock} className="w-4 mr-2" />
+                        <FontAwesomeIcon icon={faClock} className="w-4 mr-3 text-[#F4A261]" />
                         <span className="text-sm">{restaurant["opening-hours"]}</span>
                       </div>
                       <div className="flex items-center text-gray-600">
-                        <FontAwesomeIcon icon={faChair} className="w-4 mr-2" />
+                        <FontAwesomeIcon icon={faChair} className="w-4 mr-3 text-[#F4A261]" />
                         <span className="text-sm">{restaurant.availableSeats || "N/A"} seats available</span>
                       </div>
                     </div>
 
-                    <div className="flex flex-wrap gap-2 mb-4">
-                      {restaurant.categories.map((category, index) => (
-                        <span
-                          key={index}
-                          className="px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600"
-                        >
-                          {category}
-                        </span>
-                      ))}
-                    </div>
-
                     <button
-                      onClick={() => router.push(`/restaurants/${restaurant.id}/floorplan`)}
-                      className="w-full py-2.5 bg-gradient-to-r from-orange-400 to-red-500 text-white rounded-lg 
-                               hover:opacity-90 transition-opacity duration-300 font-medium text-sm"
+                      onClick={() => router.push(`/restaurants/${restaurant._id}/floorplan`)}
+                      className="w-full py-3 bg-gradient-to-r from-[#F4A261] to-[#E76F51] text-white rounded-xl
+                                 hover:shadow-lg hover:shadow-orange-200/50 transition-all duration-300 font-medium"
                     >
                       View Floor Plan & Reserve
                     </button>
                   </div>
-                </div>
+                </motion.div>
               ))}
             </div>
           </div>
         </section>
-
-        {/* Enhanced Quick Filters */}
-        <div className="fixed bottom-8 left-1/2 transform -translate-x-1/2 z-30">
-          <div className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-2xl px-8 py-4 flex space-x-6 border border-white/20">
-            {['Popular', 'Nearby', 'Open Now', 'Top Rated'].map((filter) => (
-              <button
-                key={filter}
-                className="px-5 py-2 rounded-xl text-sm font-medium hover:bg-orange-100 hover:text-orange-600 transition-all duration-300"
-              >
-                {filter}
-              </button>
-            ))}
-          </div>
-        </div>
       </main>
+
+      <Toast show={showToast} message={toastMessage} />
     </>
   );
 }

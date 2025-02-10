@@ -11,6 +11,28 @@ import { motion } from 'framer-motion'
 import OwnerProfile from '@/components/OwnerProfile'
 import RestaurantFloorPlan from '@/components/RestaurantFloorPlan'
 
+const RESTAURANT_CATEGORIES = [
+  "Buffet",
+  "Cafe",
+  "Casual Dining",
+  "Fine Dining",
+  "BBQ",
+  "Fast Food",
+  "Seafood",
+  "Steakhouse",
+  "Italian",
+  "Japanese",
+  "Thai",
+  "Chinese",
+  "Indian",
+  "Mexican",
+  "Vegetarian",
+  "Food Court",
+  "Bistro",
+  "Pub & Bar",
+  "Food Truck"
+];
+
 export default function RestaurantSetupDashboard() {
   const router = useRouter()
   const [restaurants, setRestaurants] = useState([])
@@ -21,6 +43,29 @@ export default function RestaurantSetupDashboard() {
   const [floorplan, setFloorplan] = useState(null)
   const [token, setToken] = useState(null)
 
+  const fetchRestaurantProfiles = async () => {
+    try {
+      const storedToken = localStorage.getItem("restaurantOwnerToken");
+      const response = await fetch("/api/restaurants", {
+        headers: {
+          Authorization: `Bearer ${storedToken}`,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setRestaurants(data.restaurants);
+        if (data.restaurants.length > 0) {
+          setSelectedRestaurant(data.restaurants[0]);
+        }
+      }
+    } catch (error) {
+      console.error("Error:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     const storedToken = localStorage.getItem("restaurantOwnerToken");
     if (!storedToken) {
@@ -28,28 +73,6 @@ export default function RestaurantSetupDashboard() {
       return;
     }
     setToken(storedToken);
-
-    const fetchRestaurantProfiles = async () => {
-      try {
-        const response = await fetch("/api/restaurants", {
-          headers: {
-            Authorization: `Bearer ${storedToken}`,
-          },
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          setRestaurants(data.restaurants);
-          if (data.restaurants.length > 0) {
-            setSelectedRestaurant(data.restaurants[0]);
-          }
-        }
-      } catch (error) {
-        console.error("Error:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
 
     fetchRestaurantProfiles();
   }, [router]);
@@ -258,8 +281,8 @@ export default function RestaurantSetupDashboard() {
                           prev.map(r => r._id === updatedRestaurant._id ? updatedRestaurant : r)
                         );
                         setSelectedRestaurant(updatedRestaurant);
-                        fetchRestaurantProfiles(); // Refresh the list after update
                       }}
+                      onUpdateSuccess={fetchRestaurantProfiles}
                     />
                   )
                 )}
