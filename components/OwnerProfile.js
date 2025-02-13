@@ -3,10 +3,19 @@
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { FaEdit, FaUser, FaEnvelope, FaPhone, FaClock } from 'react-icons/fa'
+import { RiUserLine, RiCameraLine } from 'react-icons/ri'
+import Image from 'next/image'
 
 export default function OwnerProfile() {
   const [ownerData, setOwnerData] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [profileImage, setProfileImage] = useState(null)
+  const [formData, setFormData] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    phone: '',
+  })
 
   useEffect(() => {
     const fetchOwnerProfile = async () => {
@@ -25,6 +34,13 @@ export default function OwnerProfile() {
         if (response.ok) {
           const data = await response.json()
           setOwnerData(data)
+          setProfileImage(data.imageUrl)
+          setFormData({
+            firstName: data.name.split(' ')[0],
+            lastName: data.name.split(' ')[1],
+            email: data.email,
+            phone: data.phoneNumber || '',
+          })
         } else {
           console.error("Failed to fetch owner profile")
         }
@@ -37,6 +53,30 @@ export default function OwnerProfile() {
 
     fetchOwnerProfile()
   }, [])
+
+  const handleImageChange = (e) => {
+    const file = e.target.files[0]
+    if (file) {
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        setProfileImage(reader.result)
+      }
+      reader.readAsDataURL(file)
+    }
+  }
+
+  const handleSubmit = (e) => {
+    e.preventDefault()
+    // Handle form submission
+  }
+
+  const handleChange = (e) => {
+    const { name, value } = e.target
+    setFormData({
+      ...formData,
+      [name]: value,
+    })
+  }
 
   if (loading) {
     return (
@@ -55,98 +95,99 @@ export default function OwnerProfile() {
   }
 
   return (
-    <motion.div 
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      className="bg-gradient-to-br from-[#2D3436] to-[#1A1C1E] rounded-3xl shadow-xl p-8"
-    >
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="flex items-center justify-between mb-8"
-      >
-        <h1 className="text-4xl font-bold text-white">
-          Owner Profile
-        </h1>
-        <motion.button
-          whileHover={{ scale: 1.02 }}
-          className="flex items-center gap-2 bg-[#F4A261] text-white px-6 py-3 rounded-xl font-semibold 
-          hover:bg-[#E76F51] transition-all duration-300"
-        >
-          <FaEdit />
-          Edit Profile
-        </motion.button>
-      </motion.div>
+    <div className="max-w-2xl mx-auto space-y-6">
+      <h2 className="text-xl font-semibold text-[#141517] mb-6">Owner Profile</h2>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <motion.div 
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.1 }}
-          className="bg-white/10 backdrop-blur rounded-2xl p-6 hover:bg-white/15 transition-all duration-300"
+      <div className="relative w-32 h-32 mx-auto mb-8">
+        <div className="relative h-full w-full rounded-full overflow-hidden border-4 border-[#FF4F18] shadow-lg">
+          {profileImage ? (
+            <Image
+              src={profileImage}
+              alt="Profile"
+              fill
+              className="object-cover"
+            />
+          ) : (
+            <div className="h-full bg-[#F8FAFC] flex items-center justify-center">
+              <RiUserLine className="text-4xl text-[#64748B]" />
+            </div>
+          )}
+        </div>
+        <button
+          onClick={() => document.getElementById('profileImage').click()}
+          className="absolute bottom-0 right-0 p-2 rounded-full bg-[#FF4F18] text-white hover:opacity-90 transition-all duration-200"
         >
-          <div className="flex items-center gap-3 text-[#F4A261] mb-2">
-            <FaUser className="text-xl" />
-            <h3 className="text-sm font-medium uppercase tracking-wider">Full Name</h3>
-          </div>
-          <p className="text-xl font-medium text-white">{ownerData.name}</p>
-        </motion.div>
-
-        <motion.div 
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.2 }}
-          className="bg-white/10 backdrop-blur rounded-2xl p-6 hover:bg-white/15 transition-all duration-300"
-        >
-          <div className="flex items-center gap-3 text-[#F4A261] mb-2">
-            <FaEnvelope className="text-xl" />
-            <h3 className="text-sm font-medium uppercase tracking-wider">Email</h3>
-          </div>
-          <p className="text-xl font-medium text-white">{ownerData.email}</p>
-        </motion.div>
-
-        <motion.div 
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.3 }}
-          className="bg-white/10 backdrop-blur rounded-2xl p-6 hover:bg-white/15 transition-all duration-300"
-        >
-          <div className="flex items-center gap-3 text-[#F4A261] mb-2">
-            <FaPhone className="text-xl" />
-            <h3 className="text-sm font-medium uppercase tracking-wider">Phone Number</h3>
-          </div>
-          <p className="text-xl font-medium text-white">{ownerData.phoneNumber || 'Not provided'}</p>
-        </motion.div>
-
-        <motion.div 
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.4 }}
-          className="bg-white/10 backdrop-blur rounded-2xl p-6 hover:bg-white/15 transition-all duration-300"
-        >
-          <div className="flex items-center gap-3 text-[#F4A261] mb-2">
-            <FaClock className="text-xl" />
-            <h3 className="text-sm font-medium uppercase tracking-wider">Account Created</h3>
-          </div>
-          <p className="text-xl font-medium text-white">
-            {new Date(ownerData.createdAt).toLocaleDateString()}
-          </p>
-        </motion.div>
+          <RiCameraLine className="text-xl" />
+        </button>
+        <input
+          id="profileImage"
+          type="file"
+          accept="image/*"
+          onChange={handleImageChange}
+          className="hidden"
+        />
       </div>
 
-      {ownerData.subscriptionPlan && (
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5 }}
-          className="mt-6 bg-gradient-to-r from-[#F4A261] to-[#E76F51] rounded-2xl p-6"
-        >
-          <h3 className="text-xl font-semibold text-white mb-2">Current Subscription</h3>
-          <p className="text-2xl font-bold text-white capitalize">
-            {ownerData.subscriptionPlan} Plan
-          </p>
-        </motion.div>
-      )}
-    </motion.div>
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <FormField
+            label="First Name"
+            name="firstName"
+            value={formData.firstName}
+            onChange={handleChange}
+            required
+          />
+          <FormField
+            label="Last Name"
+            name="lastName"
+            value={formData.lastName}
+            onChange={handleChange}
+            required
+          />
+        </div>
+
+        <FormField
+          label="Email"
+          name="email"
+          value={formData.email}
+          onChange={handleChange}
+          type="email"
+          required
+        />
+
+        <FormField
+          label="Phone"
+          name="phone"
+          value={formData.phone}
+          onChange={handleChange}
+          required
+        />
+
+        <div className="flex justify-end">
+          <button
+            type="submit"
+            className="px-6 py-2 rounded-lg bg-[#FF4F18] text-white hover:opacity-90 transition-all duration-200"
+          >
+            Save Changes
+          </button>
+        </div>
+      </form>
+    </div>
   )
-} 
+}
+
+const FormField = ({ label, name, value, onChange, type = 'text', required = false }) => (
+  <div>
+    <label className="block text-sm font-medium text-[#64748B] mb-2">
+      {label}
+    </label>
+    <input
+      type={type}
+      name={name}
+      value={value}
+      onChange={onChange}
+      required={required}
+      className="w-full px-4 py-2 rounded-lg border border-[#E2E8F0] focus:border-[#FF4F18] focus:ring-1 focus:ring-[#FF4F18] outline-none transition-all duration-200"
+    />
+  </div>
+) 

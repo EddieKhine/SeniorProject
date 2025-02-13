@@ -1,9 +1,26 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-    env: {
-      JWT_SECRET: process.env.JWT_SECRET, // explicitly pass JWT_SECRET
-    },
-  };
-  
-  export default nextConfig;
+  async headers() {
+    return [
+      {
+        source: "/api/:path*",
+        headers: [
+          { key: "Access-Control-Allow-Credentials", value: "true" },
+          { key: "Access-Control-Allow-Origin", value: "*" },
+          { key: "Access-Control-Allow-Methods", value: "GET,DELETE,PATCH,POST,PUT" },
+          { key: "Access-Control-Allow-Headers", value: "X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization" },
+        ]
+      }
+    ]
+  },
+  reactStrictMode: true,
+  images: {
+    domains: ['your-image-domain.com'], // Add your image domains here if needed
+  },
+  env: {
+    JWT_SECRET: process.env.JWT_SECRET, // Keep any existing env configurations
+  },
+};
+
+export default nextConfig;
   

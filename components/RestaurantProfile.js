@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { GoogleMap, LoadScript, Marker } from '@react-google-maps/api'
 
 export default function RestaurantProfile() {
   const router = useRouter()
@@ -132,8 +133,20 @@ export default function RestaurantProfile() {
             </div>
 
             <div className="bg-gray-50 rounded-2xl p-6 hover:shadow-md transition-shadow duration-200">
-              <h3 className="text-sm font-semibold text-gray-600 uppercase tracking-wider mb-3">Location</h3>
-              <p className="text-xl font-medium text-gray-800">{selectedRestaurant?.location}</p>
+            <p className="text-xl font-medium text-gray-800">
+              {selectedRestaurant?.location?.address || 'Location not set'}
+            </p>
+              {selectedRestaurant?.location?.coordinates && (
+                <div className="mt-4 h-[200px] rounded-lg overflow-hidden">
+                  <GoogleMap
+                    mapContainerStyle={{ width: '100%', height: '100%' }}
+                    center={location.coordinates}
+                    zoom={15}
+                  >
+                    <Marker position={location.coordinates} />
+                  </GoogleMap>
+                </div>
+              )}
             </div>
           </div>
 

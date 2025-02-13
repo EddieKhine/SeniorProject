@@ -1,6 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
+import { RiImageAddLine } from "react-icons/ri";
+import LocationSelector from './LocationSelector';
 
 const RESTAURANT_CATEGORIES = [
   "Buffet",
@@ -24,9 +27,9 @@ const RESTAURANT_CATEGORIES = [
   "Food Truck"
 ];
 
-export default function RestaurantProfileForm({ onProfileSubmit, authToken, existingRestaurant = null }) {
+export default function RestaurantProfileForm({ mode, initialData, onSubmitSuccess, onCancel }) {
   const [formData, setFormData] = useState(
-    existingRestaurant || {
+    initialData || {
       restaurantName: "",
       cuisineType: "",
       location: "",
@@ -45,6 +48,7 @@ export default function RestaurantProfileForm({ onProfileSubmit, authToken, exis
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [imagePreview, setImagePreview] = useState(null);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -61,188 +65,194 @@ export default function RestaurantProfileForm({ onProfileSubmit, authToken, exis
     }));
   };
 
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleLocationSelect = (location) => {
+    setFormData(prev => ({
+      ...prev,
+      location
+    }));
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError("");
 
-    if (!authToken) {
-      setError("Unauthorized! Please log in.");
-      setLoading(false);
-      return;
-    }
-
     try {
+      const token = localStorage.getItem("restaurantOwnerToken");
       const response = await fetch("/api/restaurants", {
-        method: "POST",
+        method: mode === 'create' ? 'POST' : 'PUT',
         headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${authToken}`,
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(formData)
       });
 
-      const result = await response.json();
-      
-      if (response.ok) {
-        alert("Restaurant profile created successfully!");
-        // Pass the new restaurant data back to the parent component
-        if (onProfileSubmit) {
-          onProfileSubmit(result.restaurant);
-        }
-      } else {
-        setError(result.message || "Failed to save profile.");
+      if (!response.ok) {
+        throw new Error('Failed to save restaurant profile');
       }
-    } catch (error) {
-      setError("An error occurred while saving your profile.");
-      console.error("Error:", error);
+
+      const data = await response.json();
+      onSubmitSuccess(data.restaurant);
+    } catch (err) {
+      setError(err.message);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <form onSubmit={handleSubmit} className="max-w-4xl mx-auto space-y-6">
-      {/* Basic Information Section */}
-      <div className="bg-white rounded-2xl shadow-md p-8">
-        <h3 className="text-xl font-bold text-gray-900 mb-6">Basic Information</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Restaurant Name
+    <form onSubmit={handleSubmit} className="space-y-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="space-y-4">
+          <div className="relative">
+            <label className="block text-sm font-medium text-[#64748B] mb-2">
+              Restaurant Image
             </label>
-            <input
-              type="text"
-              name="restaurantName"
-              value={formData.restaurantName}
-              onChange={handleInputChange}
-              className="w-full px-4 py-3 text-black rounded-xl border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all outline-none"
-              required
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Category
-            </label>
-            <select
-              name="cuisineType"
-              value={formData.cuisineType}
-              onChange={handleInputChange}
-              className="w-full px-4 py-3 text-black rounded-xl border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all outline-none bg-white"
-              required
-            >
-              <option value="">Select a category</option>
-              {RESTAURANT_CATEGORIES.map((category) => (
-                <option key={category} value={category}>
-                  {category}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-      </div>
-
-      {/* Location & Description Section */}
-      <div className="bg-white rounded-2xl shadow-md p-8">
-        <h3 className="text-xl font-bold text-gray-900 mb-6">Location & Details</h3>
-        <div className="space-y-6">
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Location
-            </label>
-            <input
-              type="text"
-              name="location"
-              value={formData.location}
-              onChange={handleInputChange}
-              className="w-full px-4 py-3 text-black rounded-xl border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all outline-none"
-              required
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Description
-            </label>
-            <textarea
-              name="description"
-              value={formData.description}
-              onChange={handleInputChange}
-              rows={4}
-              className="w-full px-4 py-3 text-black rounded-xl border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all outline-none resize-none"
-              required
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Opening Hours Section - Redesigned */}
-      <div className="bg-white rounded-2xl shadow-md p-8">
-        <h3 className="text-xl font-bold text-gray-900 mb-6">Opening Hours</h3>
-        <div className="grid grid-cols-1 gap-6">
-          {Object.keys(formData.openingHours).map((day) => (
-            <div key={day} className="flex flex-col sm:flex-row sm:items-center gap-4">
-              <div className="w-full sm:w-32">
-                <span className="inline-flex items-center justify-center px-4 py-2 bg-gray-100 rounded-lg text-sm font-semibold capitalize text-gray-700 w-full sm:w-auto">
-                  {day}
-                </span>
-              </div>
-              <div className="flex-1 grid grid-cols-2 gap-4">
-                <div className="relative">
-                  <label className="absolute -top-2.5 left-4 bg-white px-2 text-xs font-medium text-gray-600">
-                    Opening Time
-                  </label>
-                  <input
-                    type="time"
-                    value={formData.openingHours[day].open}
-                    onChange={(e) => handleHoursChange(day, "open", e.target.value)}
-                    className="w-full px-4 py-3 text-black rounded-xl border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all outline-none"
-                    required
-                  />
+            <div className="relative h-48 rounded-xl overflow-hidden border-2 border-dashed border-[#E2E8F0] hover:border-[#FF4F18] transition-colors duration-200">
+              {imagePreview ? (
+                <Image
+                  src={imagePreview}
+                  alt="Preview"
+                  fill
+                  className="object-cover"
+                />
+              ) : (
+                <div className="h-full bg-[#F8FAFC] flex flex-col items-center justify-center">
+                  <RiImageAddLine className="text-3xl text-[#64748B] mb-2" />
+                  <p className="text-sm text-[#64748B]">Click to upload image</p>
                 </div>
-                <div className="relative">
-                  <label className="absolute -top-2.5 left-4 bg-white px-2 text-xs font-medium text-gray-600">
-                    Closing Time
-                  </label>
-                  <input
-                    type="time"
-                    value={formData.openingHours[day].close}
-                    onChange={(e) => handleHoursChange(day, "close", e.target.value)}
-                    className="w-full px-4 py-3 text-black rounded-xl border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all outline-none"
-                    required
-                  />
-                </div>
-              </div>
+              )}
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleImageChange}
+                className="absolute inset-0 opacity-0 cursor-pointer"
+              />
             </div>
-          ))}
+          </div>
+
+          <FormField
+            label="Restaurant Name"
+            name="restaurantName"
+            value={formData.restaurantName}
+            onChange={handleInputChange}
+            required
+          />
+
+          <div className="space-y-4">
+            <label className="block text-sm font-medium text-[#64748B] mb-2">
+              Restaurant Location
+            </label>
+            <LocationSelector
+              onLocationSelect={handleLocationSelect}
+              initialLocation={formData.location}
+            />
+          </div>
+
+          <FormField
+            label="Cuisine Type"
+            name="cuisineType"
+            value={formData.cuisineType}
+            onChange={handleInputChange}
+            type="select"
+            options={RESTAURANT_CATEGORIES}
+            required
+          />
+        </div>
+
+        <div className="space-y-4">
+          <FormField
+            label="Description"
+            name="description"
+            value={formData.description}
+            onChange={handleInputChange}
+            type="textarea"
+            required
+          />
+
+          <FormField
+            label="Opening Hours"
+            name="openingHours"
+            value={formData.openingHours}
+            onChange={handleHoursChange}
+            type="textarea"
+            required
+          />
         </div>
       </div>
 
-      {error && (
-        <div className="rounded-xl bg-red-50 p-4 text-sm text-red-600">
-          {error}
-        </div>
-      )}
+      {error && <p className="text-red-500">{error}</p>}
 
-      <div className="flex justify-end pt-4">
+      <div className="flex justify-end gap-4">
+        {onCancel && (
+          <button
+            type="button"
+            onClick={onCancel}
+            className="px-4 py-2 rounded-lg border border-gray-300 hover:bg-gray-50"
+          >
+            Cancel
+          </button>
+        )}
         <button
           type="submit"
           disabled={loading}
-          className="px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl
-          font-semibold shadow-lg shadow-blue-600/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300"
+          className="px-4 py-2 rounded-lg bg-[#FF4F18] text-white hover:opacity-90 transition-all duration-200 disabled:opacity-50"
         >
-          {loading ? (
-            <span className="flex items-center gap-2">
-              <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-              </svg>
-              Saving...
-            </span>
-          ) : (
-            'Save Profile'
-          )}
+          {loading ? 'Saving...' : mode === 'create' ? 'Create Restaurant' : 'Save Changes'}
         </button>
       </div>
     </form>
   );
 }
+
+const FormField = ({ label, name, value, onChange, type = 'text', options = [], required = false }) => (
+  <div>
+    <label className="block text-sm font-medium text-[#64748B] mb-2">
+      {label}
+    </label>
+    {type === 'textarea' ? (
+      <textarea
+        name={name}
+        value={value}
+        onChange={onChange}
+        required={required}
+        className="w-full px-4 py-2 rounded-lg border border-[#E2E8F0] focus:border-[#FF4F18] focus:ring-1 focus:ring-[#FF4F18] outline-none transition-all duration-200"
+        rows={3}
+      />
+    ) : type === 'select' ? (
+      <select
+        name={name}
+        value={value}
+        onChange={onChange}
+        required={required}
+        className="w-full px-4 py-2 rounded-lg border border-[#E2E8F0] focus:border-[#FF4F18] focus:ring-1 focus:ring-[#FF4F18] outline-none transition-all duration-200"
+      >
+        <option value="">Select a category</option>
+        {options.map(option => (
+          <option key={option} value={option}>{option}</option>
+        ))}
+      </select>
+    ) : (
+      <input
+        type={type}
+        name={name}
+        value={value}
+        onChange={onChange}
+        required={required}
+        className="w-full px-4 py-2 rounded-lg border border-[#E2E8F0] focus:border-[#FF4F18] focus:ring-1 focus:ring-[#FF4F18] outline-none transition-all duration-200"
+      />
+    )}
+  </div>
+);

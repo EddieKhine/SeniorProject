@@ -50,15 +50,15 @@ export default function RestaurantOwnerRegister() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#2D3436] to-[#1A1C1E] p-8">
+    <div className="min-h-screen flex items-center justify-center bg-[#141517] p-8">
       <motion.div
-        className="bg-white/10 backdrop-blur-md p-10 rounded-3xl shadow-2xl max-w-2xl w-full border border-white/20"
+        className="bg-white/5 backdrop-blur-md p-10 rounded-3xl shadow-2xl max-w-2xl w-full border border-white/20"
         initial={{ opacity: 0, y: -50 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, ease: "easeOut" }}
       >
         <h2 className="text-4xl font-bold text-white mb-2 text-center">Join FoodLoft</h2>
-        <p className="text-gray-400 text-center mb-8">Create your restaurant owner account</p>
+        <p className="text-white/60 text-center mb-8">Create your restaurant owner account</p>
         
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid grid-cols-2 gap-6">
@@ -71,7 +71,7 @@ export default function RestaurantOwnerRegister() {
                 value={formData.firstName} 
                 onChange={handleChange} 
                 required 
-                className="w-full pl-12 pr-4 py-4 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-400 focus:ring-2 focus:ring-[#F4A261] focus:border-transparent transition-all outline-none" 
+                className="w-full pl-12 pr-4 py-4 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-400 focus:ring-2 focus:ring-[#FF4F18] focus:border-transparent transition-all outline-none" 
               />
             </div>
             <div className="relative">
@@ -83,7 +83,7 @@ export default function RestaurantOwnerRegister() {
                 value={formData.lastName} 
                 onChange={handleChange} 
                 required 
-                className="w-full pl-12 pr-4 py-4 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-400 focus:ring-2 focus:ring-[#F4A261] focus:border-transparent transition-all outline-none" 
+                className="w-full pl-12 pr-4 py-4 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-400 focus:ring-2 focus:ring-[#FF4F18] focus:border-transparent transition-all outline-none" 
               />
             </div>
           </div>
@@ -97,7 +97,7 @@ export default function RestaurantOwnerRegister() {
               value={formData.email} 
               onChange={handleChange} 
               required 
-              className="w-full pl-12 pr-4 py-4 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-400 focus:ring-2 focus:ring-[#F4A261] focus:border-transparent transition-all outline-none" 
+              className="w-full pl-12 pr-4 py-4 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-400 focus:ring-2 focus:ring-[#FF4F18] focus:border-transparent transition-all outline-none" 
             />
           </div>
 
@@ -110,7 +110,7 @@ export default function RestaurantOwnerRegister() {
               value={formData.password} 
               onChange={handleChange} 
               required 
-              className="w-full pl-12 pr-4 py-4 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-400 focus:ring-2 focus:ring-[#F4A261] focus:border-transparent transition-all outline-none" 
+              className="w-full pl-12 pr-4 py-4 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-400 focus:ring-2 focus:ring-[#FF4F18] focus:border-transparent transition-all outline-none" 
             />
           </div>
 
@@ -123,26 +123,18 @@ export default function RestaurantOwnerRegister() {
               value={formData.contactNumber} 
               onChange={handleChange} 
               required 
-              className="w-full pl-12 pr-4 py-4 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-400 focus:ring-2 focus:ring-[#F4A261] focus:border-transparent transition-all outline-none" 
+              className="w-full pl-12 pr-4 py-4 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-400 focus:ring-2 focus:ring-[#FF4F18] focus:border-transparent transition-all outline-none" 
             />
           </div>
 
           <motion.button 
             type="submit" 
-            className="w-full py-4 bg-gradient-to-r from-[#F4A261] to-[#E76F51] text-white font-semibold rounded-xl hover:opacity-90 transition-all transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+            className="w-full py-4 bg-[#FF4F18] text-white font-semibold rounded-xl hover:bg-[#FF4F18]/90 transition-all transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
             disabled={loading}
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
           >
-            {loading ? (
-              <span className="flex items-center justify-center">
-                <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                Creating Account...
-              </span>
-            ) : "Create Account"}
+            {loading ? "Creating Account..." : "Create Account"}
           </motion.button>
 
           {message && (

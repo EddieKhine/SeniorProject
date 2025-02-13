@@ -18,12 +18,14 @@ import {
   faLeaf,
   faBurger,
   faPizzaSlice,
-  faWineGlass
+  faWineGlass,
+  faChevronDown
 } from "@fortawesome/free-solid-svg-icons";
 import { config } from "@fortawesome/fontawesome-svg-core";
 import "@fortawesome/fontawesome-svg-core/styles.css";
 import Toast from "../components/Toast";
 import { motion } from "framer-motion";
+import { GoogleMap, Marker } from '@react-google-maps/api';
 
 config.autoAddCss = false;
 
@@ -54,15 +56,15 @@ export default function HomePage() {
         const transformedRestaurants = data.restaurants.map((restaurant) => ({
           _id: restaurant._id,
           name: restaurant.restaurantName,
-          location: restaurant.location,
+          location: restaurant.location?.address || 'Location not available',
           description: restaurant.description,
-          categories: [restaurant.cuisineType], // Using cuisineType as a category
+          categories: [restaurant.cuisineType],
           cuisineType: restaurant.cuisineType,
           rating: 4.5,
           "opening-hours": formatOpeningHours(restaurant.openingHours),
           availableSeats: "20",
+          fullLocation: restaurant.location
         }));
-
         // Extract unique cuisine types
         const uniqueCuisineTypes = [...new Set(transformedRestaurants.map(r => r.cuisineType))];
         setCuisineTypes(uniqueCuisineTypes);
@@ -235,62 +237,97 @@ export default function HomePage() {
         scrollPosition > 100 ? 'bg-white/80 backdrop-blur-lg shadow-lg' : 'bg-transparent'
       }`} />
       
-      <main className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
+      <main className="min-h-screen bg-[#FFFFFF]">
         {/* Hero Section with Refined Parallax */}
         <section className="relative h-[90vh] overflow-hidden">
+          {/* Background Layers */}
           <div className="absolute inset-0">
-            <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/50 to-transparent z-10" />
-            <img
-              src="https://images.unsplash.com/photo-1517248135467-4c7edcad34c4"
-              alt="Restaurant ambience"
-              className="w-full h-full object-cover"
-              style={{ transform: `translateY(${scrollPosition * 0.2}px)` }}
+            <div 
+              className="absolute inset-0 bg-gradient-to-b from-[#141517]/80 via-[#141517]/40 to-[#141517]/20 z-10" 
+              style={{ backdropFilter: 'blur(2px)' }}
             />
+            <motion.div
+              animate={{
+                scale: [1, 1.05, 1],
+                opacity: [0.8, 0.9, 0.8],
+              }}
+              transition={{
+                duration: 20,
+                repeat: Infinity,
+                repeatType: "reverse",
+              }}
+              className="absolute inset-0"
+            >
+              <img
+                src="https://images.unsplash.com/photo-1552566626-52f8b828add9?q=80&w=2070&auto=format&fit=crop"
+                alt="Modern Restaurant Interior"
+                className="w-full h-full object-cover"
+              />
+            </motion.div>
           </div>
 
+          {/* Hero Content */}
           <div className="relative z-20 h-full container mx-auto px-6 flex flex-col justify-center">
-            <div className="max-w-3xl animate-fade-in-up">
-              <h1 className="text-7xl font-bold text-white leading-tight mb-6">
-                Discover
-                <span className="block mt-2 bg-clip-text text-transparent bg-gradient-to-r from-orange-400 via-red-400 to-pink-500">
-                  Your Perfect Table
-                </span>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8 }}
+              className="max-w-3xl"
+            >
+              <h1 className="text-5xl md:text-6xl font-bold text-white mb-6">
+                Find and Reserve Your
+                <span className="text-[#FF4F18]"> Perfect Table</span>
               </h1>
-              
-              <div className="bg-white/10 backdrop-blur-xl rounded-3xl shadow-2xl p-3 mt-12 max-w-2xl border border-white/20">
-                <div className="flex items-center gap-2">
-                  <div className="flex-1 flex items-center px-4 bg-white/10 rounded-xl">
-                    <FontAwesomeIcon icon={faSearch} className="text-white/70 mr-3" />
+              <p className="text-lg md:text-xl text-white/80 mb-8">
+                Discover the best restaurants in your area and book your dining experience with ease
+              </p>
+
+              {/* Simplified Search Bar */}
+              <div className="bg-white p-2 rounded-2xl shadow-2xl">
+                <div className="flex items-center gap-4">
+                  <div className="flex-1 relative">
+                    <FontAwesomeIcon
+                      icon={faSearch}
+                      className="absolute left-4 top-1/2 transform -translate-y-1/2 text-[#141517]/40"
+                    />
                     <input
                       type="text"
-                      placeholder="Search restaurants, cuisines, or locations..."
-                      className="w-full py-4 focus:outline-none rounded-lg text-white placeholder-white/70 bg-transparent"
+                      placeholder="Search restaurants..."
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
+                      className="w-full pl-12 pr-4 py-4 bg-[#F2F4F7] rounded-xl text-[#141517] placeholder-[#141517]/40 focus:ring-2 focus:ring-[#FF4F18] focus:border-transparent transition-all outline-none"
                     />
                   </div>
-                  <button className="bg-gradient-to-r from-orange-400 to-pink-500 text-white px-8 py-4 rounded-xl hover:shadow-lg hover:scale-105 transition-all duration-300">
-                    Explore
-                  </button>
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    className="py-4 px-8 bg-[#FF4F18] text-white font-semibold rounded-xl hover:bg-[#FF4F18]/90 transition-all whitespace-nowrap"
+                  >
+                    Find Table
+                  </motion.button>
                 </div>
               </div>
-            </div>
+            </motion.div>
           </div>
+
+          {/* Decorative Elements */}
+          <div className="absolute bottom-0 left-0 w-full h-32 bg-gradient-to-t from-white to-transparent z-10" />
+          <div className="absolute -bottom-32 -left-32 w-64 h-64 bg-[#FF4F18]/10 rounded-full blur-3xl" />
+          <div className="absolute -top-32 -right-32 w-64 h-64 bg-[#FF4F18]/10 rounded-full blur-3xl" />
         </section>
 
-        {/* Categories Section with Enhanced Animation */}
-        <section className="py-20 px-6 relative">
-          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-orange-50/30 to-transparent"></div>
+        {/* Redesigned Cuisines Section */}
+        <section className="py-16 px-6 relative bg-[#FFFFFF]">
           <div className="container mx-auto relative">
-            <div className="flex justify-between items-end mb-12">
+            <div className="flex justify-between items-end mb-8">
               <div>
-                <h2 className="text-4xl font-bold text-gray-900">Explore Cuisines</h2>
-                <p className="text-gray-600 mt-2 text-lg">Discover restaurants by cuisine type</p>
+                <h2 className="text-3xl font-bold text-[#141517]">Explore Cuisines</h2>
+                <p className="text-[#141517]/70 mt-2">Discover restaurants by cuisine type</p>
               </div>
               {selectedCategory && (
                 <button
                   onClick={() => setSelectedCategory("")}
-                  className="text-orange-500 hover:text-orange-600 transition-colors flex items-center gap-2"
+                  className="text-[#FF4F18] hover:text-[#FF4F18]/80 transition-colors flex items-center gap-2"
                 >
                   Clear Filter
                   <span className="text-sm">×</span>
@@ -298,152 +335,192 @@ export default function HomePage() {
               )}
             </div>
 
-            <div className="flex flex-wrap gap-3">
+            <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
               {cuisineTypes.map((cuisine, index) => (
-                <button
+                <motion.button
                   key={cuisine}
                   onClick={() => setSelectedCategory(cuisine)}
-                  style={{ animationDelay: `${index * 50}ms` }}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.1 }}
                   className={`
-                    relative group px-6 py-3 rounded-xl transition-all duration-300
+                    relative group p-4 rounded-xl transition-all duration-300
                     ${selectedCategory === cuisine
-                      ? 'bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-lg shadow-orange-500/20 scale-110'
-                      : 'bg-gradient-to-br from-white to-orange-50 hover:to-orange-100 text-gray-700 hover:text-gray-900 border border-orange-100/50 hover:border-orange-200'
+                      ? 'bg-[#FF4F18]'
+                      : 'bg-gray-50 hover:bg-gray-100'
                     }
                   `}
                 >
-                  <div className="relative flex items-center gap-2">
-                    <FontAwesomeIcon 
-                      icon={getCuisineIcon(cuisine)} 
-                      className={`
-                        text-lg transition-all duration-300
-                        ${selectedCategory === cuisine ? 'text-white' : 'text-orange-400 group-hover:text-orange-500'}
-                      `}
-                    />
-                    <span className={`
-                      text-sm font-medium transition-all duration-300
-                      ${selectedCategory === cuisine ? 'text-white' : 'group-hover:text-gray-900'}
+                  <div className="flex flex-col items-center gap-3">
+                    <div className={`
+                      p-3 rounded-lg transition-all duration-300
+                      ${selectedCategory === cuisine
+                        ? 'bg-white/10'
+                        : 'bg-white'
+                      }
                     `}>
-                      {cuisine}
-                    </span>
-                    
-                    {selectedCategory === cuisine && (
-                      <span className="flex h-2 w-2">
-                        <span className="animate-ping absolute inline-flex h-2 w-2 rounded-full bg-white opacity-75"></span>
-                        <span className="relative inline-flex rounded-full h-2 w-2 bg-white"></span>
+                      <FontAwesomeIcon 
+                        icon={getCuisineIcon(cuisine)} 
+                        className={`
+                          text-lg transition-all duration-300
+                          ${selectedCategory === cuisine
+                            ? 'text-white'
+                            : 'text-[#FF4F18]'
+                          }
+                        `}
+                      />
+                    </div>
+                    <div className="text-center">
+                      <span className={`
+                        font-medium text-sm transition-all duration-300
+                        ${selectedCategory === cuisine
+                          ? 'text-white'
+                          : 'text-[#141517]'
+                        }
+                      `}>
+                        {cuisine}
                       </span>
-                    )}
+                      
+                      <p className={`
+                        text-xs mt-0.5 transition-all duration-300
+                        ${selectedCategory === cuisine
+                          ? 'text-white/70'
+                          : 'text-[#141517]/60'
+                        }
+                      `}>
+                        {restaurants.filter(r => r.cuisineType === cuisine).length} Places
+                      </p>
+                    </div>
                   </div>
 
-                  {/* Enhanced Hover Effect */}
-                  <div className={`
-                    absolute inset-0 rounded-xl transition-all duration-300
-                    ${selectedCategory === cuisine
-                      ? 'bg-gradient-to-r from-orange-500/10 to-red-500/10 blur-xl'
-                      : 'bg-gradient-to-br from-orange-50/50 to-orange-100/50 opacity-0 group-hover:opacity-100 blur-xl'
-                    }
-                  `} />
-                </button>
+                  {selectedCategory === cuisine && (
+                    <motion.div
+                      layoutId="activeIndicator"
+                      className="absolute inset-0 rounded-xl bg-gradient-to-br from-[#FF4F18]/20 to-transparent -z-10"
+                    />
+                  )}
+                </motion.button>
               ))}
             </div>
           </div>
+
+          {/* Subtle decorative elements */}
+          <div className="absolute -top-32 -right-32 w-64 h-64 bg-[#FF4F18]/5 rounded-full blur-3xl" />
+          <div className="absolute -bottom-32 -left-32 w-64 h-64 bg-[#FF4F18]/5 rounded-full blur-3xl" />
         </section>
 
         {/* Restaurants Section with Enhanced Cards */}
-        <section className="py-20 px-6">
-          <div className="container mx-auto">
-            {/* Section Header */}
-            <div className="flex items-center justify-between mb-12">
+        <section className="py-20 px-6 bg-gray-50 relative overflow-hidden">
+          <div className="container mx-auto relative">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              className="flex items-center justify-between mb-12"
+            >
               <div className="relative">
-                <h2 className="text-4xl font-bold text-gray-900">
+                <h2 className="text-4xl font-bold text-[#141517]">
                   Featured Restaurants
                   {selectedCategory && (
-                    <span className="text-[#E76F51] ml-3">• {selectedCategory}</span>
+                    <motion.span
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      className="text-[#FF4F18] ml-3"
+                    >
+                      • {selectedCategory}
+                    </motion.span>
                   )}
                 </h2>
-                <div className="absolute -bottom-4 left-0 w-1/3 h-1 bg-gradient-to-r from-[#F4A261] to-[#E76F51] rounded-full"></div>
-                <p className="text-gray-600 mt-6 text-lg">
+                <motion.div
+                  initial={{ width: 0 }}
+                  whileInView={{ width: "33%" }}
+                  viewport={{ once: true }}
+                  className="absolute -bottom-4 left-0 h-1 bg-[#FF4F18] rounded-full"
+                />
+                <p className="text-[#141517]/70 mt-6 text-lg">
                   {filteredRestaurants.length} restaurants available
                 </p>
               </div>
-            </div>
+            </motion.div>
 
-            {/* Restaurant Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {limitedRestaurants.map((restaurant, index) => (
                 <motion.div
                   key={restaurant._id}
                   initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
                   transition={{ duration: 0.5, delay: index * 0.1 }}
-                  className="group relative bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-500"
+                  whileHover={{ y: -10 }}
+                  className="group relative bg-white rounded-2xl overflow-hidden 
+                             shadow-lg hover:shadow-xl transition-all duration-500"
                 >
-                  {/* Restaurant Image Container */}
                   <div className="relative h-64 overflow-hidden">
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent z-10"></div>
-                    <img
-                      src={restaurant.image || "/images/restaurant-images/default-restaurant.jpg"}
-                      alt={restaurant.name}
-                      className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                    />
-                    {/* Favorite Button */}
-                    <button
+                    <motion.div
+                      whileHover={{ scale: 1.1 }}
+                      transition={{ duration: 0.6 }}
+                      className="absolute inset-0"
+                    >
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent z-10" />
+                      <img
+                        src={restaurant.image || "/images/restaurant-images/default-restaurant.jpg"}
+                        alt={restaurant.name}
+                        className="w-full h-full object-cover"
+                      />
+                    </motion.div>
+                    
+                    <motion.button
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.9 }}
                       onClick={(e) => {
                         e.stopPropagation();
                         handleFavorite(restaurant);
                       }}
-                      className="absolute top-4 right-4 z-20 p-3 bg-white/90 backdrop-blur-sm rounded-full shadow-lg 
-                                 hover:scale-110 transition-transform duration-300"
+                      className="absolute top-4 right-4 z-20 p-3 bg-white/90 backdrop-blur-sm rounded-full shadow-lg"
                     >
                       <FontAwesomeIcon
                         icon={isFavorite(restaurant._id) ? faSolidHeart : faRegularHeart}
-                        className={`text-xl ${isFavorite(restaurant._id) ? 'text-[#E76F51]' : 'text-gray-400'}`}
+                        className={`text-xl ${isFavorite(restaurant._id) ? 'text-[#FF4F18]' : 'text-gray-400'}`}
                       />
-                    </button>
-                    {/* Restaurant Quick Info Overlay */}
-                    <div className="absolute bottom-0 left-0 right-0 p-4 z-10">
-                      <h3 className="text-xl font-bold text-white mb-1">{restaurant.name}</h3>
-                      <div className="flex items-center space-x-2">
-                        <span className="px-2 py-1 bg-white/20 backdrop-blur-sm rounded-full text-white text-sm">
-                          {restaurant.cuisineType}
-                        </span>
-                        <div className="flex items-center bg-white/20 backdrop-blur-sm px-2 py-1 rounded-full">
-                          <FontAwesomeIcon icon={faStar} className="text-yellow-400 text-sm mr-1" />
-                          <span className="text-white text-sm">{restaurant.rating || "N/A"}</span>
-                        </div>
-                      </div>
-                    </div>
+                    </motion.button>
                   </div>
 
                   {/* Restaurant Details */}
                   <div className="p-6">
+                    <h3 className="text-xl font-semibold text-[#141517] mb-4">{restaurant.name}</h3>
                     <div className="space-y-3 mb-4">
-                      <div className="flex items-center text-gray-600">
-                        <FontAwesomeIcon icon={faMapMarkerAlt} className="w-4 mr-3 text-[#F4A261]" />
+                      <div className="flex items-center text-[#141517]/60">
+                        <FontAwesomeIcon icon={faMapMarkerAlt} className="w-4 mr-3 text-[#FF4F18]" />
                         <span className="text-sm">{restaurant.location}</span>
                       </div>
-                      <div className="flex items-center text-gray-600">
-                        <FontAwesomeIcon icon={faClock} className="w-4 mr-3 text-[#F4A261]" />
+                      <div className="flex items-center text-[#141517]/60">
+                        <FontAwesomeIcon icon={faClock} className="w-4 mr-3 text-[#FF4F18]" />
                         <span className="text-sm">{restaurant["opening-hours"]}</span>
                       </div>
-                      <div className="flex items-center text-gray-600">
-                        <FontAwesomeIcon icon={faChair} className="w-4 mr-3 text-[#F4A261]" />
+                      <div className="flex items-center text-[#141517]/60">
+                        <FontAwesomeIcon icon={faChair} className="w-4 mr-3 text-[#FF4F18]" />
                         <span className="text-sm">{restaurant.availableSeats || "N/A"} seats available</span>
                       </div>
                     </div>
 
-                    <button
-                      onClick={() => router.push(`/restaurants/${restaurant._id}/floorplan`)}
-                      className="w-full py-3 bg-gradient-to-r from-[#F4A261] to-[#E76F51] text-white rounded-xl
-                                 hover:shadow-lg hover:shadow-orange-200/50 transition-all duration-300 font-medium"
-                    >
-                      View Floor Plan & Reserve
-                    </button>
+                    <div>
+                      <button
+                        onClick={() => router.push(`/restaurants/${restaurant._id}/floorplan`)}
+                        className="w-full py-3 bg-[#FF4F18] text-white rounded-xl
+                                 hover:shadow-lg hover:shadow-[#FF4F18]/20 transition-all duration-300 font-medium"
+                      >
+                        View Floor Plan & Reserve
+                      </button>
+                    </div>
                   </div>
                 </motion.div>
               ))}
             </div>
           </div>
+
+          {/* Decorative Elements */}
+          <div className="absolute -bottom-32 -left-32 w-64 h-64 bg-[#FF4F18]/10 rounded-full blur-3xl" />
+          <div className="absolute -top-32 -right-32 w-64 h-64 bg-[#FF4F18]/10 rounded-full blur-3xl" />
         </section>
       </main>
 

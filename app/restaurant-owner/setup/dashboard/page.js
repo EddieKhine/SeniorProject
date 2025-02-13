@@ -139,33 +139,33 @@ export default function RestaurantSetupDashboard() {
   return (
     <>
       <RestaurantOwnerNavbar />
-      <div className="flex min-h-[calc(100vh-64px)] bg-gray-100 pt-24">
+      <div className="flex min-h-[calc(100vh-64px)] bg-gradient-to-b from-[#FFFFFF] to-[#F8FAFC]">
         {/* Sidebar */}
-        <div className="w-64 bg-white shadow-lg fixed left-0 top-16 h-[calc(100vh-64px)] border-r border-gray-200">
+        <div className="w-64 bg-white/95 backdrop-blur-lg shadow-lg fixed left-0 top-20 h-[calc(100vh-80px)] border-r border-[#F2F4F7] mt-4 rounded-r-2xl">
           <div className="p-4">
-            <h2 className="text-lg font-semibold text-gray-800 mb-6 px-3">Dashboard</h2>
+            <h2 className="text-lg font-semibold text-[#141517] mb-6 px-3">Dashboard</h2>
             <nav className="space-y-2">
               <button
                 onClick={() => setActiveSection('owner-profile')}
                 className={`flex items-center space-x-3 w-full p-3 rounded-lg transition-all duration-200 ${
                   activeSection === 'owner-profile'
-                    ? 'bg-orange-50 text-orange-600 font-medium shadow-sm'
-                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                    ? 'bg-[#FF4F18] text-white font-medium shadow-lg'
+                    : 'text-[#64748B] hover:bg-[#F8FAFC] hover:text-[#141517]'
                 }`}
               >
-                <RiUserLine className={`text-xl ${activeSection === 'owner-profile' ? 'text-orange-600' : 'text-gray-400'}`} />
+                <RiUserLine className={`text-xl ${activeSection === 'owner-profile' ? 'text-white' : 'text-[#64748B]'}`} />
                 <span>Profile</span>
               </button>
               <button
                 onClick={() => setActiveSection('profile')}
                 className={`flex items-center space-x-3 w-full p-3 rounded-lg transition-all duration-200 ${
                   activeSection === 'profile'
-                    ? 'bg-orange-50 text-orange-600 font-medium shadow-sm'
-                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                    ? 'bg-[#FF4F18] text-white font-medium shadow-lg'
+                    : 'text-[#64748B] hover:bg-[#F8FAFC] hover:text-[#141517]'
                 }`}
                 type="button"
               >
-                <RiRestaurantLine className={`text-xl ${activeSection === 'profile' ? 'text-orange-600' : 'text-gray-400'}`} />
+                <RiRestaurantLine className={`text-xl ${activeSection === 'profile' ? 'text-white' : 'text-[#64748B]'}`} />
                 <span>Restaurant Profile</span>
               </button>
               
@@ -173,12 +173,12 @@ export default function RestaurantSetupDashboard() {
                 onClick={() => setActiveSection('floorplan')}
                 className={`flex items-center space-x-3 w-full p-3 rounded-lg transition-all duration-200 ${
                   activeSection === 'floorplan'
-                    ? 'bg-orange-50 text-orange-600 font-medium shadow-sm'
-                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                    ? 'bg-[#FF4F18] text-white font-medium shadow-lg'
+                    : 'text-[#64748B] hover:bg-[#F8FAFC] hover:text-[#141517]'
                 }`}
                 type="button"
               >
-                <RiLayoutLine className={`text-xl ${activeSection === 'floorplan' ? 'text-orange-600' : 'text-gray-400'}`} />
+                <RiLayoutLine className={`text-xl ${activeSection === 'floorplan' ? 'text-white' : 'text-[#64748B]'}`} />
                 <span>Floor Plan</span>
               </button>
               
@@ -186,11 +186,11 @@ export default function RestaurantSetupDashboard() {
                 onClick={() => setActiveSection('reservation')}
                 className={`flex items-center space-x-3 w-full p-3 rounded-lg transition-all duration-200 ${
                   activeSection === 'reservation'
-                    ? 'bg-orange-50 text-orange-600 font-medium shadow-sm'
-                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                    ? 'bg-[#FF4F18] text-white font-medium shadow-lg'
+                    : 'text-[#64748B] hover:bg-[#F8FAFC] hover:text-[#141517]'
                 }`}
               >
-                <RiCalendarLine className={`text-xl ${activeSection === 'reservation' ? 'text-orange-600' : 'text-gray-400'}`} />
+                <RiCalendarLine className={`text-xl ${activeSection === 'reservation' ? 'text-white' : 'text-[#64748B]'}`} />
                 <span>Reservation</span>
               </button>
               
@@ -198,11 +198,11 @@ export default function RestaurantSetupDashboard() {
                 onClick={() => setActiveSection('subscription')}
                 className={`flex items-center space-x-3 w-full p-3 rounded-lg transition-all duration-200 ${
                   activeSection === 'subscription'
-                    ? 'bg-orange-50 text-orange-600 font-medium shadow-sm'
-                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                    ? 'bg-[#FF4F18] text-white font-medium shadow-lg'
+                    : 'text-[#64748B] hover:bg-[#F8FAFC] hover:text-[#141517]'
                 }`}
               >
-                <RiVipCrownLine className={`text-xl ${activeSection === 'subscription' ? 'text-orange-600' : 'text-gray-400'}`} />
+                <RiVipCrownLine className={`text-xl ${activeSection === 'subscription' ? 'text-white' : 'text-[#64748B]'}`} />
                 <span>Subscription</span>
               </button>
               
@@ -212,7 +212,7 @@ export default function RestaurantSetupDashboard() {
         </div>
 
         {/* Main Content */}
-        <div className="flex-1 ml-64 px-8">
+        <div className="flex-1 ml-64 px-8 mt-4">
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -222,8 +222,8 @@ export default function RestaurantSetupDashboard() {
             {activeSection === 'profile' && (
               <div className="space-y-6">
                 {/* Restaurant Profile Selector */}
-                <div className="bg-white p-6 rounded-xl shadow-sm mb-6">
-                  <h2 className="text-xl font-semibold text-[#3A2E2B] mb-4">Your Restaurant Profiles</h2>
+                <div className="bg-white p-6 rounded-xl shadow-sm border border-[#F2F4F7] mb-6">
+                  <h2 className="text-xl font-semibold text-[#141517] mb-4">Your Restaurant Profiles</h2>
                   <div className="flex flex-wrap gap-4">
                     {restaurants.map((rest) => (
                       <button
@@ -231,8 +231,8 @@ export default function RestaurantSetupDashboard() {
                         onClick={() => setSelectedRestaurant(rest)}
                         className={`px-4 py-2 rounded-lg transition-all duration-200 ${
                           selectedRestaurant?._id === rest._id
-                            ? 'bg-[#F4A261] text-white'
-                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                            ? 'bg-[#FF4F18] text-white'
+                            : 'bg-[#F8FAFC] text-[#64748B] hover:bg-[#F2F4F7] hover:text-[#141517] border border-[#E2E8F0]'
                         }`}
                       >
                         {rest.restaurantName}
@@ -240,7 +240,7 @@ export default function RestaurantSetupDashboard() {
                     ))}
                     <button
                       onClick={handleCreateNewRestaurant}
-                      className="px-4 py-2 rounded-lg bg-[#E76F51] text-white hover:bg-[#E76F51]/90 transition-all duration-200 flex items-center gap-2"
+                      className="px-4 py-2 rounded-lg bg-[#FF4F18] text-white hover:opacity-90 transition-all duration-200 flex items-center gap-2"
                     >
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                         <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
@@ -252,12 +252,12 @@ export default function RestaurantSetupDashboard() {
 
                 {/* Restaurant Form or Information */}
                 {isCreatingNew ? (
-                  <div>
+                  <div className="bg-white p-6 rounded-xl shadow-sm border border-[#F2F4F7]">
                     <div className="flex justify-between items-center mb-4">
-                      <h2 className="text-xl font-semibold">Create New Restaurant</h2>
+                      <h2 className="text-xl font-semibold text-[#141517]">Create New Restaurant</h2>
                       <button 
                         onClick={() => setIsCreatingNew(false)}
-                        className="text-gray-600 hover:text-gray-800"
+                        className="text-[#64748B] hover:text-[#141517]"
                       >
                         Cancel
                       </button>
@@ -274,22 +274,24 @@ export default function RestaurantSetupDashboard() {
                   </div>
                 ) : (
                   selectedRestaurant && (
-                    <RestaurantInformation 
-                      restaurant={selectedRestaurant}
-                      onEditClick={(updatedRestaurant) => {
-                        setRestaurants(prev => 
-                          prev.map(r => r._id === updatedRestaurant._id ? updatedRestaurant : r)
-                        );
-                        setSelectedRestaurant(updatedRestaurant);
-                      }}
-                      onUpdateSuccess={fetchRestaurantProfiles}
-                    />
+                    <div className="bg-white p-6 rounded-xl shadow-sm border border-[#F2F4F7]">
+                      <RestaurantInformation 
+                        restaurant={selectedRestaurant}
+                        onEditClick={(updatedRestaurant) => {
+                          setRestaurants(prev => 
+                            prev.map(r => r._id === updatedRestaurant._id ? updatedRestaurant : r)
+                          );
+                          setSelectedRestaurant(updatedRestaurant);
+                        }}
+                        onUpdateSuccess={fetchRestaurantProfiles}
+                      />
+                    </div>
                   )
                 )}
               </div>
             )}
             {activeSection === 'floorplan' && (
-              <div>
+              <div className="bg-white p-6 rounded-xl shadow-sm border border-[#F2F4F7]">
                 {selectedRestaurant ? (
                   <RestaurantFloorPlan 
                     token={token}
@@ -297,7 +299,7 @@ export default function RestaurantSetupDashboard() {
                   />
                 ) : (
                   <div className="text-center py-8">
-                    <p className="mb-4">No restaurant selected.</p>
+                    <p className="text-[#64748B]">No restaurant selected.</p>
                   </div>
                 )}
               </div>
@@ -306,12 +308,14 @@ export default function RestaurantSetupDashboard() {
               <div>Reservation Component</div>
             )}
             {activeSection === 'subscription' && (
-              <div className="mt-4">
+              <div className="bg-white p-6 rounded-xl shadow-sm border border-[#F2F4F7] mt-4">
                 <SubscriptionPlans />
               </div>
             )}
             {activeSection === 'owner-profile' && (
-              <OwnerProfile />
+              <div className="bg-white p-6 rounded-xl shadow-sm border border-[#F2F4F7]">
+                <OwnerProfile />
+              </div>
             )}
           </motion.div>
         </div>

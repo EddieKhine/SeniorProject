@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faUser, faUserEdit, faSignOutAlt, faChevronDown, faUtensils } from "@fortawesome/free-solid-svg-icons";
+import { faUser, faUserEdit, faSignOutAlt, faChevronDown, faUtensils, faBell, faCalendar, faHeart } from "@fortawesome/free-solid-svg-icons";
 import Link from "next/link";
 import LoginModal from "./LoginModal";
 import SignupModal from "./SignupModal";
@@ -68,31 +68,33 @@ export default function Navbar() {
 
   return (
     <>
-      <nav className="bg-gradient-to-r from-[#2b2929] to-[#1a1919] backdrop-blur-lg shadow-lg py-6 px-6 fixed w-full top-0 z-50">
+      <nav className="bg-white shadow-lg py-4 px-6 fixed w-full top-0 z-50 border-b border-[#F2F4F7]">
         <div className="max-w-7xl mx-auto flex justify-between items-center">
           {/* Left Side - Logo & Links */}
-          <div className="flex items-center space-x-6">
+          <div className="flex items-center space-x-8">
             <Link href="/" className="transform hover:scale-105 transition-transform duration-200">
-              <div className="flex items-center gap-2">
-                <FontAwesomeIcon 
-                  icon={faUtensils} 
-                  className="text-[#F4A261] text-2xl"
-                />
-                <h1 className="text-2xl font-bold text-white font-['Poppins']">
-                  Food<span className="text-[#F4A261]">Loft</span>
+              <div className="flex items-center gap-3">
+                <div className="bg-[#FF4F18] p-2.5 rounded-xl shadow-lg">
+                  <FontAwesomeIcon 
+                    icon={faUtensils} 
+                    className="text-white text-xl"
+                  />
+                </div>
+                <h1 className="text-2xl font-bold text-[#141517] font-['Poppins']">
+                  Food<span className="text-[#FF4F18]">Loft</span>
                 </h1>
               </div>
             </Link>
             
-            <div className="hidden md:flex space-x-1">
+            <div className="hidden md:flex space-x-2">
               <Link href="/" passHref>
-                <button className="text-white px-4 py-2 rounded-full hover:bg-white/10 hover:text-white transition-all duration-300 ease-in-out">
-                  Customers
+                <button className="text-[#141517]/70 px-5 py-2.5 rounded-xl hover:bg-[#F2F4F7] hover:text-[#141517] transition-all duration-300 ease-in-out relative group">
+                  <span className="relative z-10">Explore</span>
                 </button>
               </Link>
               <Link href="/restaurant-owner">
-                <button className="text-white px-4 py-2 rounded-full hover:bg-white/10 hover:text-white transition-all duration-300 ease-in-out">
-                  For Restaurants
+                <button className="text-[#141517]/70 px-5 py-2.5 rounded-xl hover:bg-[#F2F4F7] hover:text-[#141517] transition-all duration-300 ease-in-out relative group">
+                  <span className="relative z-10">For Restaurants</span>
                 </button>
               </Link>
             </div>
@@ -101,62 +103,62 @@ export default function Navbar() {
           {/* Right Side - Authentication & Profile */}
           <div className="flex items-center space-x-4">
             {user ? (
-              <div className="flex items-center space-x-3">
-                <span className="text-white hidden md:block">{user.firstName} {user.lastName}</span>
+              <div className="flex items-center space-x-6">
+                {/* Profile Section */}
                 <div className="relative">
-                  <div
-                    className="flex items-center justify-center w-10 h-10 bg-gradient-to-r from-[#F4A261] to-[#e07b5d] rounded-full cursor-pointer transform hover:scale-105 transition-all duration-200 shadow-md"
+                  <button
                     onClick={toggleDropdown}
-                    title="Profile"
+                    className="flex items-center space-x-3 px-3 py-2 rounded-xl hover:bg-[#F2F4F7] transition-all duration-200"
                   >
-                    {user.profileImage ? (
-                      <img
-                        src={user.profileImage}
-                        alt="Profile"
-                        className="w-10 h-10 rounded-full object-cover border-2 border-white"
-                      />
-                    ) : (
-                      <FontAwesomeIcon icon={faUser} className="text-white text-lg" />
-                    )}
-                  </div>
-
-                  {/* Enhanced Dropdown Menu */}
-                  {isDropdownOpen && (
-                    <div className="absolute right-0 mt-3 w-72 bg-white rounded-2xl overflow-hidden z-50 transform transition-all duration-200 shadow-2xl border border-gray-100">
-                      <div className="bg-gradient-to-r from-[#F4A261] to-[#e07b5d] text-white p-6 flex flex-col items-center">
-                        <div className="w-20 h-20 rounded-full bg-white p-1 flex items-center justify-center shadow-lg">
-                          {user.profileImage ? (
-                            <img src={user.profileImage} alt="Profile" className="w-full h-full rounded-full object-cover" />
-                          ) : (
-                            <FontAwesomeIcon icon={faUser} className="text-[#3A2E2B] text-3xl" />
-                          )}
+                    <div className="hidden md:block text-right">
+                      <p className="text-[#141517] font-medium">{user.firstName} {user.lastName}</p>
+                      <p className="text-sm text-[#141517]/60">@{user.firstName.toLowerCase()}</p>
+                    </div>
+                    <div className="w-10 h-10 rounded-xl overflow-hidden border-2 border-transparent hover:border-[#FF4F18] transition-all duration-300">
+                      {user.profileImage ? (
+                        <img
+                          src={user.profileImage}
+                          alt="Profile"
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-[#FF4F18] flex items-center justify-center">
+                          <FontAwesomeIcon icon={faUser} className="text-white text-lg" />
                         </div>
-                        <p className="font-bold mt-3 text-lg">{user.firstName} {user.lastName}</p>
-                        <p className="text-sm opacity-90">{user.email}</p>
-                        <span className="text-xs mt-2 bg-white/20 backdrop-blur-md px-4 py-1 rounded-full font-medium">
-                          {user.role.charAt(0).toUpperCase() + user.role.slice(1)}
-                        </span>
+                      )}
+                    </div>
+                  </button>
+
+                  {/* Dropdown Menu */}
+                  {isDropdownOpen && (
+                    <div className="absolute right-0 mt-2 w-64 bg-white rounded-xl overflow-hidden shadow-xl border border-[#F2F4F7]">
+                      {/* User Quick Stats */}
+                      <div className="px-4 py-3 border-b border-[#F2F4F7]">
+                        <div className="flex items-center space-x-3">
+                          <div className="flex-shrink-0">
+                            <div className="w-12 h-12 rounded-xl bg-[#FF4F18] flex items-center justify-center">
+                              <FontAwesomeIcon icon={faUser} className="text-white text-xl" />
+                            </div>
+                          </div>
+                          <div>
+                            <p className="text-[#141517] font-medium">{user.firstName} {user.lastName}</p>
+                            <p className="text-sm text-[#141517]/60">{user.email}</p>
+                          </div>
+                        </div>
                       </div>
 
+                      {/* Menu Items */}
                       <div className="py-2">
-                        {user.role === "customer" && (
-                          <button
-                            onClick={() => { router.push("/customer/profile"); setIsDropdownOpen(false); }}
-                            className="w-full px-6 py-3 text-gray-700 hover:bg-gray-50 flex items-center group transition-colors duration-200"
-                          >
-                            <FontAwesomeIcon icon={faUserEdit} className="mr-3 text-[#F4A261] group-hover:scale-110 transition-transform duration-200" />
-                            View Profile
+                        <Link href="/customer/profile">
+                          <button className="w-full px-4 py-2 text-left text-[#141517]/70 hover:bg-[#F2F4F7] transition-colors duration-200">
+                            Profile Settings
                           </button>
-                        )}
-                      </div>
-
-                      <div className="border-t border-gray-100">
+                        </Link>
                         <button
                           onClick={handleLogout}
-                          className="w-full px-6 py-3 text-red-500 hover:bg-red-50 flex items-center group transition-colors duration-200"
+                          className="w-full px-4 py-2 text-left text-red-500 hover:bg-red-50 transition-colors duration-200"
                         >
-                          <FontAwesomeIcon icon={faSignOutAlt} className="mr-3 group-hover:scale-110 transition-transform duration-200" />
-                          Logout
+                          Sign Out
                         </button>
                       </div>
                     </div>
@@ -164,16 +166,16 @@ export default function Navbar() {
                 </div>
               </div>
             ) : (
-              <div className="flex items-center space-x-3">
+              <div className="flex items-center space-x-4">
                 <button
                   onClick={openLoginModal}
-                  className="text-white px-5 py-2 rounded-full hover:bg-white/10 transition-all duration-300 ease-in-out"
+                  className="text-[#141517]/70 px-5 py-2.5 rounded-xl hover:bg-[#F2F4F7] hover:text-[#141517] transition-all duration-300 ease-in-out"
                 >
                   Login
                 </button>
                 <button
                   onClick={openSignupModal}
-                  className="text-white bg-gradient-to-r from-[#F4A261] to-[#e07b5d] px-5 py-2 rounded-full hover:shadow-lg hover:scale-105 transition-all duration-300 ease-in-out"
+                  className="bg-[#FF4F18] text-white px-6 py-2.5 rounded-xl font-medium hover:bg-[#FF4F18]/90 transition-all duration-300"
                 >
                   Create an account
                 </button>
@@ -183,8 +185,12 @@ export default function Navbar() {
         </div>
       </nav>
 
-      {/* Add spacing below fixed navbar */}
-      <div className="h-20"></div>
+      {/* Remove the spacing div and handle it in the page layout */}
+      <style jsx global>{`
+        main {
+          padding-top: 72px; /* Height of the navbar */
+        }
+      `}</style>
 
       {/* Modals */}
       <LoginModal

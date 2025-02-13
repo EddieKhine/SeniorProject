@@ -85,8 +85,8 @@ const RestaurantOwnerNavbar = ({ onLoginClick }) => {
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link href="/restaurant-owner" className="flex items-center space-x-2">
-            <FaUtensils className="h-6 w-6 text-[#F4A261]" />
-            <span className="font-['Pacifico'] text-2xl text-[#F4A261]">FoodLoft</span>
+            <FaUtensils className="h-6 w-6 text-[#FF4F18]" />
+            <span className="font-['Pacifico'] text-2xl text-[#FF4F18]">FoodLoft</span>
           </Link>
 
           {/* Desktop Navigation */}
@@ -97,8 +97,8 @@ const RestaurantOwnerNavbar = ({ onLoginClick }) => {
                   href="/restaurant-owner/setup/dashboard"
                   className={`flex items-center space-x-2 px-3 py-2 rounded-lg transition-colors ${
                     pathname === '/restaurant-owner/setup/dashboard'
-                      ? 'text-[#F4A261] bg-orange-50'
-                      : 'text-gray-600 hover:text-[#F4A261] hover:bg-orange-50'
+                      ? 'text-[#FF4F18] bg-[#FF4F18]/10'
+                      : 'text-gray-600 hover:text-[#FF4F18] hover:bg-[#FF4F18]/10'
                   }`}
                 >
                   <span className="text-lg"><FaUtensils /></span>
@@ -128,7 +128,7 @@ const RestaurantOwnerNavbar = ({ onLoginClick }) => {
               <div className="flex items-center space-x-4">
                 <button
                   onClick={onLoginClick}
-                  className="flex items-center space-x-2 px-4 py-2 rounded-lg text-white bg-gradient-to-r from-[#F4A261] to-[#E07B5D] hover:opacity-90 transition-opacity"
+                  className="flex items-center space-x-2 px-4 py-2 rounded-lg text-white bg-[#FF4F18] hover:bg-[#FF4F18]/90 transition-opacity"
                 >
                   <span>Restaurant Login</span>
                 </button>
@@ -154,7 +154,7 @@ const RestaurantOwnerNavbar = ({ onLoginClick }) => {
             <div className="md:hidden flex items-center space-x-2">
               <button
                 onClick={onLoginClick}
-                className="flex items-center space-x-2 px-3 py-2 rounded-lg text-white bg-gradient-to-r from-[#F4A261] to-[#E07B5D] hover:opacity-90 transition-opacity"
+                className="flex items-center space-x-2 px-3 py-2 rounded-lg text-white bg-[#FF4F18] hover:bg-[#FF4F18]/90 transition-opacity"
               >
                 <span>Login</span>
               </button>
@@ -170,7 +170,7 @@ const RestaurantOwnerNavbar = ({ onLoginClick }) => {
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -10 }}
-          className="md:hidden bg-white shadow-lg"
+          className="md:hidden bg-[#141517] shadow-lg border-t border-white/10"
         >
           <div className="px-2 pt-2 pb-3 space-y-1">
             <div className="px-3 py-2 text-gray-600">
@@ -180,8 +180,8 @@ const RestaurantOwnerNavbar = ({ onLoginClick }) => {
               href="/restaurant-owner/dashboard"
               className={`flex items-center space-x-2 px-3 py-2 rounded-lg transition-colors ${
                 pathname === '/restaurant-owner/dashboard'
-                  ? 'text-[#F4A261] bg-orange-50'
-                  : 'text-gray-600 hover:text-[#F4A261] hover:bg-orange-50'
+                  ? 'text-[#FF4F18] bg-[#FF4F18]/10'
+                  : 'text-gray-600 hover:text-[#FF4F18] hover:bg-[#FF4F18]/10'
               }`}
               onClick={() => setIsOpen(false)}
             >
@@ -191,14 +191,14 @@ const RestaurantOwnerNavbar = ({ onLoginClick }) => {
             <div className="flex items-center justify-between px-3 py-2 border-t">
               <Link
                 href="/"
-                className="text-gray-600 hover:text-[#F4A261]"
+                className="text-gray-600 hover:text-[#FF4F18]"
                 onClick={() => setIsOpen(false)}
               >
                 <FaUtensils className="rotate-180" />
               </Link>
               <button
                 onClick={handleLogout}
-                className="text-gray-600 hover:text-[#F4A261]"
+                className="text-gray-600 hover:text-[#FF4F18]"
               >
                 <FaSignOutAlt />
               </button>
