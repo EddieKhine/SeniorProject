@@ -7,7 +7,7 @@ export async function GET() {
 
   try {
     const restaurants = await Restaurant.find({})
-      .select('restaurantName cuisineType location description openingHours')
+      .select('restaurantName cuisineType location description openingHours images')
       .lean();
 
     return NextResponse.json({ restaurants }, { status: 200 });

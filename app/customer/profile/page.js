@@ -14,8 +14,10 @@ import {
   FaHeart,
   FaBookmark,
   FaHistory,
-  FaCalendarAlt
+  FaCalendarAlt,
+  FaUtensils
 } from "react-icons/fa";
+import Image from "next/image";
 
 export default function CustomerProfile() {
   const router = useRouter();
@@ -426,11 +428,19 @@ export default function CustomerProfile() {
                               className="bg-white rounded-xl shadow-sm overflow-hidden hover:shadow-md transition-all duration-300"
                             >
                               <div className="relative h-48">
-                                <img
-                                  src={restaurant.images?.[0] || "/default-restaurant.jpg"}
-                                  alt={restaurant.name}
-                                  className="w-full h-full object-cover"
-                                />
+                                {restaurant.images?.main ? (
+                                  <Image
+                                    src={restaurant.images.main}
+                                    alt={restaurant.name}
+                                    fill
+                                    className="object-cover"
+                                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                                  />
+                                ) : (
+                                  <div className="w-full h-full bg-gray-200 flex items-center justify-center">
+                                    <FaUtensils className="text-4xl text-gray-400" />
+                                  </div>
+                                )}
                                 <div className="absolute top-4 right-4">
                                   <motion.button
                                     whileHover={{ scale: 1.1 }}

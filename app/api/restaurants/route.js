@@ -30,7 +30,8 @@ export async function POST(req) {
       cuisineType,
       location,
       description,
-      openingHours
+      openingHours,
+      images
     } = await req.json();
 
     if (!restaurantName || !cuisineType || !location || !description) {
@@ -45,6 +46,7 @@ export async function POST(req) {
       location,
       description,
       openingHours,
+      images
     });
 
     await restaurant.save();
@@ -111,7 +113,8 @@ export async function PUT(req) {
       cuisineType,
       location,
       description,
-      openingHours
+      openingHours,
+      images
     } = await req.json();
 
     if (!restaurantName || !cuisineType || !location || !description) {
@@ -126,7 +129,8 @@ export async function PUT(req) {
         cuisineType,
         location,
         description,
-        openingHours
+        openingHours,
+        images
       },
       { new: true } // Returns the updated document
     );

@@ -49,6 +49,7 @@ export default function RestaurantInformation({ restaurant, onEditClick, onUpdat
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-4">
+            <ImageDisplay imageUrl={restaurant.images?.main} />
             <InfoItem label="Restaurant Name" value={restaurant.restaurantName} />
             <InfoItem label="Cuisine Type" value={restaurant.cuisineType} />
             <InfoItem label="Description" value={restaurant.description} />
@@ -78,6 +79,28 @@ const InfoItem = ({ label, value }) => (
     <p className="text-[#141517]">{value || 'Not provided'}</p>
   </div>
 );
+
+const ImageDisplay = ({ imageUrl }) => {
+  if (!imageUrl) {
+    return (
+      <div className="bg-[#F2F4F7] p-4 rounded-lg flex items-center justify-center h-[200px]">
+        <RiRestaurantLine className="text-4xl text-[#64748B]" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative h-[200px] w-full rounded-lg overflow-hidden">
+      <Image
+        src={imageUrl}
+        alt="Restaurant"
+        fill
+        className="object-cover"
+        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+      />
+    </div>
+  );
+};
 
 const LocationInfoItem = ({ location }) => {
   if (!location || !location.address) {

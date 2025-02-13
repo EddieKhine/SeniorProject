@@ -4,6 +4,7 @@ import { useState } from "react";
 import Image from "next/image";
 import { RiImageAddLine } from "react-icons/ri";
 import LocationSelector from './LocationSelector';
+import ImageUpload from './ImageUpload';
 
 const RESTAURANT_CATEGORIES = [
   "Buffet",
@@ -28,23 +29,27 @@ const RESTAURANT_CATEGORIES = [
 ];
 
 export default function RestaurantProfileForm({ mode, initialData, onSubmitSuccess, onCancel }) {
-  const [formData, setFormData] = useState(
-    initialData || {
-      restaurantName: "",
-      cuisineType: "",
-      location: "",
-      description: "",
-      openingHours: {
-        monday: { open: "", close: "" },
-        tuesday: { open: "", close: "" },
-        wednesday: { open: "", close: "" },
-        thursday: { open: "", close: "" },
-        friday: { open: "", close: "" },
-        saturday: { open: "", close: "" },
-        sunday: { open: "", close: "" },
-      },
+  const [formData, setFormData] = useState({
+    restaurantName: initialData?.restaurantName || "",
+    cuisineType: initialData?.cuisineType || "",
+    location: initialData?.location || "",
+    description: initialData?.description || "",
+    openingHours: initialData?.openingHours || {
+      monday: { open: "", close: "" },
+      tuesday: { open: "", close: "" },
+      wednesday: { open: "", close: "" },
+      thursday: { open: "", close: "" },
+      friday: { open: "", close: "" },
+      saturday: { open: "", close: "" },
+      sunday: { open: "", close: "" },
+    },
+    images: {
+      main: initialData?.images?.main || "",
+      gallery: initialData?.images?.gallery || []
     }
-  );
+  });
+
+  // ... rest of the component
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -116,31 +121,17 @@ export default function RestaurantProfileForm({ mode, initialData, onSubmitSucce
     <form onSubmit={handleSubmit} className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="space-y-4">
-          <div className="relative">
-            <label className="block text-sm font-medium text-[#64748B] mb-2">
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
               Restaurant Image
             </label>
-            <div className="relative h-48 rounded-xl overflow-hidden border-2 border-dashed border-[#E2E8F0] hover:border-[#FF4F18] transition-colors duration-200">
-              {imagePreview ? (
-                <Image
-                  src={imagePreview}
-                  alt="Preview"
-                  fill
-                  className="object-cover"
-                />
-              ) : (
-                <div className="h-full bg-[#F8FAFC] flex flex-col items-center justify-center">
-                  <RiImageAddLine className="text-3xl text-[#64748B] mb-2" />
-                  <p className="text-sm text-[#64748B]">Click to upload image</p>
-                </div>
-              )}
-              <input
-                type="file"
-                accept="image/*"
-                onChange={handleImageChange}
-                className="absolute inset-0 opacity-0 cursor-pointer"
-              />
-            </div>
+            <ImageUpload
+              onImageUpload={(url) => setFormData(prev => ({
+                ...prev,
+                images: { ...prev.images, main: url }
+              }))}
+              currentImage={formData.images.main}
+            />
           </div>
 
           <FormField

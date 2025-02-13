@@ -25,8 +25,7 @@ import { config } from "@fortawesome/fontawesome-svg-core";
 import "@fortawesome/fontawesome-svg-core/styles.css";
 import Toast from "../components/Toast";
 import { motion } from "framer-motion";
-import { GoogleMap, Marker } from '@react-google-maps/api';
-
+import Image from "next/image";
 config.autoAddCss = false;
 
 export default function HomePage() {
@@ -63,7 +62,8 @@ export default function HomePage() {
           rating: 4.5,
           "opening-hours": formatOpeningHours(restaurant.openingHours),
           availableSeats: "20",
-          fullLocation: restaurant.location
+          fullLocation: restaurant.location,
+          images: restaurant.images
         }));
         // Extract unique cuisine types
         const uniqueCuisineTypes = [...new Set(transformedRestaurants.map(r => r.cuisineType))];
@@ -462,11 +462,23 @@ export default function HomePage() {
                       className="absolute inset-0"
                     >
                       <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent z-10" />
-                      <img
-                        src={restaurant.image || "/images/restaurant-images/default-restaurant.jpg"}
-                        alt={restaurant.name}
-                        className="w-full h-full object-cover"
-                      />
+                      {restaurant.images?.main ? (
+                        <Image
+                          src={restaurant.images.main}
+                          alt={restaurant.name}
+                          width={400}
+                          height={300}
+                          className="w-full h-full object-cover"
+                          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-gray-200 flex items-center justify-center">
+                          <FontAwesomeIcon 
+                            icon={faUtensils} 
+                            className="text-4xl text-gray-400" 
+                          />
+                        </div>
+                      )}
                     </motion.div>
                     
                     <motion.button

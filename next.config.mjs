@@ -13,12 +13,19 @@ const nextConfig = {
       }
     ]
   },
-  reactStrictMode: true,
   images: {
-    domains: ['your-image-domain.com'], // Add your image domains here if needed
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: `${process.env.AWS_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com`,
+        port: '',
+        pathname: '/**',
+      },
+    ],
   },
+  reactStrictMode: true,
   env: {
-    JWT_SECRET: process.env.JWT_SECRET, // Keep any existing env configurations
+    JWT_SECRET: process.env.JWT_SECRET,
   },
 };
 

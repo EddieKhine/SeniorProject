@@ -39,6 +39,10 @@ const restaurantSchema = new mongoose.Schema({
     saturday: { open: String, close: String },
     sunday: { open: String, close: String },
   },
+  images: {
+    main: { type: String, default: "" },
+    gallery: [{ type: String }]
+  }
 }, { timestamps: true });
 
 const Restaurant = mongoose.models.Restaurant || mongoose.model("Restaurant", restaurantSchema);
