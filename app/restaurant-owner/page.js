@@ -32,7 +32,7 @@ export default function RestaurantOwnerHome() {
   };
 
   return (
-    <div className="min-h-screen bg-[#141517]">
+    <div className="min-h-screen bg-white">
       <RestaurantOwnerNavbar onLoginClick={handleLoginClick} />
       
       {/* Modern Asymmetric Hero Section */}
@@ -40,7 +40,7 @@ export default function RestaurantOwnerHome() {
         {/* Background Image with Parallax */}
         <div className="absolute inset-0">
           <div 
-            className="absolute inset-0 bg-gradient-to-b from-[#141517]/70 via-[#141517]/50 to-[#141517]/20 z-10" 
+            className="absolute inset-0 bg-gradient-to-b from-gray-900/70 via-gray-900/50 to-gray-900/20 z-10" 
             style={{ backdropFilter: 'blur(2px)' }}
           />
           <motion.div
@@ -110,7 +110,7 @@ export default function RestaurantOwnerHome() {
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   onClick={() => setShowDemo(true)}
-                  className="flex items-center justify-center gap-3 bg-white/5 backdrop-blur text-white px-8 py-4 rounded-xl font-medium hover:bg-white/10 transition-all border border-white/10"
+                  className="flex items-center justify-center gap-3 bg-white/10 backdrop-blur text-white px-8 py-4 rounded-xl font-medium hover:bg-white/20 transition-all border border-white/10"
                 >
                   Watch Demo
                 </motion.button>
@@ -131,7 +131,7 @@ export default function RestaurantOwnerHome() {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.1 + 0.5 }}
-                    className="bg-white/5 backdrop-blur border border-white/10 p-6 rounded-2xl hover:bg-white/10 transition-all group"
+                    className="bg-white/10 backdrop-blur border border-white/10 p-6 rounded-2xl hover:bg-white/20 transition-all group"
                   >
                     <div className="w-12 h-12 bg-[#FF4F18]/20 rounded-xl flex items-center justify-center mb-4 group-hover:bg-[#FF4F18]/30 transition-all">
                       <FaCheckCircle className="text-[#FF4F18] text-xl" />
@@ -150,13 +150,13 @@ export default function RestaurantOwnerHome() {
       </section>
 
       {/* Pricing Section - Modern Stacked Cards */}
-      <section className="py-24 relative">
+      <section className="py-24 relative bg-gray-50">
         <div className="container mx-auto px-6">
           <div className="text-center mb-16">
             <motion.h2 
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
-              className="text-5xl font-bold text-white"
+              className="text-4xl font-bold text-gray-900"
             >
               SUBSCRIPTIONS
             </motion.h2>
@@ -166,16 +166,16 @@ export default function RestaurantOwnerHome() {
             {/* Basic Plan */}
             <motion.div
               whileHover={{ y: -8 }}
-              className="bg-white/5 backdrop-blur border border-white/10 rounded-2xl p-8 relative group"
+              className="bg-white rounded-2xl p-8 relative group shadow-lg hover:shadow-xl transition-all"
             >
-              <h3 className="text-2xl font-bold text-white mb-4">Basic Plan</h3>
+              <h3 className="text-2xl font-bold text-gray-900 mb-4">Basic Plan</h3>
               <div className="mb-6">
-                <span className="text-3xl font-bold text-white">THB 1,200</span>
-                <span className="text-white/60">/month</span>
+                <span className="text-3xl font-bold text-gray-900">THB 1,200</span>
+                <span className="text-gray-500">/month</span>
               </div>
               
               <div className="space-y-4">
-                <h4 className="text-lg font-semibold text-white">Features:</h4>
+                <h4 className="text-lg font-semibold text-gray-900">Features:</h4>
                 <ul className="space-y-3">
                   {[
                     "Restaurant profile listing on the platform",
@@ -185,7 +185,7 @@ export default function RestaurantOwnerHome() {
                     "Email notifications for reservations",
                     "Basic customer support"
                   ].map((feature, index) => (
-                    <li key={index} className="flex items-start gap-3 text-white/80">
+                    <li key={index} className="flex items-start gap-3 text-gray-600">
                       <FaCheckCircle className="text-[#FF4F18] mt-1 flex-shrink-0" />
                       <span>{feature}</span>
                     </li>
@@ -197,16 +197,16 @@ export default function RestaurantOwnerHome() {
             {/* Professional Plan */}
             <motion.div
               whileHover={{ y: -8 }}
-              className="bg-[#FF4F18] rounded-2xl p-8 relative group"
+              className="bg-[#FF4F18] rounded-2xl p-8 relative group shadow-xl"
             >
-              <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-white/10 backdrop-blur px-4 py-1 rounded-full">
-                <span className="text-white text-sm font-medium">Most Popular</span>
+              <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-white px-4 py-1 rounded-full shadow-lg">
+                <span className="text-[#FF4F18] text-sm font-medium">Most Popular</span>
               </div>
               
               <h3 className="text-2xl font-bold text-white mb-4">Professional Plan</h3>
               <div className="mb-6">
                 <span className="text-3xl font-bold text-white">THB 2,800</span>
-                <span className="text-white/60">/month</span>
+                <span className="text-white/80">/month</span>
               </div>
 
               <div className="space-y-4">
@@ -234,16 +234,16 @@ export default function RestaurantOwnerHome() {
             {/* Business Plan */}
             <motion.div
               whileHover={{ y: -8 }}
-              className="bg-white/5 backdrop-blur border border-white/10 rounded-2xl p-8 relative group"
+              className="bg-white rounded-2xl p-8 relative group shadow-lg hover:shadow-xl transition-all"
             >
-              <h3 className="text-2xl font-bold text-white mb-4">Business Plan</h3>
+              <h3 className="text-2xl font-bold text-gray-900 mb-4">Business Plan</h3>
               <div className="mb-6">
-                <span className="text-3xl font-bold text-white">THB 5,500</span>
-                <span className="text-white/60">/month</span>
+                <span className="text-3xl font-bold text-gray-900">THB 5,500</span>
+                <span className="text-gray-500">/month</span>
               </div>
 
               <div className="space-y-4">
-                <h4 className="text-lg font-semibold text-white">Features:</h4>
+                <h4 className="text-lg font-semibold text-gray-900">Features:</h4>
                 <ul className="space-y-3">
                   {[
                     "Unlimited floor plans (suitable for large restaurants, cruise ships, or chains)",
@@ -256,7 +256,7 @@ export default function RestaurantOwnerHome() {
                     "Advanced reporting (reservation trends, revenue, and customer behavior)",
                     "Priority support (response within 2 hours)"
                   ].map((feature, index) => (
-                    <li key={index} className="flex items-start gap-3 text-white/80">
+                    <li key={index} className="flex items-start gap-3 text-gray-600">
                       <FaCheckCircle className="text-[#FF4F18] mt-1 flex-shrink-0" />
                       <span>{feature}</span>
                     </li>

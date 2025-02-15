@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { RiImageAddLine } from "react-icons/ri";
+import { RiImageAddLine, RiTimeLine, RiCloseLine } from "react-icons/ri";
+import { motion } from "framer-motion";
 import LocationSelector from './LocationSelector';
 import ImageUpload from './ImageUpload';
 
@@ -28,6 +29,24 @@ const RESTAURANT_CATEGORIES = [
   "Food Truck"
 ];
 
+const DAYS = [
+  { key: 'monday', label: 'Monday' },
+  { key: 'tuesday', label: 'Tuesday' },
+  { key: 'wednesday', label: 'Wednesday' },
+  { key: 'thursday', label: 'Thursday' },
+  { key: 'friday', label: 'Friday' },
+  { key: 'saturday', label: 'Saturday' },
+  { key: 'sunday', label: 'Sunday' }
+];
+
+const TIME_SLOTS = Array.from({ length: 48 }, (_, i) => {
+  const hour = Math.floor(i / 2);
+  const minute = i % 2 === 0 ? '00' : '30';
+  const period = hour < 12 ? 'AM' : 'PM';
+  const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
+  return `${displayHour}:${minute} ${period}`;
+});
+
 export default function RestaurantProfileForm({ mode, initialData, onSubmitSuccess, onCancel }) {
   const [formData, setFormData] = useState({
     restaurantName: initialData?.restaurantName || "",
@@ -35,21 +54,19 @@ export default function RestaurantProfileForm({ mode, initialData, onSubmitSucce
     location: initialData?.location || "",
     description: initialData?.description || "",
     openingHours: initialData?.openingHours || {
-      monday: { open: "", close: "" },
-      tuesday: { open: "", close: "" },
-      wednesday: { open: "", close: "" },
-      thursday: { open: "", close: "" },
-      friday: { open: "", close: "" },
-      saturday: { open: "", close: "" },
-      sunday: { open: "", close: "" },
+      monday: { open: "", close: "", isClosed: false },
+      tuesday: { open: "", close: "", isClosed: false },
+      wednesday: { open: "", close: "", isClosed: false },
+      thursday: { open: "", close: "", isClosed: false },
+      friday: { open: "", close: "", isClosed: false },
+      saturday: { open: "", close: "", isClosed: false },
+      sunday: { open: "", close: "", isClosed: false },
     },
     images: {
       main: initialData?.images?.main || "",
       gallery: initialData?.images?.gallery || []
     }
   });
-
-  // ... rest of the component
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -61,12 +78,49 @@ export default function RestaurantProfileForm({ mode, initialData, onSubmitSucce
   };
 
   const handleHoursChange = (day, type, value) => {
-    setFormData((prev) => ({
+    setFormData(prev => ({
       ...prev,
       openingHours: {
         ...prev.openingHours,
-        [day]: { ...prev.openingHours[day], [type]: value },
-      },
+        [day]: {
+          ...prev.openingHours[day],
+          [type]: value
+        }
+      }
+    }));
+  };
+
+  const toggleDayClosed = (day) => {
+    setFormData(prev => ({
+      ...prev,
+      openingHours: {
+        ...prev.openingHours,
+        [day]: {
+          ...prev.openingHours[day],
+          isClosed: !prev.openingHours[day].isClosed,
+          open: prev.openingHours[day].isClosed ? "" : prev.openingHours[day].open,
+          close: prev.openingHours[day].isClosed ? "" : prev.openingHours[day].close
+        }
+      }
+    }));
+  };
+
+  const copyHoursToAll = (sourceDay) => {
+    const sourceHours = formData.openingHours[sourceDay];
+    const updatedHours = {};
+    
+    DAYS.forEach(({ key }) => {
+      if (key !== sourceDay) {
+        updatedHours[key] = { ...sourceHours };
+      }
+    });
+
+    setFormData(prev => ({
+      ...prev,
+      openingHours: {
+        ...prev.openingHours,
+        ...updatedHours
+      }
     }));
   };
 
@@ -118,11 +172,13 @@ export default function RestaurantProfileForm({ mode, initialData, onSubmitSucce
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="space-y-4">
-          <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+    <form onSubmit={handleSubmit} className="space-y-8 max-w-6xl mx-auto">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* Left Column */}
+        <div className="space-y-6">
+          {/* Restaurant Image */}
+          <div className="bg-white rounded-xl shadow-sm p-6">
+            <label className="block text-sm font-semibold text-gray-900 mb-4">
               Restaurant Image
             </label>
             <ImageUpload
@@ -134,64 +190,202 @@ export default function RestaurantProfileForm({ mode, initialData, onSubmitSucce
             />
           </div>
 
-          <FormField
-            label="Restaurant Name"
-            name="restaurantName"
-            value={formData.restaurantName}
-            onChange={handleInputChange}
-            required
-          />
+          {/* Basic Information */}
+          <div className="bg-white rounded-xl shadow-sm p-6 space-y-6">
+            <h3 className="text-lg font-semibold text-gray-900">Basic Information</h3>
+            
+            {/* Restaurant Name */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-900 mb-2">
+                Restaurant Name *
+              </label>
+              <input
+                type="text"
+                name="restaurantName"
+                value={formData.restaurantName}
+                onChange={handleInputChange}
+                required
+                className="w-full px-4 py-3 text-gray-900 border border-gray-300 rounded-lg 
+                  focus:ring-[#FF4F18] focus:border-[#FF4F18] placeholder-gray-500"
+                placeholder="Enter restaurant name"
+              />
+            </div>
 
-          <div className="space-y-4">
-            <label className="block text-sm font-medium text-[#64748B] mb-2">
-              Restaurant Location
+            {/* Cuisine Type */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-900 mb-2">
+                Cuisine Type *
+              </label>
+              <select
+                name="cuisineType"
+                value={formData.cuisineType}
+                onChange={handleInputChange}
+                required
+                className="w-full px-4 py-3 text-gray-900 border border-gray-300 rounded-lg 
+                  focus:ring-[#FF4F18] focus:border-[#FF4F18] bg-white"
+              >
+                <option value="" className="text-gray-500">Select cuisine type</option>
+                {RESTAURANT_CATEGORIES.map(category => (
+                  <option key={category} value={category} className="text-gray-900">
+                    {category}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Description */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-900 mb-2">
+                Description *
+              </label>
+              <textarea
+                name="description"
+                value={formData.description}
+                onChange={handleInputChange}
+                required
+                rows={4}
+                className="w-full px-4 py-3 text-gray-900 border border-gray-300 rounded-lg 
+                  focus:ring-[#FF4F18] focus:border-[#FF4F18] placeholder-gray-500"
+                placeholder="Describe your restaurant"
+              />
+            </div>
+          </div>
+
+          {/* Location */}
+          <div className="bg-white rounded-xl shadow-sm p-6">
+            <label className="block text-sm font-semibold text-gray-900 mb-4">
+              Restaurant Location *
             </label>
             <LocationSelector
               onLocationSelect={handleLocationSelect}
               initialLocation={formData.location}
+              className="text-gray-900"
             />
           </div>
-
-          <FormField
-            label="Cuisine Type"
-            name="cuisineType"
-            value={formData.cuisineType}
-            onChange={handleInputChange}
-            type="select"
-            options={RESTAURANT_CATEGORIES}
-            required
-          />
         </div>
 
-        <div className="space-y-4">
-          <FormField
-            label="Description"
-            name="description"
-            value={formData.description}
-            onChange={handleInputChange}
-            type="textarea"
-            required
-          />
+        {/* Right Column - Opening Hours */}
+        <div className="bg-white rounded-xl shadow-sm p-6">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+              <RiTimeLine className="text-[#FF4F18]" />
+              Opening Hours
+            </h3>
+          </div>
 
-          <FormField
-            label="Opening Hours"
-            name="openingHours"
-            value={formData.openingHours}
-            onChange={handleHoursChange}
-            type="textarea"
-            required
-          />
+          <div className="space-y-4">
+            {DAYS.map(({ key, label }) => (
+              <motion.div
+                key={key}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="bg-gray-50 rounded-lg p-4 relative group hover:shadow-md transition-all duration-200"
+              >
+                <div className="flex flex-col space-y-3">
+                  {/* Day Label */}
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium text-gray-900">{label}</span>
+                    {!formData.openingHours[key].isClosed && (
+                      <button
+                        type="button"
+                        onClick={() => copyHoursToAll(key)}
+                        className="text-[#FF4F18] text-sm hover:text-[#FF4F18]/80 
+                          transition-all px-2 py-1 rounded hover:bg-[#FF4F18]/10"
+                      >
+                        Copy to all
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Time Selection */}
+                  {formData.openingHours[key].isClosed ? (
+                    <div className="flex items-center justify-between bg-white rounded-lg p-3">
+                      <span className="text-red-500 font-medium">Closed</span>
+                      <button
+                        type="button"
+                        onClick={() => toggleDayClosed(key)}
+                        className="text-[#FF4F18] hover:text-[#FF4F18]/80 font-medium"
+                      >
+                        Set Hours
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      <div className="grid grid-cols-2 gap-4">
+                        <select
+                          value={formData.openingHours[key].open}
+                          onChange={(e) => handleHoursChange(key, 'open', e.target.value)}
+                          className="w-full form-select rounded-lg border-gray-300 focus:border-[#FF4F18] 
+                            focus:ring-[#FF4F18] bg-white text-gray-900 py-2"
+                        >
+                          <option value="" className="text-gray-500">Opening Time</option>
+                          {TIME_SLOTS.map(time => (
+                            <option key={time} value={time} className="text-gray-900">
+                              {time}
+                            </option>
+                          ))}
+                        </select>
+
+                        <select
+                          value={formData.openingHours[key].close}
+                          onChange={(e) => handleHoursChange(key, 'close', e.target.value)}
+                          className="w-full form-select rounded-lg border-gray-300 focus:border-[#FF4F18] 
+                            focus:ring-[#FF4F18] bg-white text-gray-900 py-2"
+                        >
+                          <option value="" className="text-gray-500">Closing Time</option>
+                          {TIME_SLOTS.map(time => (
+                            <option key={time} value={time} className="text-gray-900">
+                              {time}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* Selected Time Display */}
+                      {(formData.openingHours[key].open || formData.openingHours[key].close) && (
+                        <div className="bg-white rounded-lg p-3 border border-gray-200">
+                          <span className="text-gray-900 font-medium">
+                            Selected Hours: {' '}
+                            <span className="text-[#FF4F18]">
+                              {formData.openingHours[key].open || 'Not set'} 
+                              {' - '} 
+                              {formData.openingHours[key].close || 'Not set'}
+                            </span>
+                          </span>
+                        </div>
+                      )}
+
+                      <button
+                        type="button"
+                        onClick={() => toggleDayClosed(key)}
+                        className="text-gray-500 hover:text-red-500 text-sm transition-colors"
+                      >
+                        Mark as closed
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </motion.div>
+            ))}
+          </div>
         </div>
       </div>
 
-      {error && <p className="text-red-500">{error}</p>}
+      {/* Error Message */}
+      {error && (
+        <div className="text-red-500 text-sm mt-2">
+          {error}
+        </div>
+      )}
 
-      <div className="flex justify-end gap-4">
+      {/* Form Actions */}
+      <div className="flex justify-end gap-4 mt-8">
         {onCancel && (
           <button
             type="button"
             onClick={onCancel}
-            className="px-4 py-2 rounded-lg border border-gray-300 hover:bg-gray-50"
+            className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 
+              hover:bg-gray-50 font-medium"
           >
             Cancel
           </button>
@@ -199,51 +393,12 @@ export default function RestaurantProfileForm({ mode, initialData, onSubmitSucce
         <button
           type="submit"
           disabled={loading}
-          className="px-4 py-2 rounded-lg bg-[#FF4F18] text-white hover:opacity-90 transition-all duration-200 disabled:opacity-50"
+          className="px-6 py-2 bg-[#FF4F18] text-white rounded-lg hover:bg-[#FF4F18]/90 
+            disabled:opacity-50 disabled:cursor-not-allowed font-medium"
         >
-          {loading ? 'Saving...' : mode === 'create' ? 'Create Restaurant' : 'Save Changes'}
+          {loading ? 'Saving...' : mode === 'create' ? 'Create Profile' : 'Save Changes'}
         </button>
       </div>
     </form>
   );
 }
-
-const FormField = ({ label, name, value, onChange, type = 'text', options = [], required = false }) => (
-  <div>
-    <label className="block text-sm font-medium text-[#64748B] mb-2">
-      {label}
-    </label>
-    {type === 'textarea' ? (
-      <textarea
-        name={name}
-        value={value}
-        onChange={onChange}
-        required={required}
-        className="w-full px-4 py-2 rounded-lg border border-[#E2E8F0] focus:border-[#FF4F18] focus:ring-1 focus:ring-[#FF4F18] outline-none transition-all duration-200"
-        rows={3}
-      />
-    ) : type === 'select' ? (
-      <select
-        name={name}
-        value={value}
-        onChange={onChange}
-        required={required}
-        className="w-full px-4 py-2 rounded-lg border border-[#E2E8F0] focus:border-[#FF4F18] focus:ring-1 focus:ring-[#FF4F18] outline-none transition-all duration-200"
-      >
-        <option value="">Select a category</option>
-        {options.map(option => (
-          <option key={option} value={option}>{option}</option>
-        ))}
-      </select>
-    ) : (
-      <input
-        type={type}
-        name={name}
-        value={value}
-        onChange={onChange}
-        required={required}
-        className="w-full px-4 py-2 rounded-lg border border-[#E2E8F0] focus:border-[#FF4F18] focus:ring-1 focus:ring-[#FF4F18] outline-none transition-all duration-200"
-      />
-    )}
-  </div>
-);

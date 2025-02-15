@@ -95,7 +95,7 @@ export default function OwnerProfile() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="max-w-2xl mx-auto space-y-6 text-black">
       <h2 className="text-xl font-semibold text-[#141517] mb-6">Owner Profile</h2>
       
       <div className="relative w-32 h-32 mx-auto mb-8">

@@ -165,36 +165,36 @@ export default function CustomerProfile() {
       className="min-h-screen bg-[#FFFFFF]"
     >
       <div className="flex">
-        {/* Modern Sidebar */}
+        {/* Modern Sidebar - Updated with lighter colors */}
         <motion.aside 
           initial={{ x: -100 }}
           animate={{ x: 0 }}
-          className="w-72 min-h-screen bg-white shadow-xl p-6 space-y-6"
+          className="w-72 min-h-screen bg-white shadow-sm p-6 space-y-6 border-r border-gray-100"
         >
-          {/* Profile Section */}
-          <div className="flex flex-col items-center space-y-4 pb-6 border-b border-[#F2F4F7]">
-            <div className="w-20 h-20 rounded-full bg-[#FF4F18] flex items-center justify-center">
+          {/* Profile Section - Updated styling */}
+          <div className="flex flex-col items-center space-y-4 pb-6 border-b border-gray-100">
+            <div className="w-20 h-20 rounded-full bg-gradient-to-r from-[#FF4F18] to-[#FF6B18] flex items-center justify-center shadow-lg">
               <FaUser className="text-white text-2xl" />
             </div>
             <div className="text-center">
-              <h2 className="text-xl font-bold text-[#141517]">
+              <h2 className="text-xl font-bold text-gray-900">
                 {user?.firstName} {user?.lastName}
               </h2>
-              <p className="text-sm text-[#141517]/60">{user?.email}</p>
+              <p className="text-sm text-gray-500">{user?.email}</p>
             </div>
           </div>
 
-          {/* Navigation */}
+          {/* Navigation - Updated hover and active states */}
           <nav className="space-y-4">
             {/* Main Navigation Buttons */}
             <motion.button
-              whileHover={{ scale: 1.02 }}
+              whileHover={{ scale: 1.02, x: 5 }}
               whileTap={{ scale: 0.98 }}
               onClick={() => setActiveTab("view")}
-              className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all ${
+              className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-300 ${
                 activeTab === "view"
-                  ? "bg-[#FF4F18] text-white"
-                  : "hover:bg-[#F2F4F7] text-[#141517]/70"
+                  ? "bg-[#FF4F18] text-white shadow-md"
+                  : "hover:bg-gray-50 text-gray-600 hover:text-[#FF4F18]"
               }`}
             >
               <FaIdCard />
@@ -202,13 +202,13 @@ export default function CustomerProfile() {
             </motion.button>
 
             <motion.button
-              whileHover={{ scale: 1.02 }}
+              whileHover={{ scale: 1.02, x: 5 }}
               whileTap={{ scale: 0.98 }}
               onClick={() => setActiveTab("edit")}
-              className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all ${
+              className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-300 ${
                 activeTab === "edit"
-                  ? "bg-[#FF4F18] text-white"
-                  : "hover:bg-[#F2F4F7] text-[#141517]/70"
+                  ? "bg-[#FF4F18] text-white shadow-md"
+                  : "hover:bg-gray-50 text-gray-600 hover:text-[#FF4F18]"
               }`}
             >
               <FaUserEdit />
@@ -218,13 +218,13 @@ export default function CustomerProfile() {
             {/* Activities Section */}
             <div className="space-y-2">
               <motion.button
-                whileHover={{ scale: 1.02 }}
+                whileHover={{ scale: 1.02, x: 5 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={() => setActiveTab("activities")}
-                className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all ${
+                className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-300 ${
                   activeTab === "activities"
-                    ? "bg-[#FF4F18] text-white"
-                    : "hover:bg-[#F2F4F7] text-[#141517]/70"
+                    ? "bg-[#FF4F18] text-white shadow-md"
+                    : "hover:bg-gray-50 text-gray-600 hover:text-[#FF4F18]"
                 }`}
               >
                 <FaBookmark />
@@ -283,10 +283,14 @@ export default function CustomerProfile() {
 
             {/* Home Button */}
             <motion.button
-              whileHover={{ scale: 1.02 }}
+              whileHover={{ scale: 1.02, x: 5 }}
               whileTap={{ scale: 0.98 }}
               onClick={() => router.push("/")}
-              className="w-full flex items-center space-x-3 px-4 py-3 rounded-xl hover:bg-[#F2F4F7] text-[#141517]/70"
+              className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-300 ${
+                activeTab === "view"
+                  ? "bg-gray-50 text-gray-600 hover:text-[#FF4F18]"
+                  : "hover:bg-gray-50 text-gray-600 hover:text-[#FF4F18]"
+              }`}
             >
               <FaHome />
               <span>Home</span>
@@ -294,10 +298,14 @@ export default function CustomerProfile() {
 
             {/* Logout Button */}
             <motion.button
-              whileHover={{ scale: 1.02 }}
+              whileHover={{ scale: 1.02, x: 5 }}
               whileTap={{ scale: 0.98 }}
               onClick={handleLogout}
-              className="w-full flex items-center space-x-3 px-4 py-3 rounded-xl hover:bg-red-50 text-red-600"
+              className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-300 ${
+                activeTab === "view"
+                  ? "bg-gray-50 text-gray-600 hover:text-red-500"
+                  : "hover:bg-gray-50 text-gray-600 hover:text-red-500"
+              }`}
             >
               <FaSignOutAlt />
               <span>Logout</span>
@@ -305,8 +313,8 @@ export default function CustomerProfile() {
           </nav>
         </motion.aside>
 
-        {/* Main Content */}
-        <main className="flex-1 p-8 bg-[#F2F4F7]">
+        {/* Main Content - Updated with softer backgrounds */}
+        <main className="flex-1 p-8 bg-gray-50">
           {user ? (
             <>
               {/* View Profile Section */}
@@ -316,8 +324,8 @@ export default function CustomerProfile() {
                   animate={{ opacity: 1, y: 0 }}
                   className="max-w-4xl mx-auto space-y-6"
                 >
-                  <div className="bg-white rounded-2xl shadow-sm p-8">
-                    <h2 className="text-2xl font-bold text-[#141517] mb-6">Profile Information</h2>
+                  <div className="bg-white rounded-2xl shadow-sm p-8 border border-gray-100">
+                    <h2 className="text-2xl font-bold text-gray-900 mb-6">Profile Information</h2>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       {[
                         { icon: FaUser, label: "First Name", value: user.firstName },
@@ -330,15 +338,15 @@ export default function CustomerProfile() {
                           initial={{ opacity: 0, y: 20 }}
                           animate={{ opacity: 1, y: 0 }}
                           transition={{ delay: index * 0.1 }}
-                          className="bg-[#F2F4F7] rounded-xl p-4 hover:shadow-md transition-all duration-300"
+                          className="bg-gray-50 rounded-xl p-4 hover:shadow-md transition-all duration-300 border border-gray-100"
                         >
                           <div className="flex items-center space-x-3">
-                            <div className="p-2 bg-white rounded-lg">
+                            <div className="p-2 bg-white rounded-lg shadow-sm">
                               <item.icon className="text-[#FF4F18]" />
                             </div>
                             <div>
-                              <p className="text-sm text-[#141517]/60">{item.label}</p>
-                              <p className="font-medium text-[#141517]">{item.value}</p>
+                              <p className="text-sm text-gray-500">{item.label}</p>
+                              <p className="font-medium text-gray-900">{item.value}</p>
                             </div>
                           </div>
                         </motion.div>
@@ -355,41 +363,46 @@ export default function CustomerProfile() {
                   animate={{ opacity: 1, y: 0 }}
                   className="max-w-4xl mx-auto"
                 >
-                  <div className="bg-white rounded-2xl shadow-sm p-8">
-                    <h2 className="text-2xl font-bold text-[#141517] mb-6">Edit Profile</h2>
+                  <div className="bg-white rounded-2xl shadow-sm p-8 border border-gray-100">
+                    <h2 className="text-2xl font-bold text-gray-900 mb-6">Edit Profile</h2>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <input
                         type="text"
                         placeholder="First Name"
-                        className="p-3 bg-[#F2F4F7] border border-[#F2F4F7] rounded-xl text-[#141517] placeholder-[#141517]/40 focus:ring-2 focus:ring-[#FF4F18] focus:border-transparent transition-all outline-none"
+                        className="p-3 bg-gray-50 border border-gray-100 rounded-xl text-gray-900 placeholder-gray-400 
+                                 focus:ring-2 focus:ring-[#FF4F18] focus:border-transparent transition-all outline-none"
                         value={updatedUser.firstName}
                         onChange={(e) => setUpdatedUser({ ...updatedUser, firstName: e.target.value })}
                       />
                       <input
                         type="text"
                         placeholder="Last Name"
-                        className="p-3 bg-[#F2F4F7] border border-[#F2F4F7] rounded-xl text-[#141517] placeholder-[#141517]/40 focus:ring-2 focus:ring-[#FF4F18] focus:border-transparent transition-all outline-none"
+                        className="p-3 bg-gray-50 border border-gray-100 rounded-xl text-gray-900 placeholder-gray-400 
+                                 focus:ring-2 focus:ring-[#FF4F18] focus:border-transparent transition-all outline-none"
                         value={updatedUser.lastName}
                         onChange={(e) => setUpdatedUser({ ...updatedUser, lastName: e.target.value })}
                       />
                       <input
                         type="email"
                         placeholder="Email"
-                        className="p-3 bg-[#F2F4F7] border border-[#F2F4F7] rounded-xl text-[#141517] placeholder-[#141517]/40 focus:ring-2 focus:ring-[#FF4F18] focus:border-transparent transition-all outline-none"
+                        className="p-3 bg-gray-50 border border-gray-100 rounded-xl text-gray-900 placeholder-gray-400 
+                                 focus:ring-2 focus:ring-[#FF4F18] focus:border-transparent transition-all outline-none"
                         value={updatedUser.email}
                         onChange={(e) => setUpdatedUser({ ...updatedUser, email: e.target.value })}
                       />
                       <input
                         type="text"
                         placeholder="Contact Number"
-                        className="p-3 bg-[#F2F4F7] border border-[#F2F4F7] rounded-xl text-[#141517] placeholder-[#141517]/40 focus:ring-2 focus:ring-[#FF4F18] focus:border-transparent transition-all outline-none"
+                        className="p-3 bg-gray-50 border border-gray-100 rounded-xl text-gray-900 placeholder-gray-400 
+                                 focus:ring-2 focus:ring-[#FF4F18] focus:border-transparent transition-all outline-none"
                         value={updatedUser.contactNumber}
                         onChange={(e) => setUpdatedUser({ ...updatedUser, contactNumber: e.target.value })}
                       />
                       <input
                         type="password"
                         placeholder="New Password"
-                        className="p-3 bg-[#F2F4F7] border border-[#F2F4F7] rounded-xl text-[#141517] placeholder-[#141517]/40 focus:ring-2 focus:ring-[#FF4F18] focus:border-transparent transition-all outline-none"
+                        className="p-3 bg-gray-50 border border-gray-100 rounded-xl text-gray-900 placeholder-gray-400 
+                                 focus:ring-2 focus:ring-[#FF4F18] focus:border-transparent transition-all outline-none"
                         value={updatedUser.newPassword}
                         onChange={(e) => setUpdatedUser({ ...updatedUser, newPassword: e.target.value })}
                       />
@@ -398,7 +411,8 @@ export default function CustomerProfile() {
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
                       onClick={handleUpdateProfile}
-                      className="mt-6 w-full py-3 bg-[#FF4F18] text-white rounded-xl font-medium hover:opacity-90 transition-all duration-300"
+                      className="mt-6 w-full py-3 bg-gradient-to-r from-[#FF4F18] to-[#FF6B18] text-white rounded-xl 
+                               font-medium hover:shadow-lg transition-all duration-300"
                     >
                       Save Changes
                     </motion.button>
@@ -415,8 +429,8 @@ export default function CustomerProfile() {
                 >
                   {/* Saved Restaurants */}
                   {activeSubTab === "saved" && (
-                    <div className="bg-white rounded-2xl shadow-sm p-8">
-                      <h2 className="text-2xl font-bold text-[#141517] mb-6">Saved Restaurants</h2>
+                    <div className="bg-white rounded-2xl shadow-sm p-8 border border-gray-100">
+                      <h2 className="text-2xl font-bold text-gray-900 mb-6">Saved Restaurants</h2>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         {savedRestaurants.length > 0 ? (
                           savedRestaurants.map((restaurant, index) => (
@@ -425,7 +439,8 @@ export default function CustomerProfile() {
                               initial={{ opacity: 0, y: 20 }}
                               animate={{ opacity: 1, y: 0 }}
                               transition={{ delay: index * 0.1 }}
-                              className="bg-white rounded-xl shadow-sm overflow-hidden hover:shadow-md transition-all duration-300"
+                              className="bg-white rounded-xl shadow-sm overflow-hidden hover:shadow-md 
+                                       transition-all duration-300 border border-gray-100"
                             >
                               <div className="relative h-48">
                                 {restaurant.images?.main ? (

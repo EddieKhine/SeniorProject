@@ -19,47 +19,31 @@ export async function POST(req) {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const ownerId = decoded.userId;
 
-    // Check if the restaurant owner exists
-    const ownerExists = await RestaurantOwner.findById(ownerId);
-    if (!ownerExists) {
-      return NextResponse.json({ message: "Owner not found" }, { status: 404 });
+    // Check if owner already has a restaurant
+    const existingRestaurant = await Restaurant.findOne({ ownerId });
+    if (existingRestaurant) {
+      return NextResponse.json({ message: "Restaurant profile already exists" }, { status: 400 });
     }
 
-    const {
-      restaurantName,
-      cuisineType,
-      location,
-      description,
-      openingHours,
-      images
-    } = await req.json();
-
-    if (!restaurantName || !cuisineType || !location || !description) {
-      return NextResponse.json({ message: "All fields are required" }, { status: 400 });
-    }
-
-    // Always create a new restaurant profile
+    const restaurantData = await req.json();
     const restaurant = new Restaurant({
       ownerId,
-      restaurantName,
-      cuisineType,
-      location,
-      description,
-      openingHours,
-      images
+      ...restaurantData
     });
 
     await restaurant.save();
 
-    return NextResponse.json({ message: "Profile saved successfully!", restaurant }, { status: 201 });
+    // Update owner with restaurant reference
+    await RestaurantOwner.findByIdAndUpdate(ownerId, { restaurantId: restaurant._id });
 
+    return NextResponse.json({ message: "Profile created successfully!", restaurant }, { status: 201 });
   } catch (error) {
-    console.error("Error saving restaurant profile:", error);
+    console.error("Error creating restaurant profile:", error);
     return NextResponse.json({ message: "Internal server error" }, { status: 500 });
   }
 }
 
-// ✅ GET: Fetch all restaurant profiles for an owner
+// ✅ GET: Fetch single restaurant profile
 export async function GET(req) {
   await dbConnect();
 
@@ -73,17 +57,17 @@ export async function GET(req) {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const ownerId = decoded.userId;
 
-    // Find all restaurants by owner ID
-    const restaurants = await Restaurant.find({ ownerId });
+    // Find single restaurant by owner ID
+    const restaurant = await Restaurant.findOne({ ownerId });
     
-    if (!restaurants || restaurants.length === 0) {
-      return NextResponse.json({ message: "No restaurants found", restaurants: [] }, { status: 200 });
+    if (!restaurant) {
+      return NextResponse.json({ message: "No restaurant found", restaurant: null }, { status: 200 });
     }
 
-    return NextResponse.json({ restaurants }, { status: 200 });
+    return NextResponse.json({ restaurant }, { status: 200 });
 
   } catch (error) {
-    console.error("Error fetching restaurant profiles:", error);
+    console.error("Error fetching restaurant profile:", error);
     return NextResponse.json({ message: "Internal server error" }, { status: 500 });
   }
 }

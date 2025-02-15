@@ -1,134 +1,148 @@
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useState } from 'react';
 import Image from 'next/image';
-import { RiRestaurantLine, RiTimeLine } from 'react-icons/ri';
+import { RiRestaurantLine, RiTimeLine, RiMapPinLine, RiEdit2Line } from 'react-icons/ri';
+import { MdRestaurantMenu, MdAnalytics } from 'react-icons/md';
 import { GoogleMap, Marker } from '@react-google-maps/api';
 import RestaurantProfileForm from './RestaurantProfileForm';
 
 const formatOpeningHours = (hours) => {
-  if (!hours || typeof hours !== 'object') return 'Not provided';
-  
-  return Object.entries(hours)
-    .map(([day, time]) => {
-      if (!time || !time.open || !time.close) return `${day}: Closed`;
-      const capitalizedDay = day.charAt(0).toUpperCase() + day.slice(1);
-      return `${capitalizedDay}: ${time.open} - ${time.close}`;
-    })
-    .join('\n');
+  if (!hours || typeof hours !== 'object') return [];
+  const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+  return days.map(day => {
+    const time = hours[day];
+    if (!time || !time.open || !time.close || time.isClosed) {
+      return {
+        day: day.charAt(0).toUpperCase() + day.slice(1),
+        status: 'Closed',
+        isOpen: false
+      };
+    }
+    return {
+      day: day.charAt(0).toUpperCase() + day.slice(1),
+      hours: `${time.open} - ${time.close}`,
+      isOpen: true
+    };
+  });
 };
 
 export default function RestaurantInformation({ restaurant, onEditClick, onUpdateSuccess }) {
   const [isEditing, setIsEditing] = useState(false);
+  const [activeTab, setActiveTab] = useState('overview');
 
-  // Only display fields from the Restaurant model
-  return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-xl font-semibold text-[#141517]">Restaurant Information</h2>
-        {!isEditing && (
-          <button
-            onClick={() => setIsEditing(true)}
-            className="px-4 py-2 rounded-lg bg-[#FF4F18] text-[#FFFFFF] hover:opacity-90 transition-all duration-200"
-          >
-            Edit Profile
-          </button>
-        )}
-      </div>
-
-      {isEditing ? (
+  if (isEditing) {
+    return (
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="bg-white rounded-2xl shadow-xl p-8"
+      >
         <RestaurantProfileForm
           mode="edit"
           initialData={restaurant}
           onSubmitSuccess={(updatedData) => {
             onEditClick(updatedData);
             setIsEditing(false);
-            onUpdateSuccess();
+            if (onUpdateSuccess) onUpdateSuccess();
           }}
           onCancel={() => setIsEditing(false)}
         />
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="space-y-4">
-            <ImageDisplay imageUrl={restaurant.images?.main} />
-            <InfoItem label="Restaurant Name" value={restaurant.restaurantName} />
-            <InfoItem label="Cuisine Type" value={restaurant.cuisineType} />
-            <InfoItem label="Description" value={restaurant.description} />
+      </motion.div>
+    );
+  }
+
+  const formattedHours = formatOpeningHours(restaurant.openingHours);
+
+  return (
+    <div className="space-y-6">
+      {/* Hero Section */}
+      <div className="relative aspect-[21/9] w-full rounded-3xl overflow-hidden">
+        {restaurant.images?.main ? (
+          <Image
+            src={restaurant.images.main}
+            alt={restaurant.restaurantName}
+            fill
+            className="object-cover"
+            sizes="100vw"
+          />
+        ) : (
+          <div className="w-full h-full bg-gradient-to-r from-gray-200 to-gray-300 
+            flex items-center justify-center">
+            <RiRestaurantLine className="text-6xl text-gray-400" />
           </div>
+        )}
+        
+        <div className="absolute inset-0 bg-black/40 p-6 flex flex-col justify-between">
+          <button
+            onClick={() => setIsEditing(true)}
+            className="self-end bg-white/90 text-[#FF4F18] px-4 py-2 rounded-lg 
+              shadow-lg hover:bg-white transition-all duration-200 flex items-center gap-2"
+          >
+            <RiEdit2Line />
+            Edit Profile
+          </button>
           
-          <div className="space-y-4">
-            <LocationInfoItem location={restaurant.location} />
-            <div className="bg-[#F2F4F7] p-4 rounded-lg">
-              <div className="flex items-center gap-2 mb-2">
-                <RiTimeLine className="text-[#141517]" />
-                <p className="text-sm font-medium text-[#141517]">Opening Hours</p>
-              </div>
-              <pre className="text-[#141517] whitespace-pre-line font-sans">
-                {formatOpeningHours(restaurant.openingHours)}
-              </pre>
-            </div>
+          <div>
+            <h1 className="text-3xl font-bold text-white mb-2">{restaurant.restaurantName}</h1>
+            <p className="text-white/90">{restaurant.cuisineType}</p>
           </div>
         </div>
-      )}
+      </div>
+
+      {/* Restaurant Details */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Description */}
+        <div className="bg-white rounded-xl shadow-lg p-6">
+          <h3 className="text-xl font-semibold mb-4 flex items-center gap-2 text-black">
+            <MdRestaurantMenu className="text-[#FF4F18]" />
+            About
+          </h3>
+          <p className="text-gray-600">{restaurant.description || 'No description provided'}</p>
+        </div>
+
+        {/* Opening Hours */}
+        <div className="bg-white rounded-xl shadow-lg p-6">
+          <h3 className="text-xl font-semibold mb-4 flex items-center gap-2 text-black">
+            <RiTimeLine className="text-[#FF4F18]" />
+            Opening Hours
+          </h3>
+          <div className="space-y-3">
+            {formattedHours.map(({ day, hours, isOpen, status }) => (
+              <div key={day} className="flex justify-between items-center py-2 border-b last:border-0">
+                <span className="font-medium text-gray-900">{day}</span>
+                {isOpen ? (
+                  <span className="text-gray-900">{hours}</span>
+                ) : (
+                  <span className="text-red-500">{status}</span>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Location */}
+        {restaurant.location && (
+          <div className="bg-white rounded-xl shadow-lg p-6 md:col-span-2">
+            <h3 className="text-xl font-semibold mb-4 flex items-center gap-2 text-black">
+              <RiMapPinLine className="text-[#FF4F18]" />
+              Location
+            </h3>
+            <p className="text-gray-600 mb-4">{restaurant.location.address}</p>
+            {restaurant.location.coordinates && (
+              <div className="h-[300px] rounded-lg overflow-hidden">
+                <GoogleMap
+                  mapContainerStyle={{ width: '100%', height: '100%' }}
+                  center={restaurant.location.coordinates}
+                  zoom={15}
+                >
+                  <Marker position={restaurant.location.coordinates} />
+                </GoogleMap>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
-
-const InfoItem = ({ label, value }) => (
-  <div className="bg-[#F2F4F7] p-4 rounded-lg">
-    <p className="text-sm font-medium text-[#141517] mb-1">{label}</p>
-    <p className="text-[#141517]">{value || 'Not provided'}</p>
-  </div>
-);
-
-const ImageDisplay = ({ imageUrl }) => {
-  if (!imageUrl) {
-    return (
-      <div className="bg-[#F2F4F7] p-4 rounded-lg flex items-center justify-center h-[200px]">
-        <RiRestaurantLine className="text-4xl text-[#64748B]" />
-      </div>
-    );
-  }
-
-  return (
-    <div className="relative h-[200px] w-full rounded-lg overflow-hidden">
-      <Image
-        src={imageUrl}
-        alt="Restaurant"
-        fill
-        className="object-cover"
-        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-      />
-    </div>
-  );
-};
-
-const LocationInfoItem = ({ location }) => {
-  if (!location || !location.address) {
-    return (
-      <div className="bg-[#F2F4F7] p-4 rounded-lg">
-        <p className="text-sm font-medium text-[#141517] mb-1">Location</p>
-        <p className="text-[#141517]">Not provided</p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-4">
-      <div className="bg-[#F2F4F7] p-4 rounded-lg">
-        <p className="text-sm font-medium text-[#141517] mb-1">Location</p>
-        <p className="text-[#141517]">{location.address || 'Not provided'}</p>
-      </div>
-      {location.coordinates && (
-        <div className="h-[200px] rounded-lg overflow-hidden">
-          <GoogleMap
-            mapContainerStyle={{ width: '100%', height: '100%' }}
-            center={location.coordinates}
-            zoom={15}
-          >
-            <Marker position={location.coordinates} />
-          </GoogleMap>
-        </div>
-      )}
-    </div>
-  );
-};
