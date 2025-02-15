@@ -42,6 +42,14 @@ const restaurantSchema = new mongoose.Schema({
   images: {
     main: { type: String, default: "" },
     gallery: [{ type: String }]
+  },
+  rating: {
+    type: Number,
+    default: 0
+  },
+  totalReviews: {
+    type: Number,
+    default: 0
   }
 }, { timestamps: true });
 

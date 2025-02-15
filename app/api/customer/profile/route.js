@@ -50,53 +50,58 @@ export async function GET(req) {
 
 // 🚀 PUT Request: Update User Information
 export async function PUT(req) {
-    try {
-      const body = await req.text();
-      console.log("Raw request body:", body); // Debugging
-  
-      const { email, firstName, lastName, contactNumber, newPassword } = JSON.parse(body);
-  
-      if (!email) {
-        return new Response(JSON.stringify({ message: "Email is required" }), {
-          status: 400,
-          headers: { "Content-Type": "application/json" },
-        });
-      }
-  
-      const client = await connectDB();
-      const db = client.db("cluster0");
-      const usersCollection = db.collection("users");
-  
-      const user = await usersCollection.findOne({ email });
-      if (!user) {
-        await client.close();
-        return new Response(JSON.stringify({ message: "User not found" }), {
-          status: 404,
-          headers: { "Content-Type": "application/json" },
-        });
-      }
-  
-      // Prepare update object
-      let updateFields = { firstName, lastName, contactNumber };
-  
-      if (newPassword) {
-        const hashedPassword = await bcrypt.hash(newPassword, 10);
-        updateFields.password = hashedPassword;
-      }
-  
-      await usersCollection.updateOne({ email }, { $set: updateFields });
-      await client.close();
-  
-      return new Response(JSON.stringify({ message: "Profile updated successfully!" }), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      });
-    } catch (error) {
-      console.error("Error updating profile:", error);
-      return new Response(JSON.stringify({ message: "Invalid request format" }), {
-        status: 500,
+  try {
+    const body = await req.text();
+    console.log("Raw request body:", body);
+
+    const { email, firstName, lastName, contactNumber, newPassword, profileImage } = JSON.parse(body);
+
+    if (!email) {
+      return new Response(JSON.stringify({ message: "Email is required" }), {
+        status: 400,
         headers: { "Content-Type": "application/json" },
       });
     }
+
+    const client = await connectDB();
+    const db = client.db("cluster0");
+    const usersCollection = db.collection("users");
+
+    const user = await usersCollection.findOne({ email });
+    if (!user) {
+      await client.close();
+      return new Response(JSON.stringify({ message: "User not found" }), {
+        status: 404,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    // Prepare update object
+    let updateFields = { firstName, lastName, contactNumber };
+    
+    // Add profileImage to updateFields if it exists
+    if (profileImage) {
+      updateFields.profileImage = profileImage;
+    }
+
+    if (newPassword) {
+      const hashedPassword = await bcrypt.hash(newPassword, 10);
+      updateFields.password = hashedPassword;
+    }
+
+    await usersCollection.updateOne({ email }, { $set: updateFields });
+    await client.close();
+
+    return new Response(JSON.stringify({ message: "Profile updated successfully!" }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
+  } catch (error) {
+    console.error("Error updating profile:", error);
+    return new Response(JSON.stringify({ message: "Invalid request format" }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
+    });
   }
+}
   

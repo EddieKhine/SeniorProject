@@ -7,6 +7,7 @@ import { FaMapMarkerAlt, FaClock, FaPhone, FaStar, FaHome, FaShare, FaBookmark, 
 import Image from 'next/image';
 import PublicFloorPlan from '@/components/PublicFloorPlan';
 import { GoogleMap, Marker } from '@react-google-maps/api';
+import ReviewSection from '@/components/ReviewSection';
 
 export default function RestaurantFloorplanPage({ params }) {
   const restaurantId = use(params).id;
@@ -247,20 +248,27 @@ export default function RestaurantFloorplanPage({ params }) {
 
         {/* Main Panel - Floor Plan */}
         <div className="flex-1 p-6 bg-gray-50 overflow-y-auto">
-          <div className="h-[calc(100vh-120px)] bg-white rounded-xl shadow-lg overflow-hidden">
-            {restaurant.floorplanData ? (
-              <div className="w-full h-full relative">
+          {/* Floorplan Section */}
+          <div className="mb-8 bg-white rounded-xl shadow-lg overflow-hidden">
+            <h2 className="text-xl font-bold p-4 border-b">Floor Plan</h2>
+            <div className="h-[400px]">
+              {restaurant.floorplanData ? (
                 <PublicFloorPlan 
                   floorplanData={restaurant.floorplanData}
-                  style={{ width: '100%', height: '100%', position: 'absolute', top: 0, left: 0 }}
+                  style={{ width: '100%', height: '100%' }}
                 />
-              </div>
-            ) : (
-              <div className="h-full flex flex-col items-center justify-center">
-                <FaUtensils className="text-4xl text-[#FF4F18] mb-4" />
-                <p className="text-gray-500">Floor plan is not available</p>
-              </div>
-            )}
+              ) : (
+                <div className="h-full flex flex-col items-center justify-center">
+                  <FaUtensils className="text-4xl text-[#FF4F18] mb-4" />
+                  <p className="text-gray-500">Floor plan is not available</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Reviews Section */}
+          <div className="bg-white rounded-xl shadow-lg p-6">
+            <ReviewSection restaurantId={restaurantId} />
           </div>
         </div>
       </div>
