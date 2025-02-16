@@ -73,8 +73,16 @@ export class FileManager {
                             z: obj.rotation.z
                         },
                         scale: obj.scale.toArray(),
-                        userData: { ...obj.userData }
+                        userData: { 
+                            ...obj.userData,
+                            maxCapacity: obj.userData.isTable ? (obj.userData.maxCapacity || 4) : undefined
+                        }
                     };
+
+                    // Preserve the original _id if it exists
+                    if (obj.userData._id) {
+                        cleanObject._id = obj.userData._id;
+                    }
 
                     // Ensure wall has UUID
                     if (obj.userData.isWall) {
@@ -367,12 +375,14 @@ export class FileManager {
             } else {
                 if (data.userData.isChair) {
                     model = await this.ui.createChair();
-                } else if (data.userData.isFurniture) {
-                    model = await this.ui.createTable();
+                } else if (data.userData.isTable) {
+                    if (data.userData.isRoundTable) {
+                        model = await this.ui.createRoundTable();
+                    } else {
+                        model = await this.ui.createTable();
+                    }
                 } else if (data.userData.isSofa) {
                     model = await this.ui.createSofa();
-                } else if (data.userData.isTable) {
-                    model = await this.ui.createRoundTable();
                 }
 
                 if (model) {
@@ -381,7 +391,12 @@ export class FileManager {
                     model.scale.fromArray(data.scale);
                     model.userData = {
                         ...data.userData,
-                        isInteractable: !isViewOnly
+                        _id: data._id,
+                        isInteractable: !isViewOnly,
+                        maxCapacity: data.userData.isTable ? (data.userData.maxCapacity || 4) : undefined,
+                        bookingStatus: data.userData.isTable ? (data.userData.bookingStatus || 'available') : undefined,
+                        currentBooking: data.userData.isTable ? (data.userData.currentBooking || null) : undefined,
+                        bookingHistory: data.userData.isTable ? (data.userData.bookingHistory || []) : undefined
                     };
                 }
             }

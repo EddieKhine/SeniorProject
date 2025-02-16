@@ -210,9 +210,11 @@ export default function RestaurantSetupDashboard() {
                 ) : (
                   <div className="bg-white p-6 rounded-xl shadow-sm border border-[#F2F4F7]">
                     {isCreatingNew ? (
-                      <>
+                      <div>
                         <div className="flex justify-between items-center mb-4">
-                          <h2 className="text-xl font-semibold text-[#141517]">Create Restaurant Profile</h2>
+                          <h2 className="text-xl font-semibold text-[#141517]">
+                            Create Restaurant Profile
+                          </h2>
                           <button 
                             onClick={() => setIsCreatingNew(false)}
                             className="text-[#64748B] hover:text-[#141517]"
@@ -222,21 +224,26 @@ export default function RestaurantSetupDashboard() {
                         </div>
                         <RestaurantProfileForm 
                           mode="create"
+                          initialData={null}
                           onSubmitSuccess={(newRestaurant) => {
+                            console.log('Create success:', newRestaurant);
                             setRestaurant(newRestaurant);
                             setIsCreatingNew(false);
-                            fetchRestaurantProfile();
                           }}
-                          authToken={token}
+                          onCancel={() => setIsCreatingNew(false)}
                         />
-                      </>
+                      </div>
                     ) : (
                       <RestaurantInformation 
                         restaurant={restaurant}
                         onEditClick={(updatedRestaurant) => {
+                          console.log('Edit click:', updatedRestaurant);
                           setRestaurant(updatedRestaurant);
                         }}
-                        onUpdateSuccess={fetchRestaurantProfile}
+                        onUpdateSuccess={(updatedRestaurant) => {
+                          console.log('Update success:', updatedRestaurant);
+                          setRestaurant(updatedRestaurant);
+                        }}
                       />
                     )}
                   </div>

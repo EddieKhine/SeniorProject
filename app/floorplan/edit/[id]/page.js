@@ -180,7 +180,14 @@ export default function EditFloorplan() {
                   ...objData.userData,
                   isMovable: true,
                   isRotatable: true,
-                  isInteractable: true
+                  isInteractable: true,
+                  // Add table-specific properties if it's a table
+                  ...(objData.userData.isTable && {
+                    maxCapacity: objData.userData.maxCapacity || 4,
+                    bookingStatus: objData.userData.bookingStatus || 'available',
+                    currentBooking: objData.userData.currentBooking || null,
+                    bookingHistory: objData.userData.bookingHistory || []
+                  })
                 };
                 scene.add(furniture);
               }

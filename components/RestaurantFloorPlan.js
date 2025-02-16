@@ -290,14 +290,15 @@ export default function RestaurantFloorPlan({ token, restaurantId, isCustomerVie
                 
                 if (objData.userData.isChair) {
                   model = await chair(scene);
-                } else if (objData.userData.isFurniture) {
-                  model = await table(scene);
                 } else if (objData.userData.isTable) {
-                  model = await roundTable(scene);
+                  if (objData.userData.isRoundTable) {
+                    model = await roundTable(scene);
+                  } else {
+                    model = await table(scene);
+                  }
                 } else if (objData.userData.isSofa) {
                   model = await sofa(scene);
                 }
-
 
                 if (model) {
                   model.position.fromArray(objData.position);

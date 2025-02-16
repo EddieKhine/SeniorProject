@@ -26,9 +26,22 @@ export async function POST(req) {
     }
 
     const restaurantData = await req.json();
+    
+    // Validate required fields
+    if (!restaurantData.restaurantName || !restaurantData.cuisineType || 
+        !restaurantData.location || !restaurantData.description) {
+      return NextResponse.json({ message: "Missing required fields" }, { status: 400 });
+    }
+
+    // Create new restaurant with validated data
     const restaurant = new Restaurant({
       ownerId,
-      ...restaurantData
+      restaurantName: restaurantData.restaurantName,
+      cuisineType: restaurantData.cuisineType,
+      location: restaurantData.location,
+      description: restaurantData.description,
+      openingHours: restaurantData.openingHours || {},
+      images: restaurantData.images || { main: "", gallery: [] }
     });
 
     await restaurant.save();
@@ -39,7 +52,10 @@ export async function POST(req) {
     return NextResponse.json({ message: "Profile created successfully!", restaurant }, { status: 201 });
   } catch (error) {
     console.error("Error creating restaurant profile:", error);
-    return NextResponse.json({ message: "Internal server error" }, { status: 500 });
+    return NextResponse.json({ 
+      message: "Internal server error", 
+      error: error.message 
+    }, { status: 500 });
   }
 }
 
@@ -73,11 +89,11 @@ export async function GET(req) {
 }
 
 // ✅ PUT: Update restaurant profile
-export async function PUT(req) {
+export async function PUT(request) {
   await dbConnect();
 
   try {
-    const authHeader = req.headers.get("authorization");
+    const authHeader = request.headers.get("authorization");
     if (!authHeader) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
@@ -86,47 +102,40 @@ export async function PUT(req) {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const ownerId = decoded.userId;
 
-    // Check if the restaurant owner exists
-    const ownerExists = await RestaurantOwner.findById(ownerId);
-    if (!ownerExists) {
-      return NextResponse.json({ message: "Owner not found" }, { status: 404 });
-    }
+    // Log for debugging
+    console.log('Owner ID:', ownerId);
 
-    const {
-      restaurantName,
-      cuisineType,
-      location,
-      description,
-      openingHours,
-      images
-    } = await req.json();
+    const restaurantData = await request.json();
+    console.log('Received restaurant data:', restaurantData);
 
-    if (!restaurantName || !cuisineType || !location || !description) {
-      return NextResponse.json({ message: "All fields are required" }, { status: 400 });
-    }
-
-    // Find and update the restaurant profile
+    // Find and update the restaurant
     const restaurant = await Restaurant.findOneAndUpdate(
       { ownerId },
       {
-        restaurantName,
-        cuisineType,
-        location,
-        description,
-        openingHours,
-        images
+        restaurantName: restaurantData.restaurantName,
+        cuisineType: restaurantData.cuisineType,
+        location: restaurantData.location,
+        description: restaurantData.description,
+        openingHours: restaurantData.openingHours,
+        images: restaurantData.images
       },
-      { new: true } // Returns the updated document
+      { new: true }
     );
 
     if (!restaurant) {
       return NextResponse.json({ message: "Restaurant not found" }, { status: 404 });
     }
 
-    return NextResponse.json({ message: "Profile updated successfully!", restaurant }, { status: 200 });
+    return NextResponse.json({ 
+      message: "Profile updated successfully!", 
+      restaurant 
+    }, { status: 200 });
 
   } catch (error) {
     console.error("Error updating restaurant profile:", error);
-    return NextResponse.json({ message: "Internal server error" }, { status: 500 });
+    return NextResponse.json({ 
+      message: "Internal server error", 
+      error: error.message 
+    }, { status: 500 });
   }
 }

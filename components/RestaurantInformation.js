@@ -30,6 +30,9 @@ export default function RestaurantInformation({ restaurant, onEditClick, onUpdat
   const [isEditing, setIsEditing] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
 
+  // Add console log to debug component state
+  console.log('RestaurantInformation render:', { isEditing, restaurant });
+
   if (isEditing) {
     return (
       <motion.div
@@ -39,12 +42,12 @@ export default function RestaurantInformation({ restaurant, onEditClick, onUpdat
         className="bg-white rounded-2xl shadow-xl p-8"
       >
         <RestaurantProfileForm
-          mode="edit"
+          mode="update"
           initialData={restaurant}
-          onSubmitSuccess={(updatedData) => {
-            onEditClick(updatedData);
+          onSubmitSuccess={(updatedRestaurant) => {
+            console.log('Update success in RestaurantInformation:', updatedRestaurant); // Debug log
+            onUpdateSuccess(updatedRestaurant);
             setIsEditing(false);
-            if (onUpdateSuccess) onUpdateSuccess();
           }}
           onCancel={() => setIsEditing(false)}
         />

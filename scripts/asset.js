@@ -40,7 +40,7 @@ export async function table(scene) {
         const group = await loader.loadAsync('/models/table/ractangleTable/Table.obj');
         if (group.children.length > 0) {
             const material = new THREE.MeshPhongMaterial({
-                color: 0xffffff,  // Default gray color
+                color: 0xffffff,
                 shininess: 30
             });
 
@@ -55,8 +55,12 @@ export async function table(scene) {
             group.position.set(0, 0.01, 0);
             group.userData = {
                 isMovable: true,
-                isFurniture: true,
-                isRotatable: true
+                isTable: true,
+                isRotatable: true,
+                maxCapacity: 4,
+                bookingStatus: 'available',
+                currentBooking: null,
+                bookingHistory: []
             };
             scene.add(group);
         }
@@ -89,7 +93,9 @@ export async function sofa(scene) {
             group.userData = {
                 isMovable: true,
                 isSofa: true,
-                isRotatable: true
+                isRotatable: true,
+                maxCapacity: 2,
+                isTable: false
             };
             scene.add(group);
         }
@@ -123,7 +129,12 @@ export async function roundTable(scene) {
             group.userData = {
                 isMovable: true,
                 isTable: true,
-                isRotatable: true
+                isRotatable: true,
+                isRoundTable: true,
+                maxCapacity: 2,
+                bookingStatus: 'available',
+                currentBooking: null,
+                bookingHistory: []
             };
             scene.add(group);
         }

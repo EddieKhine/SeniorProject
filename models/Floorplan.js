@@ -18,6 +18,10 @@ const floorplanSchema = new mongoose.Schema({
                 required: true,
                 enum: ['wall', 'door', 'window', 'furniture']
             },
+            objectId: {
+                type: String,
+                required: true
+            },
             position: [Number],
             rotation: {
                 x: Number,

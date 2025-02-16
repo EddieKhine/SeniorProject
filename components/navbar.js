@@ -19,7 +19,17 @@ export default function Navbar() {
   // Load user from localStorage
   const loadUserFromStorage = () => {
     const storedUser = localStorage.getItem("customerUser");
-    setUser(storedUser ? JSON.parse(storedUser) : null);
+    if (!storedUser || storedUser === "undefined") {
+      setUser(null);
+      return;
+    }
+    try {
+      setUser(JSON.parse(storedUser));
+    } catch (error) {
+      console.error('Error parsing user data:', error);
+      setUser(null);
+      localStorage.removeItem("customerUser"); // Clean up invalid data
+    }
   };
 
   useEffect(() => {

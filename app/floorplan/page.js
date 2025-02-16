@@ -93,6 +93,31 @@ export default function FloorplanEditor() {
             console.log('Creating new floorplan:', sceneData);
             const restaurantData = JSON.parse(localStorage.getItem("restaurantData"));
 
+            // Transform the objects to include objectId and booking properties
+            const objectsWithIds = sceneData.objects.map(obj => {
+              const baseObject = {
+                ...obj,
+                objectId: THREE.MathUtils.generateUUID()
+              };
+
+              // Add additional properties for tables
+              if (obj.userData && obj.userData.isTable) {
+                return {
+                  ...baseObject,
+                  userData: {
+                    ...obj.userData,
+                    isTable: true,
+                    maxCapacity: obj.userData.maxCapacity || 4,
+                    bookingStatus: obj.userData.bookingStatus || 'available',
+                    currentBooking: obj.userData.currentBooking || null,
+                    bookingHistory: obj.userData.bookingHistory || []
+                  }
+                };
+              }
+
+              return baseObject;
+            });
+
             const response = await fetch('/api/scenes', {
               method: 'POST',
               headers: {
@@ -103,7 +128,7 @@ export default function FloorplanEditor() {
                 name: 'Restaurant Floor Plan',
                 restaurantId: restaurantData.id,
                 data: {
-                  objects: sceneData.objects || [],
+                  objects: objectsWithIds,
                   version: 2
                 }
               }),

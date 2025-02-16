@@ -47,7 +47,7 @@ export class SidebarManager {
                             if (tableModel) {
                                 tableModel.position.set(0, 0.5, 0);
                                 tableModel.userData = {
-                                    isFurniture: true,
+                                    isTable: true,
                                     isMovable: true,
                                     isRotatable: true
                                 };
@@ -80,6 +80,7 @@ export class SidebarManager {
                                 roundTableModel.position.set(0, 0.5, 0);
                                 roundTableModel.userData = {
                                     isTable: true,
+                                    isRoundTable: true,
                                     isMovable: true,
                                     isRotatable: true
                                 };

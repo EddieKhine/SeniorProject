@@ -255,7 +255,8 @@ export default function RestaurantFloorplanPage({ params }) {
               {restaurant.floorplanData ? (
                 <PublicFloorPlan 
                   floorplanData={restaurant.floorplanData}
-                  style={{ width: '100%', height: '100%' }}
+                  floorplanId={restaurant.floorplanId}
+                  restaurantId={restaurant._id}
                 />
               ) : (
                 <div className="h-full flex flex-col items-center justify-center">

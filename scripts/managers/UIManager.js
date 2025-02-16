@@ -165,7 +165,9 @@ export class UIManager {
                  current.userData.isChair ||
                  current.userData.isFurniture ||
                  current.userData.isDoor ||
-                 current.userData.isWindow)) {
+                 current.userData.isWindow ||
+                 current.userData.isSofa ||
+                 current.userData.isTable)) {
                 return current;
             }
             current = current.parent;
@@ -191,7 +193,13 @@ export class UIManager {
             tableModel.userData = {
                 isFurniture: true,
                 isMovable: true,
-                isRotatable: true
+                isRotatable: true,
+                isTable: true,
+                isRoundTable: false,
+                maxCapacity: 4,
+                bookingStatus: 'available',
+                currentBooking: null,
+                bookingHistory: []
             };
         }
         return tableModel;
@@ -210,15 +218,21 @@ export class UIManager {
     }
 
     async createRoundTable() {
-        const roundTableModel = await roundTable(this.scene);
-        if (roundTableModel) {
-            roundTableModel.userData = {
-                isTable: true,
+        const tableModel = await roundTable(this.scene);
+        if (tableModel) {
+            tableModel.userData = {
+                isFurniture: true,
                 isMovable: true,
-                isRotatable: true
+                isRotatable: true,
+                isTable: true,
+                isRoundTable: true,
+                maxCapacity: 2,
+                bookingStatus: 'available',
+                currentBooking: null,
+                bookingHistory: []
             };
         }
-        return roundTableModel;
+        return tableModel;
     }
 
     toggleRemoveMode() {

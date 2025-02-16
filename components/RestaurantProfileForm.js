@@ -6,6 +6,7 @@ import { RiImageAddLine, RiTimeLine, RiCloseLine } from "react-icons/ri";
 import { motion } from "framer-motion";
 import LocationSelector from './LocationSelector';
 import ImageUpload from './ImageUpload';
+import { useRouter } from "next/navigation";
 
 const RESTAURANT_CATEGORIES = [
   "Buffet",
@@ -47,7 +48,14 @@ const TIME_SLOTS = Array.from({ length: 48 }, (_, i) => {
   return `${displayHour}:${minute} ${period}`;
 });
 
-export default function RestaurantProfileForm({ mode, initialData, onSubmitSuccess, onCancel }) {
+export default function RestaurantProfileForm({ 
+  mode = 'create',
+  initialData = null,
+  onSubmitSuccess = () => {},
+  onCancel = () => {}
+}) {
+  console.log('RestaurantProfileForm props:', { mode, initialData, onSubmitSuccess, onCancel });
+
   const [formData, setFormData] = useState({
     restaurantName: initialData?.restaurantName || "",
     cuisineType: initialData?.cuisineType || "",
@@ -70,7 +78,10 @@ export default function RestaurantProfileForm({ mode, initialData, onSubmitSucce
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState(false);
   const [imagePreview, setImagePreview] = useState(null);
+
+  const router = useRouter();
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -146,9 +157,17 @@ export default function RestaurantProfileForm({ mode, initialData, onSubmitSucce
     e.preventDefault();
     setLoading(true);
     setError("");
+    setSuccess(false);
 
     try {
       const token = localStorage.getItem("restaurantOwnerToken");
+      if (!token) {
+        throw new Error("No authentication token found");
+      }
+
+      console.log('Submitting form data:', formData);
+      console.log('Mode:', mode);
+
       const response = await fetch("/api/restaurants", {
         method: mode === 'create' ? 'POST' : 'PUT',
         headers: {
@@ -158,14 +177,37 @@ export default function RestaurantProfileForm({ mode, initialData, onSubmitSucce
         body: JSON.stringify(formData)
       });
 
+      console.log('Response status:', response.status);
+      const data = await response.json();
+      
       if (!response.ok) {
-        throw new Error('Failed to save restaurant profile');
+        throw new Error(data.message || 'Failed to save restaurant profile');
       }
 
-      const data = await response.json();
+      setSuccess(true);
+
+      // Store the restaurant data in localStorage for the floorplan step
+      localStorage.setItem("restaurantData", JSON.stringify({
+        id: data.restaurant._id,
+        name: data.restaurant.restaurantName,
+        floorplanId: data.restaurant.floorplanId,
+        ownerId: data.restaurant.ownerId,
+        location: data.restaurant.location,
+        cuisineType: data.restaurant.cuisineType,
+        description: data.restaurant.description,
+        openingHours: data.restaurant.openingHours
+      }));
+
+      // Call the success handler with the restaurant data
       onSubmitSuccess(data.restaurant);
+
+      // Redirect to floorplan creation if in setup flow
+      if (mode === 'create' && window.location.pathname.includes('/setup')) {
+        router.push('/floorplan');
+      }
     } catch (err) {
       setError(err.message);
+      console.error('Submission error:', err);
     } finally {
       setLoading(false);
     }
@@ -378,6 +420,13 @@ export default function RestaurantProfileForm({ mode, initialData, onSubmitSucce
         </div>
       )}
 
+      {/* Success Message */}
+      {success && (
+        <div className="text-green-500 text-sm mt-2">
+          Restaurant profile saved successfully!
+        </div>
+      )}
+
       {/* Form Actions */}
       <div className="flex justify-end gap-4 mt-8">
         {onCancel && (
@@ -386,6 +435,7 @@ export default function RestaurantProfileForm({ mode, initialData, onSubmitSucce
             onClick={onCancel}
             className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 
               hover:bg-gray-50 font-medium"
+            disabled={loading}
           >
             Cancel
           </button>
