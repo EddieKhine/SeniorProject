@@ -1,6 +1,8 @@
-import { MongoClient } from "mongodb";
+import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import dbConnect from "@/lib/mongodb";
+import User from "@/models/user";
 
 export async function POST(req) {
   try {
@@ -8,68 +10,55 @@ export async function POST(req) {
 
     // Basic validation
     if (!email || !password) {
-      return new Response(JSON.stringify({ message: "Email and password are required" }), {
-        status: 400,
-        headers: { "Content-Type": "application/json" },
-      });
+      return NextResponse.json(
+        { message: "Email and password are required" },
+        { status: 400 }
+      );
     }
 
-    // Connect to MongoDB
-    const client = new MongoClient(process.env.MONGODB_URI);
-    await client.connect();
-    const db = client.db("cluster0"); // Replace with your actual DB name
-    const usersCollection = db.collection("users");
+    await dbConnect();
 
-    // Find user by email
-    const user = await usersCollection.findOne({ email });
+    // Find user by email using Mongoose model
+    const user = await User.findOne({ email });
     if (!user) {
-      return new Response(JSON.stringify({ message: "User not found" }), {
-        status: 404,
-        headers: { "Content-Type": "application/json" },
-      });
+      return NextResponse.json(
+        { message: "User not found" },
+        { status: 404 }
+      );
     }
 
     // Compare provided password with stored hashed password
     const isPasswordMatch = await bcrypt.compare(password, user.password);
     if (!isPasswordMatch) {
-      return new Response(JSON.stringify({ message: "Invalid password" }), {
-        status: 401,
-        headers: { "Content-Type": "application/json" },
-      });
+      return NextResponse.json(
+        { message: "Invalid password" },
+        { status: 401 }
+      );
     }
 
     // Create JWT token
     const token = jwt.sign(
       { userId: user._id, email: user.email, role: user.role },
-      process.env.JWT_SECRET, // Ensure this is in your .env.local file
-      { expiresIn: "1h" }     // Token expires in 1 hour
+      process.env.JWT_SECRET,
+      { expiresIn: "1h" }
     );
 
-    // Close the MongoDB connection
-    await client.close();
-
-    return new Response(
-      JSON.stringify({
-        message: "Login successful",
-        token,
-        user: {
-          firstName: user.firstName, 
-          lastName: user.lastName,
-          email: user.email,
-          contactNumber: user.contactNumber,
-          role: user.role,  // Ensuring role is stored in the frontend
-        },
-      }),
-      {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      }
-    );
+    return NextResponse.json({
+      message: "Login successful",
+      token,
+      user: {
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        contactNumber: user.contactNumber,
+        role: user.role,
+      },
+    });
   } catch (error) {
     console.error("Error in login API:", error);
-    return new Response(JSON.stringify({ message: "Internal Server Error" }), {
-      status: 500,
-      headers: { "Content-Type": "application/json" },
-    });
+    return NextResponse.json(
+      { message: "Internal Server Error" },
+      { status: 500 }
+    );
   }
 }
