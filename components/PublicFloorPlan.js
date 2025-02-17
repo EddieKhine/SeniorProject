@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 import { createScene, createFloor } from '@/scripts/floor';
@@ -14,9 +14,30 @@ export default function PublicFloorPlan({ floorplanData, floorplanId, restaurant
   const sceneRef = useRef(null);
   const doorManagerRef = useRef(null);
   const windowManagerRef = useRef(null);
+  const [sceneData, setSceneData] = useState(null);
+
+  // Load floorplan data if not provided as prop
+  useEffect(() => {
+    const loadFloorplanData = async () => {
+      if (!floorplanData && floorplanId) {
+        try {
+          const response = await fetch(`/api/scenes/${floorplanId}`);
+          if (!response.ok) throw new Error('Failed to fetch floorplan data');
+          const data = await response.json();
+          setSceneData(data.floorplan);
+        } catch (error) {
+          console.error('Error loading floorplan data:', error);
+        }
+      } else {
+        setSceneData(floorplanData);
+      }
+    };
+
+    loadFloorplanData();
+  }, [floorplanData, floorplanId]);
 
   useEffect(() => {
-    if (!containerRef.current || !floorplanData) return;
+    if (!containerRef.current || !sceneData) return;
 
     // Cleanup function
     const cleanup = () => {
@@ -103,11 +124,11 @@ export default function PublicFloorPlan({ floorplanData, floorplanId, restaurant
         windowManagerRef.current = new WindowManager(scene, { walls: [] }, renderer);
 
         // Process floorplan data
-        if (floorplanData.objects) {
+        if (sceneData.objects) {
           const wallMap = new Map();
 
           // First pass: Create walls
-          const wallObjects = floorplanData.objects.filter(obj => obj.type === 'wall');
+          const wallObjects = sceneData.objects.filter(obj => obj.type === 'wall');
           for (const objData of wallObjects) {
             const wallGeometry = new THREE.BoxGeometry(2, 2, 0.2);
             const wallMaterial = new THREE.MeshPhongMaterial({ color: 0x808080 });
@@ -131,7 +152,7 @@ export default function PublicFloorPlan({ floorplanData, floorplanId, restaurant
           }
 
           // Second pass: Create doors and windows
-          const openingsObjects = floorplanData.objects.filter(obj => 
+          const openingsObjects = sceneData.objects.filter(obj => 
             obj.type === 'door' || obj.type === 'window'
           );
 
@@ -164,7 +185,7 @@ export default function PublicFloorPlan({ floorplanData, floorplanId, restaurant
           }
 
           // Third pass: Create furniture
-          const furnitureObjects = floorplanData.objects.filter(obj => 
+          const furnitureObjects = sceneData.objects.filter(obj => 
             !['wall', 'door', 'window'].includes(obj.type)
           );
 
@@ -233,54 +254,68 @@ export default function PublicFloorPlan({ floorplanData, floorplanId, restaurant
         const mouse = new THREE.Vector2();
 
         const handleTableClick = async (intersects) => {
-          // Get the first intersected object
-          const clickedObject = intersects[0]?.object;
+          const clickedObject = intersects[0].object;
           console.log('Clicked object:', clickedObject);
 
           // Find the parent group (table)
-          let tableGroup = clickedObject?.parent;
-          while (tableGroup && !tableGroup.userData?.isTable) {
-              tableGroup = tableGroup.parent;
+          let tableGroup = clickedObject;
+          while (tableGroup.parent && !tableGroup.userData?.isTable) {
+            tableGroup = tableGroup.parent;
           }
 
-          if (tableGroup && tableGroup.userData && tableGroup.userData.isTable) {
-              // Generate objectId if it doesn't exist
-              if (!tableGroup.userData.objectId) {
-                  tableGroup.userData.objectId = THREE.MathUtils.generateUUID();
-              }
+          if (tableGroup && tableGroup.userData?.isTable) {
+            console.log('Table found:', tableGroup);
+            console.log('Table userData:', tableGroup.userData);
 
-              const tableId = tableGroup.userData.objectId;
-              console.log('Table found:', tableGroup);
-              console.log('Table data:', {
-                  id: tableId, // Using the objectId
-                  position: tableGroup.position,
-                  userData: tableGroup.userData,
-                  bookingStatus: tableGroup.userData.bookingStatus || 'available',
-                  maxCapacity: tableGroup.userData.maxCapacity || 4
-              });
+            // Use the userData directly from the tableGroup
+            const tableData = {
+              objectId: tableGroup.userData.friendlyId,
+              position: tableGroup.position,
+              userData: tableGroup.userData,
+              bookingStatus: tableGroup.userData.bookingStatus || 'available',
+              maxCapacity: tableGroup.userData.maxCapacity || 4
+            };
 
-              const dialog = await createBookingDialog(tableGroup, tableId);
-              if (dialog) {
-                  document.body.appendChild(dialog);
-              }
+            console.log('Table data:', tableData);
+
+            if (tableData.bookingStatus === 'booked') {
+              alert('This table is already booked');
+              return;
+            }
+
+            const dialog = await createBookingDialog(
+              tableGroup, 
+              tableGroup.userData.friendlyId // Use friendlyId directly from userData
+            );
+            
+            if (dialog) {
+              document.body.appendChild(dialog);
+            }
           }
         };
 
         const handleClick = (event) => {
           console.log('Click detected');
           
+          // Get mouse position
+          const mouse = new THREE.Vector2();
           const rect = containerRef.current.getBoundingClientRect();
-          const x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-          const y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+          mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+          mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
 
-          raycaster.setFromCamera(new THREE.Vector2(x, y), camera);
+          // Update the picking ray with the camera and mouse position
+          const raycaster = new THREE.Raycaster();
+          raycaster.setFromCamera(mouse, camera);
+
+          // Calculate objects intersecting the picking ray
           const intersects = raycaster.intersectObjects(sceneRef.current.children, true);
-          
-          console.log('Review data structure:', intersects[0]?.object?.parent?.userData);
-          console.log('Intersects:', intersects);
 
           if (intersects.length > 0) {
-              handleTableClick(intersects);
+            // Log the data structure for debugging
+            console.log('Review data structure:', intersects[0].object.parent.userData);
+            console.log('Intersects:', intersects);
+            
+            handleTableClick(intersects);
           }
         };
 
@@ -305,7 +340,7 @@ export default function PublicFloorPlan({ floorplanData, floorplanId, restaurant
     };
 
     initScene();
-  }, [floorplanData]);
+  }, [sceneData]);
 
   const generateTimeSlots = (openTime, closeTime, interval = 30) => {
     console.log('Generating time slots for:', { openTime, closeTime }); // Debug log
@@ -462,7 +497,7 @@ export default function PublicFloorPlan({ floorplanData, floorplanId, restaurant
 
         // Debug log
         console.log('Booking attempt:', {
-            tableId,
+            tableId,  // Now using friendlyId or objectId from floorplan data
             date: dateInput,
             time: timeInput,
             guestCount,
@@ -470,14 +505,12 @@ export default function PublicFloorPlan({ floorplanData, floorplanId, restaurant
             customerData: customer
         });
 
-        const bookingData = {
-            tableId, // This should now be properly defined
-            date: dateInput,
-            time: timeInput,
-            guestCount,
-            restaurantId,
-            customerData: customer
-        };
+        console.log('Sending booking request with:', {
+          tableId,
+          tableUserData: table.userData,
+          date: dateInput,
+          time: timeInput
+        });
 
         const response = await fetch(`/api/scenes/${floorplanId}/book`, {
             method: 'POST',
@@ -485,7 +518,14 @@ export default function PublicFloorPlan({ floorplanData, floorplanId, restaurant
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${customerToken}`
             },
-            body: JSON.stringify(bookingData)
+            body: JSON.stringify({
+                tableId: table.userData.friendlyId,  // Make sure we're using friendlyId
+                date: dateInput,
+                time: timeInput,
+                guestCount,
+                restaurantId,
+                customerData: customer
+            })
         });
 
         if (!response.ok) {
@@ -515,7 +555,7 @@ export default function PublicFloorPlan({ floorplanData, floorplanId, restaurant
         alert('Booking confirmed!');
     } catch (error) {
         console.error('Booking error:', error);
-        alert(error.message || 'Failed to book table. Please try again.');
+        alert(error.message || 'Failed to book table');
     }
   };
 

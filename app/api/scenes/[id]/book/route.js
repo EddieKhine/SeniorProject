@@ -33,10 +33,65 @@ export async function POST(request, { params }) {
       customerData
     } = await request.json();
     
+    console.log('Looking for table:', tableId); // Debug log
+
     // Get restaurant operating hours
     const restaurant = await Restaurant.findById(restaurantId);
     if (!restaurant) {
       return NextResponse.json({ error: "Restaurant not found" }, { status: 404 });
+    }
+
+    // Get the scene and find the table
+    const scene = await Floorplan.findById(id);
+    if (!scene) {
+      return NextResponse.json({ error: "Floorplan not found" }, { status: 404 });
+    }
+
+    console.log('Scene objects:', scene.data.objects.length); // Debug log
+
+    // Enhanced table lookup with more detailed logging
+    const table = scene.data.objects.find(obj => {
+      console.log('Checking table:', {
+        type: obj.type,
+        objectId: obj.objectId,
+        friendlyId: obj.userData?.friendlyId,
+        isTable: obj.userData?.isTable,
+        lookingFor: tableId
+      });
+
+      // Match by objectId directly since it matches the friendlyId
+      return obj.type === 'furniture' && obj.objectId === tableId;
+    });
+
+    if (!table) {
+      // Log all available tables for debugging
+      const availableTables = scene.data.objects
+        .filter(obj => obj.type === 'furniture' && obj.objectId?.startsWith('t'))
+        .map(obj => ({
+          objectId: obj.objectId,
+          type: obj.type
+        }));
+      
+      console.log('Available tables:', availableTables);
+      
+      return NextResponse.json({ 
+        error: "Table not found",
+        details: {
+          searchedId: tableId,
+          availableTables
+        }
+      }, { status: 404 });
+    }
+
+    // Initialize userData if it doesn't exist
+    if (!table.userData) {
+      table.userData = {
+        isTable: true,
+        friendlyId: table.objectId,
+        bookingStatus: 'available',
+        currentBooking: null,
+        bookingHistory: []
+      };
     }
 
     // Get the day of the week for the booking date
@@ -88,44 +143,15 @@ export async function POST(request, { params }) {
     }
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     
-    // Calculate end time (2 hours after start time)
-    const startTime = new Date(`2000-01-01T${bookingTime}`);
-    const endTime = new Date(startTime);
-    endTime.setHours(endTime.getHours() + 2);
-    const endTimeString = endTime.toTimeString().slice(0, 5);
-
-    // Check if table is available for the entire 2-hour slot
-    const existingBookings = await Booking.find({
-      tableId,
-      date,
-      $or: [
-        {
-          time: {
-            $gte: bookingTime,
-            $lt: endTimeString
-          }
-        },
-        {
-          time: bookingTime
-        }
-      ],
-      status: { $in: ['pending', 'confirmed'] }
-    });
-
-    if (existingBookings.length > 0) {
-      return NextResponse.json({ 
-        error: "Table not available for this time slot" 
-      }, { status: 400 });
-    }
-
-    // Create booking
+    // Create and save booking
     const booking = new Booking({
       userId: decoded.userId,
       restaurantId,
       floorplanId: id,
-      tableId,
+      tableId: tableId,
       date: new Date(date),
-      time: bookingTime,
+      startTime: time,
+      endTime: calculateEndTime(time),
       guestCount,
       status: 'confirmed',
       customerName: `${customerData.firstName} ${customerData.lastName}`.trim(),
@@ -135,22 +161,43 @@ export async function POST(request, { params }) {
 
     await booking.save();
 
-    // Update table status in floorplan
-    const scene = await Floorplan.findById(id);
-    const table = scene.data.objects.find(obj => obj.objectId === tableId);
-    if (table) {
-      table.userData.bookingStatus = 'booked';
-      table.userData.currentBooking = booking._id;
-      scene.markModified('data.objects');
-      await scene.save();
-    }
+    // Update the floorplan document directly using MongoDB update operators
+    await Floorplan.updateOne(
+      { 
+        _id: id,
+        'data.objects.objectId': tableId 
+      },
+      { 
+        $set: {
+          'data.objects.$.userData.bookingStatus': 'booked',
+          'data.objects.$.userData.currentBooking': booking._id
+        }
+      }
+    );
 
     return NextResponse.json({ 
       message: "Booking confirmed",
-      booking 
+      booking
     });
   } catch (error) {
     console.error('Booking error:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ 
+      error: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    }, { status: 500 });
   }
+}
+
+// Helper function to calculate end time
+function calculateEndTime(startTime) {
+  const [time, period] = startTime.split(' ');
+  const [hours, minutes] = time.split(':').map(Number);
+  let endHours = hours;
+  
+  if (period === 'PM' && hours !== 12) endHours += 12;
+  if (period === 'AM' && hours === 12) endHours = 0;
+  
+  endHours = (endHours + 2) % 24;
+  
+  return `${endHours === 0 ? 12 : endHours > 12 ? endHours - 12 : endHours}:${minutes.toString().padStart(2, '0')} ${endHours >= 12 ? 'PM' : 'AM'}`;
 } 

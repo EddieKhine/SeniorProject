@@ -20,106 +20,70 @@ export async function POST(request) {
   try {
     await dbConnect();
     
-    // Debug: Log headers
-    console.log('Auth header:', request.headers.get("authorization"));
-    
     const authHeader = request.headers.get("authorization");
-    if (!authHeader) {
-      console.log('No authorization header found');
-      return NextResponse.json({ error: "Unauthorized - No token provided" }, { status: 401 });
+    if (!authHeader?.startsWith('Bearer ')) {
+      return NextResponse.json({ 
+        error: "Unauthorized - Invalid token format" 
+      }, { status: 401 });
     }
 
     const token = authHeader.split(" ")[1];
-    if (!token) {
-      console.log('Token extraction failed');
-      return NextResponse.json({ error: "Unauthorized - Invalid token format" }, { status: 401 });
-    }
-
-    // Debug: Log token (first few characters)
-    console.log('Token (first 10 chars):', token.substring(0, 10));
-
+    
     try {
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
-      console.log('Decoded token:', decoded);
       const ownerId = decoded.userId;
 
       if (!ownerId) {
-        console.log('No userId in decoded token');
-        return NextResponse.json({ error: "Unauthorized - Invalid token payload" }, { status: 401 });
+        return NextResponse.json({ 
+          error: "Unauthorized - Invalid token payload" 
+        }, { status: 401 });
       }
 
       const data = await request.json();
-      console.log('Request data:', {
-        name: data.name,
-        restaurantId: data.restaurantId,
-        hasObjects: !!data.data?.objects
-      });
-
-      // Validate required fields
-      if (!data.name || !data.data || !data.data.objects || !data.restaurantId) {
+      
+      // Validate minimum required fields
+      if (!data.restaurantId) {
         return NextResponse.json(
-          { error: 'Missing required fields' },
+          { error: 'Missing restaurant ID' },
           { status: 400 }
         );
       }
 
-      // Create new floorplan
+      // Create floorplan with minimal required data
       const floorplan = new Floorplan({
-        name: data.name,
+        name: data.name || "Restaurant Floor Plan",
         restaurantId: data.restaurantId,
         ownerId: ownerId,
         data: {
-          objects: data.data.objects,
-          version: data.data.version || 1
+          objects: data.data?.objects || [],
+          version: data.data?.version || 1
         }
       });
 
       await floorplan.save();
 
-      // Update the restaurant with the new floorplanId
-      const updatedRestaurant = await Restaurant.findByIdAndUpdate(
+      // Update restaurant with floorplan ID
+      await Restaurant.findByIdAndUpdate(
         data.restaurantId,
-        { floorplanId: floorplan._id },
-        { new: true }
+        { floorplanId: floorplan._id }
       );
 
-      if (!updatedRestaurant) {
-        // If restaurant update fails, delete the created floorplan
-        await Floorplan.findByIdAndDelete(floorplan._id);
-        return NextResponse.json(
-          { error: 'Restaurant not found or update failed' },
-          { status: 404 }
-        );
-      }
-
       return NextResponse.json({
-        message: "Floorplan saved and restaurant updated successfully",
-        floorplan,
-        restaurant: updatedRestaurant,
-        token: jwt.sign(
-          { 
-            floorplanId: floorplan._id,
-            restaurantId: data.restaurantId,
-            ownerId 
-          },
-          process.env.JWT_SECRET,
-          { expiresIn: '24h' }
-        )
+        message: "Floorplan created successfully",
+        floorplan
       });
 
     } catch (jwtError) {
       console.error('JWT verification failed:', jwtError);
       return NextResponse.json({ 
-        error: "Unauthorized - Token verification failed",
-        details: process.env.NODE_ENV === 'development' ? jwtError.message : undefined
+        error: "Unauthorized - Token verification failed"
       }, { status: 401 });
     }
 
   } catch (error) {
     console.error('Server error:', error);
     return NextResponse.json({ 
-      error: "Internal server error",
-      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      error: "Internal server error"
     }, { status: 500 });
   }
 } 

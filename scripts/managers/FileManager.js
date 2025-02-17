@@ -43,12 +43,22 @@ export class FileManager {
             const token = localStorage.getItem("restaurantOwnerToken");
             const restaurantData = JSON.parse(localStorage.getItem("restaurantData"));
             
-            if (!token || !restaurantData) {
-                throw new Error('No authentication token or restaurant data found');
+            if (!token || !restaurantData?.id) {
+                throw new Error('No authentication token or restaurant ID found');
             }
 
+            // Initialize counters for different types of objects
+            const counters = {
+                table: 1,
+                chair: 1,
+                sofa: 1,
+                wall: 1,
+                door: 1,
+                window: 1
+            };
+
             const sceneData = {
-                name: `${restaurantData.name || 'Restaurant'} Floor Plan`,
+                name: "Restaurant Floor Plan",
                 restaurantId: restaurantData.id,
                 data: {
                     objects: [],
@@ -61,11 +71,30 @@ export class FileManager {
                 if (obj.userData?.isMovable || obj.userData?.isWall || 
                     obj.userData?.isDoor || obj.userData?.isWindow) {
                     
+                    // Generate user-friendly ID based on object type
+                    let friendlyId;
+                    if (obj.userData.isTable) {
+                        friendlyId = `t${counters.table++}`;
+                    } else if (obj.userData.isChair) {
+                        friendlyId = `c${counters.chair++}`;
+                    } else if (obj.userData.isSofa) {
+                        friendlyId = `s${counters.sofa++}`;
+                    } else if (obj.userData.isWall) {
+                        friendlyId = `w${counters.wall++}`;
+                    } else if (obj.userData.isDoor) {
+                        friendlyId = `d${counters.door++}`;
+                    } else if (obj.userData.isWindow) {
+                        friendlyId = `win${counters.window++}`;
+                    } else {
+                        friendlyId = `obj${THREE.MathUtils.generateUUID().slice(0, 4)}`;
+                    }
+
                     // Create a clean object without circular references
                     const cleanObject = {
                         type: obj.userData.isWall ? 'wall' : 
                               obj.userData.isDoor ? 'door' :
                               obj.userData.isWindow ? 'window' : 'furniture',
+                        objectId: friendlyId,
                         position: obj.position.toArray(),
                         rotation: {
                             x: obj.rotation.x,
@@ -75,6 +104,7 @@ export class FileManager {
                         scale: obj.scale.toArray(),
                         userData: { 
                             ...obj.userData,
+                            friendlyId, // Store the friendly ID in userData as well
                             maxCapacity: obj.userData.isTable ? (obj.userData.maxCapacity || 4) : undefined
                         }
                     };
@@ -113,33 +143,34 @@ export class FileManager {
                 }
             });
 
-            let response;
-            // Check if we're editing an existing floorplan
-            if (restaurantData.floorplanId) {
-                // Update existing floorplan
-                response = await fetch(`/api/scenes/${restaurantData.floorplanId}`, {
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`
-                    },
-                    body: JSON.stringify(sceneData)
-                });
-            } else {
-                // Create new floorplan
-                response = await fetch('/api/scenes', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`
-                    },
-                    body: JSON.stringify(sceneData)
-                });
+            // Determine if we're updating an existing floorplan or creating a new one
+            const existingFloorplanId = restaurantData.floorplanId;
+            const endpoint = existingFloorplanId 
+                ? `/api/scenes/${existingFloorplanId}` 
+                : '/api/scenes';
+            const method = existingFloorplanId ? 'PUT' : 'POST';
+
+            const response = await fetch(endpoint, {
+                method: method,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify(sceneData)
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to save floorplan');
             }
 
-            const responseData = await response.json();
-            if (!response.ok) {
-                throw new Error(responseData.error || 'Failed to save floorplan');
+            const result = await response.json();
+            console.log('Save successful:', result);
+
+            // Only update restaurantData if we're creating a new floorplan
+            if (!existingFloorplanId) {
+                restaurantData.floorplanId = result.floorplan._id;
+                localStorage.setItem("restaurantData", JSON.stringify(restaurantData));
             }
 
             alert('Floor plan saved successfully!');

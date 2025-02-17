@@ -189,13 +189,7 @@ export default function RestaurantProfileForm({
       // Store the restaurant data in localStorage for the floorplan step
       localStorage.setItem("restaurantData", JSON.stringify({
         id: data.restaurant._id,
-        name: data.restaurant.restaurantName,
-        floorplanId: data.restaurant.floorplanId,
-        ownerId: data.restaurant.ownerId,
-        location: data.restaurant.location,
-        cuisineType: data.restaurant.cuisineType,
-        description: data.restaurant.description,
-        openingHours: data.restaurant.openingHours
+        floorplanId: data.restaurant.floorplanId
       }));
 
       // Call the success handler with the restaurant data

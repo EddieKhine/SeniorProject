@@ -23,7 +23,11 @@ const bookingSchema = new mongoose.Schema({
     },
     tableId: {
         type: String,
-        required: true
+        required: true        // This will store the friendly ID (e.g., 't1')
+    },
+    originalTableId: {        // Add this new field
+        type: String,
+        required: false       // Optional, stores the original UUID if needed
     },
     customerName: {
         type: String,
@@ -42,9 +46,13 @@ const bookingSchema = new mongoose.Schema({
         type: Date,
         required: [true, 'Please provide booking date']
     },
-    time: {
+    startTime: {
         type: String,
-        required: [true, 'Please provide booking time']
+        required: [true, 'Please provide booking start time']
+    },
+    endTime: {
+        type: String,
+        required: [true, 'Please provide booking end time']
     },
     guestCount: {
         type: Number,
@@ -97,11 +105,21 @@ bookingSchema.index({ userId: 1 });
 bookingSchema.index({ bookingRef: 1 }, { unique: true });
 
 // Method to check if table is available for a specific time
-bookingSchema.statics.isTableAvailable = async function(tableId, date, time) {
+bookingSchema.statics.isTableAvailable = async function(tableId, date, startTime, endTime) {
     const existingBooking = await this.findOne({
-        tableId,
+        $or: [
+            { tableId: tableId },
+            { originalTableId: tableId }
+        ],
         date,
-        time,
+        $or: [
+            {
+                $and: [
+                    { startTime: { $lt: endTime } },
+                    { endTime: { $gt: startTime } }
+                ]
+            }
+        ],
         status: { $in: ['pending', 'confirmed'] }
     });
     return !existingBooking;
@@ -121,7 +139,10 @@ bookingSchema.statics.getRestaurantBookings = async function(restaurantId, date)
 // Method to get table bookings
 bookingSchema.statics.getTableBookings = async function(tableId, date) {
     return this.find({
-        tableId,
+        $or: [
+            { tableId: tableId },
+            { originalTableId: tableId }
+        ],
         date,
         status: { $in: ['pending', 'confirmed'] }
     })

@@ -118,11 +118,12 @@ export default function FloorplanEditor() {
               return baseObject;
             });
 
+            // Make sure to include the Bearer token in the request
             const response = await fetch('/api/scenes', {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
+                'Authorization': `Bearer ${token}` // Make sure token is properly formatted
               },
               body: JSON.stringify({
                 name: 'Restaurant Floor Plan',
@@ -134,12 +135,13 @@ export default function FloorplanEditor() {
               }),
             });
 
+            if (!response.ok) {
+              const errorData = await response.json();
+              throw new Error(errorData.error || 'Failed to create scene');
+            }
+
             const responseData = await response.json();
             console.log('API Response:', responseData);
-
-            if (!response.ok) {
-              throw new Error(responseData.error || 'Failed to create scene');
-            }
 
             // Update restaurant with new floorplanId
             const updateResponse = await fetch(`/api/restaurants/${restaurantData.id}`, {
@@ -149,7 +151,7 @@ export default function FloorplanEditor() {
                 'Authorization': `Bearer ${token}`
               },
               body: JSON.stringify({
-                floorplanId: responseData._id
+                floorplanId: responseData.floorplan._id
               }),
             });
 
@@ -170,8 +172,6 @@ export default function FloorplanEditor() {
             }
 
             const updatedRestaurantData = await updatedRestaurantResponse.json();
-            
-            // Update localStorage with the fresh data
             localStorage.setItem("restaurantData", JSON.stringify(updatedRestaurantData));
 
             alert('New floor plan created successfully!');
@@ -179,6 +179,8 @@ export default function FloorplanEditor() {
           } catch (error) {
             console.error('Error details:', error);
             if (error.message.includes('Unauthorized')) {
+              // Handle token expiration
+              localStorage.removeItem('restaurantOwnerToken');
               router.push('/restaurant-owner');
             } else {
               alert('Failed to create floor plan: ' + error.message);

@@ -195,34 +195,35 @@ export default function RestaurantOwnerOnboarding() {
                   <button
                     onClick={async () => {
                       const restaurantData = JSON.parse(localStorage.getItem("restaurantData"));
-                      // Get fresh restaurant data from API
+                      if (!restaurantData?.id) {
+                        alert('Restaurant data not found');
+                        return;
+                      }
+                      
                       try {
-                        const response = await fetch(`/api/restaurants/${restaurantData.id}`);
+                        // Get fresh restaurant data
+                        const token = localStorage.getItem("restaurantOwnerToken");
+                        const response = await fetch(`/api/restaurants/${restaurantData.id}`, {
+                          headers: {
+                            'Authorization': `Bearer ${token}`
+                          }
+                        });
                         
                         if (!response.ok) throw new Error('Failed to fetch restaurant data');
                         
                         const freshRestaurantData = await response.json();
                         
-                        // Update localStorage with complete restaurant data
+                        // Only update necessary data in localStorage
                         localStorage.setItem("restaurantData", JSON.stringify({
                           id: freshRestaurantData._id || freshRestaurantData.id,
-                          name: freshRestaurantData.name,
-                          floorplanId: freshRestaurantData.floorplanId,
-                          // Add any other necessary data
-                          ownerId: freshRestaurantData.ownerId,
-                          location: freshRestaurantData.location,
-                          cuisineType: freshRestaurantData.cuisineType
+                          floorplanId: freshRestaurantData.floorplanId
                         }));
 
-                        // Navigate to appropriate page
-                        if (freshRestaurantData.floorplanId) {
-                          router.push(`/floorplan/edit/${freshRestaurantData.floorplanId}`);
-                        } else {
-                          router.push("/floorplan");
-                        }
+                        // Navigate based on floorplan existence
+                        router.push("/floorplan");
                       } catch (error) {
-                        console.error('Error fetching restaurant data:', error);
-                        alert('Error loading restaurant data. Please try again.');
+                        console.error('Error:', error);
+                        alert('Failed to load restaurant data');
                       }
                     }}
                     className="px-6 py-3 bg-gradient-to-r from-[#F4A261] to-[#E76F51] text-white rounded-md 
