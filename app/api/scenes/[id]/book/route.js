@@ -27,7 +27,8 @@ export async function POST(request, { params }) {
     const { 
       tableId, 
       date, 
-      time, 
+      startTime,    // Now receiving startTime directly
+      endTime,      // Now receiving endTime directly
       guestCount, 
       restaurantId,
       customerData
@@ -126,7 +127,7 @@ export async function POST(request, { params }) {
     const validTimeSlots = generateTimeSlots(openTime, closeTime);
     
     // Convert booking time to 24-hour format for comparison
-    const bookingTime = parseTime(time);
+    const bookingTime = parseTime(startTime);
     console.log('Booking time:', bookingTime); // Debug log
     
     // Validate time format
@@ -143,15 +144,15 @@ export async function POST(request, { params }) {
     }
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     
-    // Create and save booking
+    // Create and save booking with the provided times
     const booking = new Booking({
       userId: decoded.userId,
       restaurantId,
       floorplanId: id,
       tableId: tableId,
       date: new Date(date),
-      startTime: time,
-      endTime: calculateEndTime(time),
+      startTime,
+      endTime,
       guestCount,
       status: 'confirmed',
       customerName: `${customerData.firstName} ${customerData.lastName}`.trim(),
@@ -161,23 +162,26 @@ export async function POST(request, { params }) {
 
     await booking.save();
 
-    // Update the floorplan document directly using MongoDB update operators
+    // Update the floorplan document using MongoDB's $set operator
     await Floorplan.updateOne(
-      { 
-        _id: id,
-        'data.objects.objectId': tableId 
-      },
-      { 
+      { _id: id, 'data.objects.objectId': tableId },
+      {
         $set: {
           'data.objects.$.userData.bookingStatus': 'booked',
-          'data.objects.$.userData.currentBooking': booking._id
+          'data.objects.$.userData.currentBooking': booking._id,
+          'data.objects.$.userData.bookingHistory': []
         }
       }
     );
 
     return NextResponse.json({ 
       message: "Booking confirmed",
-      booking
+      booking,
+      tableDetails: {
+        friendlyId: tableId,
+        bookingStatus: 'booked',
+        bookingId: booking._id
+      }
     });
   } catch (error) {
     console.error('Booking error:', error);

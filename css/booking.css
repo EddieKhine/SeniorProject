@@ -98,3 +98,289 @@
   #cancel-booking:hover {
     background-color: #DC2626;
   }
+  
+  .booking-columns {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    margin-bottom: 1.5rem;
+  }
+  
+  .date-column,
+  .time-column {
+    background: #f8f9fa;
+    padding: 1rem;
+    border-radius: 8px;
+  }
+  
+  .time-slots-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: 0.5rem;
+    padding: 0.5rem;
+  }
+  
+  .time-slot-btn {
+    padding: 0.5rem;
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 0.875rem;
+    text-align: center;
+    white-space: nowrap;
+  }
+  
+  .time-slot-btn:hover {
+    background: #f1f5f9;
+  }
+  
+  .time-slot-btn.selected {
+    background: #6366F1;
+    color: white;
+    border-color: #6366F1;
+  }
+  
+  .time-slot-btn:disabled {
+    background: #e2e8f0;
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+  
+  .booking-panel {
+    background: white;
+    padding: 1rem;
+    border-bottom: 1px solid #e2e8f0;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    z-index: 10;
+  }
+  
+  .booking-columns-container {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  
+  /* Date selection styles */
+  .date-selector {
+    display: flex;
+    gap: 1rem;
+    overflow-x: auto;
+    padding: 0.5rem;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  .date-option {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 80px;
+    padding: 0.75rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: white;
+    color: #1a1a1a;
+  }
+  
+  .date-option:hover {
+    border-color: #FF4F18;
+  }
+  
+  .date-option.selected {
+    background: #FF4F18;
+    color: white;
+    border-color: #FF4F18;
+  }
+  
+  .date-day {
+    font-size: 1rem;
+    font-weight: 600;
+    color: inherit;
+  }
+  
+  .date-date {
+    font-size: 1.25rem;
+    font-weight: bold;
+    color: inherit;
+  }
+  
+  .date-month {
+    font-size: 0.875rem;
+    color: inherit;
+  }
+  
+  /* Time slots styles */
+  .time-slots-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: 0.5rem;
+    padding: 0.5rem;
+  }
+  
+  .time-slot-btn {
+    padding: 0.75rem 1rem;
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 0.875rem;
+    text-align: center;
+    color: #1a1a1a;
+    font-weight: 500;
+  }
+  
+  .time-slot-btn:hover {
+    border-color: #FF4F18;
+  }
+  
+  .time-slot-btn.selected {
+    background: #FF4F18;
+    color: white;
+    border-color: #FF4F18;
+  }
+  
+  .floorplan-container {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+    height: calc(100vh - 250px);
+  }
+  
+  .time-slots-slider {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.5rem;
+  }
+  
+  .time-slots-container {
+    display: flex;
+    gap: 0.5rem;
+    overflow-x: hidden;
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+    padding: 0.5rem;
+    max-width: 100%;
+  }
+  
+  .slider-arrow {
+    background: #FF4F18;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: opacity 0.2s;
+    flex-shrink: 0;
+    z-index: 1;
+    font-weight: bold;
+    font-size: 1.2rem;
+  }
+  
+  .slider-arrow:hover {
+    opacity: 0.9;
+  }
+  
+  .time-slot-btn {
+    padding: 0.75rem 1rem;
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 0.875rem;
+    white-space: nowrap;
+    flex-shrink: 0;
+    color: #1a1a1a;
+    font-weight: 500;
+  }
+  
+  .time-slot-btn.selected {
+    background: #FF4F18;
+    color: white;
+    border-color: #FF4F18;
+  }
+
+  /* Common slider styles */
+  .date-slider,
+  .time-slots-slider {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.5rem;
+  }
+
+  .date-container,
+  .time-slots-container {
+    display: flex;
+    gap: 0.5rem;
+    overflow-x: hidden;
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+    padding: 0.5rem;
+    max-width: 100%;
+  }
+
+  .slider-arrow {
+    background: #FF4F18;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: opacity 0.2s;
+    flex-shrink: 0;
+    z-index: 1;
+    font-weight: bold;
+    font-size: 1.2rem;
+  }
+
+  .slider-arrow:hover {
+    opacity: 0.9;
+  }
+
+  /* Section headers */
+  .booking-column h4 {
+    color: #1a1a1a;
+    font-weight: 600;
+  }
+
+  /* Container styles */
+  .booking-panel {
+    background: white;
+    padding: 1rem;
+    border-bottom: 1px solid #e2e8f0;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    z-index: 10;
+  }
+
+  .booking-columns-container {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .floorplan-container {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+    height: calc(100vh - 250px);
+  }

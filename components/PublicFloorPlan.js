@@ -8,36 +8,35 @@ import { chair, table, roundTable, sofa } from '@/scripts/asset';
 import { DoorManager } from '@/scripts/managers/DoorManager';
 import { WindowManager } from '@/scripts/managers/WindowManager';
 import '@/css/booking.css';
+import { toast } from 'react-hot-toast';
 
 export default function PublicFloorPlan({ floorplanData, floorplanId, restaurantId }) {
   const containerRef = useRef(null);
   const sceneRef = useRef(null);
   const doorManagerRef = useRef(null);
   const windowManagerRef = useRef(null);
-  const [sceneData, setSceneData] = useState(null);
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [selectedTime, setSelectedTime] = useState('');
+  const [availableTimeSlots, setAvailableTimeSlots] = useState([]);
+  const [restaurant, setRestaurant] = useState(null);
 
-  // Load floorplan data if not provided as prop
-  useEffect(() => {
-    const loadFloorplanData = async () => {
-      if (!floorplanData && floorplanId) {
-        try {
-          const response = await fetch(`/api/scenes/${floorplanId}`);
-          if (!response.ok) throw new Error('Failed to fetch floorplan data');
-          const data = await response.json();
-          setSceneData(data.floorplan);
-        } catch (error) {
-          console.error('Error loading floorplan data:', error);
-        }
-      } else {
-        setSceneData(floorplanData);
-      }
-    };
-
-    loadFloorplanData();
-  }, [floorplanData, floorplanId]);
+  const dateRef = useRef(selectedDate);
+  const timeRef = useRef(selectedTime);
 
   useEffect(() => {
-    if (!containerRef.current || !sceneData) return;
+    dateRef.current = selectedDate;
+  }, [selectedDate]);
+
+  useEffect(() => {
+    timeRef.current = selectedTime;
+  }, [selectedTime]);
+
+  useEffect(() => {
+    console.log('Selected Date:', selectedDate, 'Selected Time:', selectedTime);
+  }, [selectedDate, selectedTime]);
+
+  useEffect(() => {
+    if (!containerRef.current || !floorplanData) return;
 
     // Cleanup function
     const cleanup = () => {
@@ -124,11 +123,11 @@ export default function PublicFloorPlan({ floorplanData, floorplanId, restaurant
         windowManagerRef.current = new WindowManager(scene, { walls: [] }, renderer);
 
         // Process floorplan data
-        if (sceneData.objects) {
+        if (floorplanData.objects) {
           const wallMap = new Map();
 
           // First pass: Create walls
-          const wallObjects = sceneData.objects.filter(obj => obj.type === 'wall');
+          const wallObjects = floorplanData.objects.filter(obj => obj.type === 'wall');
           for (const objData of wallObjects) {
             const wallGeometry = new THREE.BoxGeometry(2, 2, 0.2);
             const wallMaterial = new THREE.MeshPhongMaterial({ color: 0x808080 });
@@ -152,7 +151,7 @@ export default function PublicFloorPlan({ floorplanData, floorplanId, restaurant
           }
 
           // Second pass: Create doors and windows
-          const openingsObjects = sceneData.objects.filter(obj => 
+          const openingsObjects = floorplanData.objects.filter(obj => 
             obj.type === 'door' || obj.type === 'window'
           );
 
@@ -185,7 +184,7 @@ export default function PublicFloorPlan({ floorplanData, floorplanId, restaurant
           }
 
           // Third pass: Create furniture
-          const furnitureObjects = sceneData.objects.filter(obj => 
+          const furnitureObjects = floorplanData.objects.filter(obj => 
             !['wall', 'door', 'window'].includes(obj.type)
           );
 
@@ -253,70 +252,106 @@ export default function PublicFloorPlan({ floorplanData, floorplanId, restaurant
         const raycaster = new THREE.Raycaster();
         const mouse = new THREE.Vector2();
 
-        const handleTableClick = async (intersects) => {
-          const clickedObject = intersects[0].object;
-          console.log('Clicked object:', clickedObject);
+        const handleClick = (event) => {
+          console.log('Click detected');
+          console.log('Current state values:', {
+            date: dateRef.current,
+            time: timeRef.current
+          });
+          
+          const rect = containerRef.current.getBoundingClientRect();
+          const x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+          const y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
 
-          // Find the parent group (table)
-          let tableGroup = clickedObject;
-          while (tableGroup.parent && !tableGroup.userData?.isTable) {
-            tableGroup = tableGroup.parent;
+          raycaster.setFromCamera(new THREE.Vector2(x, y), camera);
+          const intersects = raycaster.intersectObjects(sceneRef.current.children, true);
+          
+          // Debug current state
+          console.log('State when clicking:', {
+            selectedDate: dateRef.current,
+            selectedTime: timeRef.current
+          });
+
+          const tableObject = intersects.find(item => 
+            item.object?.userData?.isTable || 
+            item.object?.parent?.userData?.isTable
+          );
+
+          if (!tableObject) return;
+
+          const table = tableObject.object.userData?.isTable 
+            ? tableObject.object 
+            : tableObject.object.parent;
+
+          console.log('Table clicked:', table.userData);
+
+          // Use the state values directly
+          if (!dateRef.current || !timeRef.current) {
+            alert("Please select a date and time first before choosing a table");
+            return;
           }
 
-          if (tableGroup && tableGroup.userData?.isTable) {
-            console.log('Table found:', tableGroup);
-            console.log('Table userData:', tableGroup.userData);
+          const tableId = table.userData.objectId || table.userData.friendlyId;
 
-            // Use the userData directly from the tableGroup
-            const tableData = {
-              objectId: tableGroup.userData.friendlyId,
-              position: tableGroup.position,
-              userData: tableGroup.userData,
-              bookingStatus: tableGroup.userData.bookingStatus || 'available',
-              maxCapacity: tableGroup.userData.maxCapacity || 4
-            };
+          // Create booking dialog
+          const guestCountDialog = document.createElement('div');
+          guestCountDialog.className = 'booking-dialog';
+          guestCountDialog.innerHTML = `
+            <div class="booking-dialog-content">
+              <h3 class="text-xl font-bold mb-4">Complete Booking</h3>
+              <div class="booking-details mb-4">
+                <p>Date: ${new Date(dateRef.current).toLocaleDateString()}</p>
+                <p>Time: ${timeRef.current}</p>
+                <p>Table ID: ${tableId}</p>
+              </div>
+              <div class="form-group">
+                <label for="guest-count">Number of Guests</label>
+                <input 
+                  type="number" 
+                  id="guest-count" 
+                  min="1" 
+                  max="${table.userData.maxCapacity || 4}" 
+                  required
+                  class="w-full p-2 border rounded"
+                >
+              </div>
+              <div class="dialog-buttons">
+                <button type="button" id="cancel-booking" class="px-4 py-2 bg-gray-200 rounded">Cancel</button>
+                <button type="button" id="confirm-booking" class="px-4 py-2 bg-orange-500 text-white rounded">Confirm Booking</button>
+              </div>
+            </div>
+          `;
 
-            console.log('Table data:', tableData);
+          document.body.appendChild(guestCountDialog);
 
-            if (tableData.bookingStatus === 'booked') {
-              alert('This table is already booked');
+          // Add event listeners
+          const confirmButton = guestCountDialog.querySelector('#confirm-booking');
+          const cancelButton = guestCountDialog.querySelector('#cancel-booking');
+          const guestCountInput = guestCountDialog.querySelector('#guest-count');
+
+          cancelButton.addEventListener('click', () => {
+            document.body.removeChild(guestCountDialog);
+          });
+
+          confirmButton.addEventListener('click', async () => {
+            const guestCount = parseInt(guestCountInput.value);
+            if (!guestCount) {
+              alert('Please enter number of guests');
               return;
             }
 
-            const dialog = await createBookingDialog(
-              tableGroup, 
-              tableGroup.userData.friendlyId // Use friendlyId directly from userData
-            );
-            
-            if (dialog) {
-              document.body.appendChild(dialog);
+            try {
+              await handleBookingSubmission(table, tableId, {
+                date: dateRef.current,
+                time: timeRef.current,
+                guestCount
+              });
+              document.body.removeChild(guestCountDialog);
+            } catch (error) {
+              console.error('Booking error:', error);
+              alert(error.message || 'Failed to book table');
             }
-          }
-        };
-
-        const handleClick = (event) => {
-          console.log('Click detected');
-          
-          // Get mouse position
-          const mouse = new THREE.Vector2();
-          const rect = containerRef.current.getBoundingClientRect();
-          mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-          mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
-
-          // Update the picking ray with the camera and mouse position
-          const raycaster = new THREE.Raycaster();
-          raycaster.setFromCamera(mouse, camera);
-
-          // Calculate objects intersecting the picking ray
-          const intersects = raycaster.intersectObjects(sceneRef.current.children, true);
-
-          if (intersects.length > 0) {
-            // Log the data structure for debugging
-            console.log('Review data structure:', intersects[0].object.parent.userData);
-            console.log('Intersects:', intersects);
-            
-            handleTableClick(intersects);
-          }
+          });
         };
 
         if (containerRef.current) {
@@ -340,13 +375,38 @@ export default function PublicFloorPlan({ floorplanData, floorplanId, restaurant
     };
 
     initScene();
-  }, [sceneData]);
+  }, [floorplanData]);
 
-  const generateTimeSlots = (openTime, closeTime, interval = 30) => {
-    console.log('Generating time slots for:', { openTime, closeTime }); // Debug log
+  useEffect(() => {
+    // Fetch restaurant details and set default time slots
+    const fetchRestaurantDetails = async () => {
+      try {
+        const response = await fetch(`/api/restaurants/${restaurantId}`);
+        if (!response.ok) throw new Error('Failed to fetch restaurant details');
+        const data = await response.json();
+        setRestaurant(data);
+
+        // Get today's day of week
+        const today = new Date();
+        const dayOfWeek = today.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
+        
+        if (data.openingHours && data.openingHours[dayOfWeek]) {
+          const dayHours = data.openingHours[dayOfWeek];
+          if (!dayHours.isClosed) {
+            const timeSlots = generateTimeSlots(dayHours.open, dayHours.close);
+            setAvailableTimeSlots(timeSlots);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching restaurant details:', error);
+      }
+    };
+    fetchRestaurantDetails();
+  }, [restaurantId]);
+
+  const generateTimeSlots = (openTime, closeTime) => {
     const slots = [];
     
-    // Parse opening hours (e.g., "6:00 AM" to "06:00")
     const parseTime = (timeStr) => {
         const [time, period] = timeStr.split(' ');
         let [hours, minutes] = time.split(':').map(Number);
@@ -365,204 +425,226 @@ export default function PublicFloorPlan({ floorplanData, floorplanId, restaurant
     const end = new Date();
     const [closeHours, closeMinutes] = formattedCloseTime.split(':').map(Number);
     end.setHours(closeHours, closeMinutes, 0);
-
-    // Subtract 2 hours from end time to ensure full booking slots
     end.setHours(end.getHours() - 2);
 
     while (current <= end) {
-        const timeString = current.toLocaleTimeString('en-US', {
+        const startTime = current.toLocaleTimeString('en-US', {
             hour: 'numeric',
             minute: '2-digit',
             hour12: true
         });
-        slots.push(timeString);
-        current.setMinutes(current.getMinutes() + interval);
+        
+        const endTime = new Date(current.getTime() + (2 * 60 * 60 * 1000)).toLocaleTimeString('en-US', {
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: true
+        });
+        
+        const timeSlot = `${startTime} - ${endTime}`;
+        slots.push(timeSlot);
+        current.setMinutes(current.getMinutes() + 30);
     }
 
-    console.log('Generated slots:', slots); // Debug log
     return slots;
   };
 
-  const createBookingDialog = async (table, tableId) => {
-    try {
-        const response = await fetch(`/api/restaurants/${restaurantId}`);
-        if (!response.ok) {
-            throw new Error('Failed to fetch restaurant details');
-        }
-        const restaurant = await response.json();
-        
-        // Get current day
-        const today = new Date().toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
-        const todayHours = restaurant.openingHours[today];
-
-        if (!todayHours || !todayHours.open || !todayHours.close) {
-            alert('Restaurant is closed today');
-            return null;
-        }
-
-        console.log('Today\'s hours:', todayHours); // Debug log
-
-        const dialog = document.createElement('div');
-        dialog.className = 'booking-dialog';
-        
-        const dialogContent = document.createElement('div');
-        dialogContent.className = 'booking-dialog-content';
-        
-        const timeSlots = generateTimeSlots(todayHours.open, todayHours.close);
-
-        const timeOptions = timeSlots
-            .map(slot => {
-                const startTime = new Date(`2000-01-01 ${slot}`);
-                const endTime = new Date(startTime);
-                endTime.setHours(endTime.getHours() + 2);
-                
-                const endTimeString = endTime.toLocaleTimeString('en-US', {
-                    hour: 'numeric',
-                    minute: '2-digit',
-                    hour12: true
-                });
-
-                return `<option value="${slot}">${slot} - ${endTimeString}</option>`;
-            })
-            .join('');
-
-        dialogContent.innerHTML = `
-            <h3 class="text-xl font-bold mb-4">Book Table</h3>
-            <p class="text-gray-600 mb-4">Today's Hours: ${todayHours.open} - ${todayHours.close}</p>
-            <form class="booking-form">
-                <div class="form-group">
-                    <label for="booking-date">Date</label>
-                    <input type="date" id="booking-date" min="${new Date().toISOString().split('T')[0]}" required>
-                </div>
-                <div class="form-group">
-                    <label for="booking-time">Time Slot (2 hours)</label>
-                    <select id="booking-time" required>
-                        <option value="">Select a time slot</option>
-                        ${timeOptions}
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="guest-count">Number of Guests</label>
-                    <input type="number" id="guest-count" min="1" required>
-                </div>
-                <div class="dialog-buttons">
-                    <button type="button" id="cancel-booking">Cancel</button>
-                    <button type="button" id="confirm-booking">Confirm Booking</button>
-                </div>
-            </form>
-        `;
-
-        dialog.appendChild(dialogContent);
-
-        // Add event listeners
-        const cancelButton = dialogContent.querySelector('#cancel-booking');
-        const confirmButton = dialogContent.querySelector('#confirm-booking');
-
-        cancelButton.addEventListener('click', () => {
-            document.body.removeChild(dialog);
-        });
-
-        confirmButton.addEventListener('click', () => {
-            handleBookingConfirmation(table, tableId, dialog);
-        });
-
-        return dialog;
-    } catch (error) {
-        console.error('Error creating booking dialog:', error);
-        alert('Failed to load restaurant hours. Please try again.');
-        return null;
-    }
-  };
-
-  const handleBookingConfirmation = async (table, tableId, dialog) => {
-    const dateInput = dialog.querySelector('#booking-date').value;
-    const timeInput = dialog.querySelector('#booking-time').value;
-    const guestCount = parseInt(dialog.querySelector('#guest-count').value);
-
-    if (!dateInput || !timeInput || !guestCount) {
-        alert('Please fill in all fields');
-        return;
-    }
+  const handleDateChange = async (date) => {
+    console.log('Changing date to:', date);
+    setSelectedDate(date);
+    
+    if (!date || !restaurant) return;
 
     try {
-        const customerToken = localStorage.getItem('customerToken');
-        const customerData = localStorage.getItem('customerUser');
-        
-        if (!customerToken || !customerData) {
-            alert('Please log in to make a booking');
+        const dayOfWeek = new Date(date)
+            .toLocaleDateString('en-US', { weekday: 'long' })
+            .toLowerCase();
+        const dayHours = restaurant.openingHours[dayOfWeek];
+
+        if (!dayHours || dayHours.isClosed) {
+            setAvailableTimeSlots([]);
             return;
         }
 
-        const customer = JSON.parse(customerData);
-
-        // Debug log
-        console.log('Booking attempt:', {
-            tableId,  // Now using friendlyId or objectId from floorplan data
-            date: dateInput,
-            time: timeInput,
-            guestCount,
-            restaurantId,
-            customerData: customer
-        });
-
-        console.log('Sending booking request with:', {
-          tableId,
-          tableUserData: table.userData,
-          date: dateInput,
-          time: timeInput
-        });
-
-        const response = await fetch(`/api/scenes/${floorplanId}/book`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${customerToken}`
-            },
-            body: JSON.stringify({
-                tableId: table.userData.friendlyId,  // Make sure we're using friendlyId
-                date: dateInput,
-                time: timeInput,
-                guestCount,
-                restaurantId,
-                customerData: customer
-            })
-        });
-
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || 'Failed to book table');
-        }
-
-        const result = await response.json();
-        
-        // Update table status
-        if (table && table.userData) {
-            table.userData.bookingStatus = 'booked';
-            table.userData.currentBooking = result.booking._id;
-            
-            // Update visual appearance
-            if (table.children && table.children[0] && table.children[0].material) {
-                const tableMesh = table.children[0];
-                if (Array.isArray(tableMesh.material)) {
-                    tableMesh.material.forEach(mat => mat.color.setHex(0xff0000));
-                } else {
-                    tableMesh.material.color.setHex(0xff0000);
-                }
-            }
-        }
-
-        document.body.removeChild(dialog);
-        alert('Booking confirmed!');
+        const timeSlots = generateTimeSlots(dayHours.open, dayHours.close);
+        setAvailableTimeSlots(timeSlots);
     } catch (error) {
-        console.error('Booking error:', error);
-        alert(error.message || 'Failed to book table');
+        console.error('Error generating time slots:', error);
+        setAvailableTimeSlots([]);
     }
   };
 
+  const handleBookingSubmission = async (table, tableId, bookingDetails) => {
+    const customerToken = localStorage.getItem('customerToken');
+    const customerData = localStorage.getItem('customerUser');
+    
+    if (!customerToken || !customerData) {
+        throw new Error('Please log in to make a booking');
+    }
+
+    const customer = JSON.parse(customerData);
+    
+    // Parse both start and end times from the time slot
+    const [startTime, endTime] = bookingDetails.time.split(' - ');
+    
+    console.log('Submitting booking with:', {
+        date: dateRef.current,
+        startTime: startTime.trim(),
+        endTime: endTime.trim()
+    });
+
+    const bookingData = {
+        tableId,
+        date: dateRef.current, // Use the selectedDate from state
+        startTime: startTime.trim(),
+        endTime: endTime.trim(),
+        guestCount: bookingDetails.guestCount,
+        restaurantId,
+        customerData: customer
+    };
+
+    const response = await fetch(`/api/scenes/${floorplanId}/book`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${customerToken}`
+        },
+        body: JSON.stringify(bookingData)
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to book table');
+    }
+
+    const result = await response.json();
+    
+    // Update table status
+    if (table && table.userData) {
+        table.userData.bookingStatus = 'booked';
+        table.userData.currentBooking = result.booking._id;
+        
+        // Update visual appearance
+        if (table.children && table.children[0] && table.children[0].material) {
+            const tableMesh = table.children[0];
+            if (Array.isArray(tableMesh.material)) {
+                tableMesh.material.forEach(mat => mat.color.setHex(0xff0000));
+            } else {
+                tableMesh.material.color.setHex(0xff0000);
+            }
+        }
+    }
+
+    alert(`Booking confirmed! Reference: ${result.booking.bookingRef}`);
+  };
+
+  // Add this useEffect to debug state updates
+  useEffect(() => {
+    console.log('Time state updated:', selectedTime);
+  }, [selectedTime]);
+
+  // Add this debug log
+  useEffect(() => {
+    console.log('Component mounted/updated with time:', selectedTime);
+  }, []);
+
   return (
-    <div 
-      ref={containerRef} 
-      className="w-full h-[500px] rounded-lg bg-gradient-to-b from-gray-50 to-gray-100"
-    />
+    <div className="flex flex-col h-screen">
+      <div className="booking-panel">
+        <div className="booking-columns-container">
+          {/* Date Selection with Slider */}
+          <div className="date-slider">
+            <button 
+              className="slider-arrow left"
+              onClick={() => {
+                const container = document.querySelector('.date-container');
+                container.scrollBy({ left: -200, behavior: 'smooth' });
+              }}
+            >
+              ←
+            </button>
+            
+            <div className="date-container">
+              {[...Array(14)].map((_, index) => {
+                const date = new Date();
+                date.setDate(date.getDate() + index);
+                const dayName = date.toLocaleDateString('en-US', { weekday: 'short' });
+                const dayDate = date.getDate();
+                const month = date.toLocaleDateString('en-US', { month: 'short' });
+                const dateString = date.toISOString().split('T')[0];
+                
+                return (
+                  <div
+                    key={dateString}
+                    className={`date-option ${selectedDate === dateString ? 'selected' : ''}`}
+                    onClick={() => {
+                      console.log('Selected date:', dateString);
+                      handleDateChange(dateString);
+                    }}
+                  >
+                    <span className="date-day">{dayName}</span>
+                    <span className="date-date">{dayDate}</span>
+                    <span className="date-month">{month}</span>
+                  </div>
+                );
+              })}
+            </div>
+
+            <button 
+              className="slider-arrow right"
+              onClick={() => {
+                const container = document.querySelector('.date-container');
+                container.scrollBy({ left: 200, behavior: 'smooth' });
+              }}
+            >
+              →
+            </button>
+          </div>
+
+          {/* Time Selection with Slider */}
+          <div className="booking-column">
+            <h4 className="text-lg font-semibold mb-3">Available Times</h4>
+            <div className="time-slots-slider">
+              <button 
+                className="slider-arrow left"
+                onClick={() => {
+                  const container = document.querySelector('.time-slots-container');
+                  container.scrollBy({ left: -200, behavior: 'smooth' });
+                }}
+              >
+                ←
+              </button>
+              
+              <div className="time-slots-container">
+                {availableTimeSlots.map((slot) => (
+                  <button
+                    key={slot}
+                    onClick={() => {
+                      console.log('Setting time to:', slot);
+                      setSelectedTime(slot);
+                    }}
+                    className={`time-slot-btn ${selectedTime === slot ? 'selected' : ''}`}
+                  >
+                    {slot}
+                  </button>
+                ))}
+              </div>
+
+              <button 
+                className="slider-arrow right"
+                onClick={() => {
+                  const container = document.querySelector('.time-slots-container');
+                  container.scrollBy({ left: 200, behavior: 'smooth' });
+                }}
+              >
+                →
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Floor Plan Container */}
+      <div className="floorplan-container" ref={containerRef} />
+    </div>
   );
 } 

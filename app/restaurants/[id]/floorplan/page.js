@@ -248,10 +248,10 @@ export default function RestaurantFloorplanPage({ params }) {
 
         {/* Main Panel - Floor Plan */}
         <div className="flex-1 p-6 bg-gray-50 overflow-y-auto">
-          {/* Floorplan Section */}
-          <div className="mb-8 bg-white rounded-xl shadow-lg overflow-hidden">
+          {/* Floorplan Section with adjusted height */}
+          <div className="bg-white rounded-xl shadow-lg overflow-hidden">
             <h2 className="text-xl font-bold p-4 border-b">Floor Plan</h2>
-            <div className="h-[400px]">
+            <div className="p-6">
               {restaurant.floorplanData ? (
                 <PublicFloorPlan 
                   floorplanData={restaurant.floorplanData}
@@ -268,7 +268,7 @@ export default function RestaurantFloorplanPage({ params }) {
           </div>
 
           {/* Reviews Section */}
-          <div className="bg-white rounded-xl shadow-lg p-6">
+          <div className="mt-8 bg-white rounded-xl shadow-lg p-6">
             <ReviewSection restaurantId={restaurantId} />
           </div>
         </div>
