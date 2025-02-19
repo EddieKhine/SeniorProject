@@ -1,119 +1,53 @@
 import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
 import Review from '@/models/Review';
-import { MongoClient, ObjectId } from 'mongodb';
+import mongoose from 'mongoose';
 import jwt from 'jsonwebtoken';
 import Restaurant from '@/models/Restaurants';
 
 // GET: Fetch reviews for a restaurant
 export async function GET(req, { params }) {
+  await dbConnect();
+  const { id } = params;
+
   try {
-    await dbConnect();
-    const id = params.id;
+    const reviews = await Review.find({ 
+      restaurantId: new mongoose.Types.ObjectId(id) 
+    })
+    .populate('userId', 'firstName lastName')
+    .sort({ createdAt: -1 });
 
-    if (!id) {
-      return NextResponse.json({ error: "Restaurant ID is required" }, { status: 400 });
-    }
-
-    // Connect to the specific database where users are stored
-    const client = await MongoClient.connect(process.env.MONGODB_URI);
-    const db = client.db('cluster0');
-    const usersCollection = db.collection('users');
-
-    const reviews = await Review.find({ restaurantId: id }).sort({ createdAt: -1 });
-    
-    console.log('Reviews before population:', reviews);
-    console.log('Users collection:', await usersCollection.findOne({}));
-    
-    // Manually populate user information
-    const populatedReviews = await Promise.all(reviews.map(async (review) => {
-      const user = await usersCollection.findOne({ _id: new ObjectId(review.userId) });
-      const reviewObj = review.toObject();
-      reviewObj.userId = user;
-      return reviewObj;
-    }));
-
-    await client.close();
-    return NextResponse.json({ reviews: populatedReviews });
+    return NextResponse.json({ reviews });
   } catch (error) {
-    console.error('Error fetching reviews:', error);
-    return NextResponse.json(
-      { error: "Failed to fetch reviews", details: error.message },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
 
 // POST: Create a new review
 export async function POST(req, { params }) {
+  await dbConnect();
+  const { id } = params;
+
   try {
-    await dbConnect();
-    const { id } = await params;
+    const { rating, comment } = await req.json();
+    const token = req.headers.get('authorization')?.split(' ')[1];
     
-    const token = req.headers.get("authorization")?.split(" ")[1];
     if (!token) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json({ error: 'No token provided' }, { status: 401 });
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     
-    // Connect to MongoDB directly for user lookup
-    const client = await MongoClient.connect(process.env.MONGODB_URI);
-    const db = client.db('cluster0');
-    const usersCollection = db.collection('users');
-    
-    const user = await usersCollection.findOne({ 
-      _id: new ObjectId(decoded.userId) 
-    });
-
-    if (!user) {
-      await client.close();
-      return NextResponse.json({ 
-        error: "User not found",
-        details: `No user found with ID: ${decoded.userId}`
-      }, { status: 404 });
-    }
-
-    const { rating, comment, images } = await req.json();
-    
-    const review = new Review({
-      userId: decoded.userId,
-      restaurantId: id,
+    const review = await Review.create({
+      restaurantId: new mongoose.Types.ObjectId(id),
+      userId: new mongoose.Types.ObjectId(decoded.userId),
       rating,
-      comment,
-      images
+      comment
     });
 
-    await review.save();
-    
-    // Instead of using populate, manually construct the response
-    const reviewResponse = {
-      ...review.toObject(),
-      userId: {
-        firstName: user.firstName,
-        lastName: user.lastName,
-        email: user.email
-      }
-    };
-
-    // Update restaurant rating
-    const allReviews = await Review.find({ restaurantId: id });
-    const totalRating = allReviews.reduce((sum, review) => sum + review.rating, 0);
-    const averageRating = allReviews.length > 0 ? totalRating / allReviews.length : 0;
-
-    await Restaurant.findByIdAndUpdate(id, {
-      rating: averageRating,
-      totalReviews: allReviews.length
-    });
-
-    await client.close();
-    return NextResponse.json({ review: reviewResponse }, { status: 201 });
+    return NextResponse.json({ review });
   } catch (error) {
-    console.error('Error creating review:', error);
-    return NextResponse.json({ 
-      error: "Internal server error", 
-      details: error.message 
-    }, { status: 500 });
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
 

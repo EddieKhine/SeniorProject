@@ -19,3 +19,22 @@ body {
   background: var(--background);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Add to your globals.css */
+.overflow-y-auto {
+  scrollbar-width: thin;
+  scrollbar-color: #FF4F18 #22262A;
+}
+
+.overflow-y-auto::-webkit-scrollbar {
+  width: 6px;
+}
+
+.overflow-y-auto::-webkit-scrollbar-track {
+  background: #22262A;
+}
+
+.overflow-y-auto::-webkit-scrollbar-thumb {
+  background-color: #FF4F18;
+  border-radius: 20px;
+}

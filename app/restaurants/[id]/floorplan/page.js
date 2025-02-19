@@ -3,17 +3,19 @@
 import { useState, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
 import RestaurantFloorPlan from '@/components/RestaurantFloorPlan';
-import { FaMapMarkerAlt, FaClock, FaPhone, FaStar, FaHome, FaShare, FaBookmark, FaUtensils } from 'react-icons/fa';
+import { FaMapMarkerAlt, FaClock, FaPhone, FaStar, FaHome, FaShare, FaBookmark, FaUtensils, FaComments } from 'react-icons/fa';
 import Image from 'next/image';
 import PublicFloorPlan from '@/components/PublicFloorPlan';
 import { GoogleMap, Marker } from '@react-google-maps/api';
 import ReviewSection from '@/components/ReviewSection';
+import CustomerChat from '@/components/CustomerChat';
 
 export default function RestaurantFloorplanPage({ params }) {
   const restaurantId = use(params).id;
   const [restaurant, setRestaurant] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isSaved, setIsSaved] = useState(false);
+  const [showChat, setShowChat] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -273,6 +275,24 @@ export default function RestaurantFloorplanPage({ params }) {
           </div>
         </div>
       </div>
+
+      <div className="fixed bottom-4 right-4 z-50">
+        <button
+          onClick={() => setShowChat(!showChat)}
+          className="bg-[#FF4F18] text-white p-4 rounded-full shadow-lg hover:bg-[#FF4F18]/90 transition-all duration-200"
+        >
+          <FaComments className="text-2xl" />
+        </button>
+      </div>
+
+      {showChat && restaurant && (
+        <CustomerChat
+          restaurantId={restaurant._id}
+          restaurantName={restaurant.restaurantName}
+          customerId={localStorage.getItem('customerUser') ? JSON.parse(localStorage.getItem('customerUser')).userId : null}
+          setShowChat={setShowChat}
+        />
+      )}
     </div>
   );
 } 

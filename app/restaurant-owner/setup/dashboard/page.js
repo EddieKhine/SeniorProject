@@ -6,11 +6,11 @@ import RestaurantOwnerNavbar from '@/components/RestaurantOwnerNavbar'
 import RestaurantInformation from '@/components/RestaurantInformation'
 import RestaurantProfileForm from '@/components/RestaurantProfileForm'
 import SubscriptionPlans from '@/components/SubscriptionPlans'
-import { RiRestaurantLine, RiLayoutLine, RiCalendarLine, RiVipCrownLine, RiUserLine } from 'react-icons/ri'
+import { RiRestaurantLine, RiLayoutLine, RiCalendarLine, RiVipCrownLine, RiUserLine, RiMessage2Line } from 'react-icons/ri'
 import { motion } from 'framer-motion'
 import OwnerProfile from '@/components/OwnerProfile'
 import RestaurantFloorPlan from '@/components/RestaurantFloorPlan'
-
+import RestaurantOwnerChat from '@/components/RestaurantOwnerChat'
 const RESTAURANT_CATEGORIES = [
   "Buffet",
   "Cafe",
@@ -41,6 +41,7 @@ export default function RestaurantSetupDashboard() {
   const [isCreatingNew, setIsCreatingNew] = useState(false)
   const [floorplan, setFloorplan] = useState(null)
   const [token, setToken] = useState(null)
+  const [restaurantId, setRestaurantId] = useState(null)
 
   const fetchRestaurantProfile = async () => {
     try {
@@ -69,6 +70,13 @@ export default function RestaurantSetupDashboard() {
       return;
     }
     setToken(storedToken);
+
+    // Get restaurant owner data
+    const ownerData = localStorage.getItem('restaurantOwnerUser');
+    if (ownerData) {
+      const { userId } = JSON.parse(ownerData);
+      setRestaurantId(userId);
+    }
 
     fetchRestaurantProfile();
   }, [router]);
@@ -179,7 +187,17 @@ export default function RestaurantSetupDashboard() {
                 <span>Subscription</span>
               </button>
               
-              
+              <button
+                onClick={() => setActiveSection('messages')}
+                className={`flex items-center space-x-3 w-full p-3 rounded-lg transition-all duration-200 ${
+                  activeSection === 'messages'
+                    ? 'bg-[#FF4F18] text-white font-medium shadow-lg'
+                    : 'text-[#64748B] hover:bg-[#F8FAFC] hover:text-[#141517]'
+                }`}
+              >
+                <RiMessage2Line className={`text-xl ${activeSection === 'messages' ? 'text-white' : 'text-[#64748B]'}`} />
+                <span>Messages</span>
+              </button>
             </nav>
           </div>
         </div>
@@ -275,6 +293,11 @@ export default function RestaurantSetupDashboard() {
             {activeSection === 'owner-profile' && (
               <div className="bg-white p-6 rounded-xl shadow-sm border border-[#F2F4F7]">
                 <OwnerProfile />
+              </div>
+            )}
+            {activeSection === 'messages' && (
+              <div className="bg-white p-6 rounded-xl shadow-sm border border-[#F2F4F7]">
+                <RestaurantOwnerChat restaurantId={restaurantId} />
               </div>
             )}
           </motion.div>
