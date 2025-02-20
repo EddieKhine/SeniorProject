@@ -196,10 +196,7 @@ export class UIManager {
                 isRotatable: true,
                 isTable: true,
                 isRoundTable: false,
-                maxCapacity: 4,
-                bookingStatus: 'available',
-                currentBooking: null,
-                bookingHistory: []
+                maxCapacity: 4
             };
         }
         return tableModel;
@@ -226,10 +223,7 @@ export class UIManager {
                 isRotatable: true,
                 isTable: true,
                 isRoundTable: true,
-                maxCapacity: 2,
-                bookingStatus: 'available',
-                currentBooking: null,
-                bookingHistory: []
+                maxCapacity: 2
             };
         }
         return tableModel;

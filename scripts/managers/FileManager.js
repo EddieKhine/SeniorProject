@@ -424,10 +424,7 @@ export class FileManager {
                         ...data.userData,
                         _id: data._id,
                         isInteractable: !isViewOnly,
-                        maxCapacity: data.userData.isTable ? (data.userData.maxCapacity || 4) : undefined,
-                        bookingStatus: data.userData.isTable ? (data.userData.bookingStatus || 'available') : undefined,
-                        currentBooking: data.userData.isTable ? (data.userData.currentBooking || null) : undefined,
-                        bookingHistory: data.userData.isTable ? (data.userData.bookingHistory || []) : undefined
+                        maxCapacity: data.userData.isTable ? (data.userData.maxCapacity || 4) : undefined
                     };
                 }
             }

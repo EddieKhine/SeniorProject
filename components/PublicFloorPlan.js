@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 import { createScene, createFloor } from '@/scripts/floor';
@@ -19,6 +19,7 @@ export default function PublicFloorPlan({ floorplanData, floorplanId, restaurant
   const [selectedTime, setSelectedTime] = useState('');
   const [availableTimeSlots, setAvailableTimeSlots] = useState([]);
   const [restaurant, setRestaurant] = useState(null);
+  const [availableTables, setAvailableTables] = useState(new Set());
 
   const dateRef = useRef(selectedDate);
   const timeRef = useRef(selectedTime);
@@ -212,17 +213,19 @@ export default function PublicFloorPlan({ floorplanData, floorplanId, restaurant
               );
               model.scale.fromArray(objData.scale);
               
-              // Preserve all userData including maxCapacity
-              model.userData = { ...objData.userData };
+              // Preserve the table ID and other userData
+              model.userData = {
+                ...objData.userData,
+                objectId: objData.objectId // Make sure objectId is preserved
+              };
               
-              // Set color based on booking status
-              if (model.material) {
-                if (objData.userData.isBooked) {
-                  if (Array.isArray(model.material)) {
-                    model.material.forEach(mat => mat.color.setHex(0xff0000));
-                  } else {
-                    model.material.color.setHex(0xff0000);
-                  }
+              // Set initial color
+              if (model.children && model.children[0]) {
+                const tableMesh = model.children[0];
+                if (Array.isArray(tableMesh.material)) {
+                  tableMesh.material.forEach(mat => mat.color.setHex(0xffffff));
+                } else {
+                  tableMesh.material.color.setHex(0xffffff);
                 }
               }
               
@@ -232,11 +235,18 @@ export default function PublicFloorPlan({ floorplanData, floorplanId, restaurant
         }
 
         // Animation loop
-        function animate() {
-          requestAnimationFrame(animate);
+        const animate = () => {
+          if (!sceneRef.current) return;
+          
+          animationFrameId = requestAnimationFrame(animate);
           controls.update();
           renderer.render(scene, camera);
-        }
+        };
+
+        // Store animation frame ID
+        let animationFrameId;
+
+        // Start animation
         animate();
 
         // Handle window resize
@@ -287,11 +297,101 @@ export default function PublicFloorPlan({ floorplanData, floorplanId, restaurant
 
           // Use the state values directly
           if (!dateRef.current || !timeRef.current) {
-            alert("Please select a date and time first before choosing a table");
+            toast.error("Please select a date and time first before choosing a table");
             return;
           }
 
           const tableId = table.userData.objectId || table.userData.friendlyId;
+
+          // Check if table is red (unavailable)
+          const tableMesh = table.children[0];
+          const isRed = tableMesh && (
+            (Array.isArray(tableMesh.material) && tableMesh.material[0].color.getHex() === 0xff0000) ||
+            (!Array.isArray(tableMesh.material) && tableMesh.material.color.getHex() === 0xff0000)
+          );
+
+          if (isRed) {
+            // Create and show tooltip
+            const tooltip = document.createElement('div');
+            tooltip.className = 'booking-tooltip';
+            tooltip.innerHTML = `
+              <div class="booking-tooltip-content">
+                <div class="tooltip-header">
+                  <h4 class="text-lg font-bold text-red-600">Table Not Available</h4>
+                  <button class="close-tooltip">×</button>
+                </div>
+                <div class="tooltip-body">
+                  <p>This table is already booked for:</p>
+                  <p class="font-semibold">${new Date(dateRef.current).toLocaleDateString()}</p>
+                  <p class="font-semibold">${timeRef.current}</p>
+                </div>
+              </div>
+            `;
+
+            // Position the tooltip near the mouse click
+            tooltip.style.position = 'fixed';
+            tooltip.style.left = event.clientX + 'px';
+            tooltip.style.top = event.clientY + 'px';
+            
+            // Add styles for the tooltip
+            const style = document.createElement('style');
+            style.textContent = `
+              .booking-tooltip {
+                position: fixed;
+                z-index: 1000;
+                background: white;
+                border-radius: 8px;
+                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+                padding: 16px;
+                max-width: 300px;
+                animation: fadeIn 0.2s ease-in-out;
+              }
+              .tooltip-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 12px;
+              }
+              .close-tooltip {
+                background: none;
+                border: none;
+                font-size: 24px;
+                cursor: pointer;
+                color: #666;
+                padding: 0 8px;
+              }
+              .close-tooltip:hover {
+                color: #000;
+              }
+              .tooltip-body p {
+                margin: 8px 0;
+                color: #333;
+              }
+              @keyframes fadeIn {
+                from { opacity: 0; transform: translateY(-10px); }
+                to { opacity: 1; transform: translateY(0); }
+              }
+            `;
+            document.head.appendChild(style);
+
+            // Add to document
+            document.body.appendChild(tooltip);
+
+            // Add close button functionality
+            const closeBtn = tooltip.querySelector('.close-tooltip');
+            closeBtn.addEventListener('click', () => {
+              document.body.removeChild(tooltip);
+            });
+
+            // Auto-remove after 3 seconds
+            setTimeout(() => {
+              if (document.body.contains(tooltip)) {
+                document.body.removeChild(tooltip);
+              }
+            }, 3000);
+
+            return;
+          }
 
           // Create booking dialog
           const guestCountDialog = document.createElement('div');
@@ -367,6 +467,9 @@ export default function PublicFloorPlan({ floorplanData, floorplanId, restaurant
           }
           if (containerRef.current) {
             containerRef.current.removeEventListener('click', handleClick);
+          }
+          if (animationFrameId) {
+            cancelAnimationFrame(animationFrameId);
           }
         };
       } catch (error) {
@@ -481,26 +584,50 @@ export default function PublicFloorPlan({ floorplanData, floorplanId, restaurant
         throw new Error('Please log in to make a booking');
     }
 
+    // Check availability again before submitting
+    const isAvailable = availableTables.size === 0 || availableTables.has(tableId);
+    if (!isAvailable) {
+        throw new Error('This table is no longer available for the selected time slot');
+    }
+
     const customer = JSON.parse(customerData);
     
-    // Parse both start and end times from the time slot
     const [startTime, endTime] = bookingDetails.time.split(' - ');
     
-    console.log('Submitting booking with:', {
-        date: dateRef.current,
-        startTime: startTime.trim(),
-        endTime: endTime.trim()
-    });
-
     const bookingData = {
         tableId,
-        date: dateRef.current, // Use the selectedDate from state
+        date: dateRef.current,
         startTime: startTime.trim(),
         endTime: endTime.trim(),
         guestCount: bookingDetails.guestCount,
         restaurantId,
         customerData: customer
     };
+
+    // Double-check availability with server before proceeding
+    const availabilityResponse = await fetch(`/api/scenes/${floorplanId}/availability`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            date: dateRef.current,
+            startTime: startTime.trim(),
+            endTime: endTime.trim()
+        })
+    });
+
+    const availabilityData = await availabilityResponse.json();
+    
+    if (!availabilityResponse.ok) {
+        throw new Error(availabilityData.error || 'Failed to verify table availability');
+    }
+
+    // Check if the table is still available from server response
+    const availableTableArray = Array.isArray(availabilityData.availableTables) ? availabilityData.availableTables : [];
+    if (availableTableArray.length > 0 && !availableTableArray.includes(tableId)) {
+        throw new Error('This table has just been booked by someone else');
+    }
 
     const response = await fetch(`/api/scenes/${floorplanId}/book`, {
         method: 'POST',
@@ -518,23 +645,24 @@ export default function PublicFloorPlan({ floorplanData, floorplanId, restaurant
 
     const result = await response.json();
     
-    // Update table status
-    if (table && table.userData) {
-        table.userData.bookingStatus = 'booked';
-        table.userData.currentBooking = result.booking._id;
-        
-        // Update visual appearance
-        if (table.children && table.children[0] && table.children[0].material) {
-            const tableMesh = table.children[0];
-            if (Array.isArray(tableMesh.material)) {
-                tableMesh.material.forEach(mat => mat.color.setHex(0xff0000));
-            } else {
-                tableMesh.material.color.setHex(0xff0000);
-            }
+    // Only update the visual appearance without modifying userData
+    if (table && table.children && table.children[0]) {
+        const tableMesh = table.children[0];
+        if (Array.isArray(tableMesh.material)) {
+            tableMesh.material.forEach(mat => mat.color.setHex(0xff0000));
+        } else {
+            tableMesh.material.color.setHex(0xff0000);
         }
     }
 
-    alert(`Booking confirmed! Reference: ${result.booking.bookingRef}`);
+    // Update available tables after successful booking
+    setAvailableTables(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(tableId);
+        return newSet;
+    });
+
+    toast.success(`Booking confirmed! Reference: ${result.booking.bookingRef}`);
   };
 
   // Add this useEffect to debug state updates
@@ -546,6 +674,150 @@ export default function PublicFloorPlan({ floorplanData, floorplanId, restaurant
   useEffect(() => {
     console.log('Component mounted/updated with time:', selectedTime);
   }, []);
+
+  // Add this function to check availability
+  const checkTableAvailability = async (date, timeSlot) => {
+    if (!date || !timeSlot) {
+        console.log('No date or time selected');
+        return;
+    }
+
+    const [startTime, endTime] = timeSlot.split(' - ');
+
+    try {
+        console.log('1. Sending availability check:', { 
+            date, 
+            startTime: startTime.trim(), 
+            endTime: endTime.trim() 
+        });
+
+        const response = await fetch(`/api/scenes/${floorplanId}/availability`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                date,
+                startTime: startTime.trim(),
+                endTime: endTime.trim()
+            })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.error || 'Failed to check availability');
+        }
+
+        console.log('2. Server response:', data);
+        console.log('2a. Available tables from server:', data.availableTables);
+        console.log('2b. Debug info:', data.debug);
+
+        // If no available tables data, assume all tables are available
+        if (!data.availableTables) {
+            console.log('3. No availability data, assuming all tables available');
+            setAvailableTables(new Set([]));
+            return;
+        }
+
+        // Ensure we're working with an array before creating the Set
+        const availableTableArray = Array.isArray(data.availableTables) ? data.availableTables : [];
+        console.log('3. Available table array:', availableTableArray);
+
+        // Set the available tables
+        setAvailableTables(new Set(availableTableArray));
+        console.log('4. New available tables set:', new Set(availableTableArray));
+
+        // Update table colors
+        updateTableColors();
+
+    } catch (error) {
+        console.error('Error checking availability:', error);
+        // In case of error, assume all tables are available
+        setAvailableTables(new Set([]));
+        toast.error('Error checking table availability. Assuming all tables are available.');
+    }
+  };
+
+  // Make sure this function exists and is properly handling all furniture types
+  const getFurnitureModel = (type) => {
+    switch (type) {
+        case 'table':
+            return table;
+        case 'chair':
+            return chair;
+        case 'sofa':
+            return sofa;
+        default:
+            console.warn(`Unknown furniture type: ${type}`);
+            return null;
+    }
+  };
+
+  // Make sure this useEffect is present to trigger availability check when date/time changes
+  useEffect(() => {
+    if (selectedDate && selectedTime) {
+        checkTableAvailability(selectedDate, selectedTime);
+    }
+  }, [selectedDate, selectedTime]);
+
+  const updateTableColors = () => {
+    if (!sceneRef.current) return;
+    
+    console.log('5. Updating colors with available tables:', Array.from(availableTables));
+    
+    sceneRef.current.traverse((object) => {
+        if (object.userData?.isTable) {
+            const tableId = object.userData.objectId;
+            // If availableTables is empty, consider all tables available
+            const isAvailable = availableTables.size === 0 || availableTables.has(tableId);
+            
+            console.log('6. Table check:', {
+                tableId,
+                isAvailable,
+                tableIdType: typeof tableId,
+                availableTablesContent: Array.from(availableTables),
+                setSize: availableTables.size
+            });
+
+            // Update all meshes in the table object
+            object.traverse((child) => {
+                if (child.isMesh) {
+                    const color = isAvailable ? 0xffffff : 0xff0000;
+                    
+                    if (Array.isArray(child.material)) {
+                        child.material.forEach(mat => {
+                            mat.color.setHex(color);
+                            mat.needsUpdate = true;
+                        });
+                    } else if (child.material) {
+                        child.material.color.setHex(color);
+                        child.material.needsUpdate = true;
+                    }
+                }
+            });
+        }
+    });
+  };
+
+  // Add this useEffect to trigger color updates
+  useEffect(() => {
+    updateTableColors();
+  }, [updateTableColors, availableTables]);
+
+  // Add useEffect to monitor state changes
+  useEffect(() => {
+    console.log('Current state:', {
+      selectedDate,
+      selectedTime,
+      availableTables: Array.from(availableTables)
+    });
+  }, [selectedDate, selectedTime, availableTables]);
+
+  const handleTimeSlotSelection = (slot) => {
+    console.log('Setting time to:', slot);
+    setSelectedTime(slot);
+  };
 
   return (
     <div className="flex flex-col h-screen">
@@ -618,10 +890,7 @@ export default function PublicFloorPlan({ floorplanData, floorplanId, restaurant
                 {availableTimeSlots.map((slot) => (
                   <button
                     key={slot}
-                    onClick={() => {
-                      console.log('Setting time to:', slot);
-                      setSelectedTime(slot);
-                    }}
+                    onClick={() => handleTimeSlotSelection(slot)}
                     className={`time-slot-btn ${selectedTime === slot ? 'selected' : ''}`}
                   >
                     {slot}

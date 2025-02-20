@@ -58,9 +58,7 @@ export async function table(scene) {
                 isTable: true,
                 isRotatable: true,
                 maxCapacity: 4,
-                bookingStatus: 'available',
-                currentBooking: null,
-                bookingHistory: []
+
             };
             scene.add(group);
         }
@@ -132,9 +130,7 @@ export async function roundTable(scene) {
                 isRotatable: true,
                 isRoundTable: true,
                 maxCapacity: 2,
-                bookingStatus: 'available',
-                currentBooking: null,
-                bookingHistory: []
+
             };
             scene.add(group);
         }

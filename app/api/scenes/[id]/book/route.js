@@ -160,6 +160,14 @@ export async function POST(request, { params }) {
       customerPhone: customerData.contactNumber
     });
 
+    // Add initial history entry
+    booking.addToHistory('created', {
+      tableId,
+      guestCount,
+      startTime,
+      endTime
+    });
+
     await booking.save();
 
     // Update the floorplan document using MongoDB's $set operator
@@ -168,8 +176,7 @@ export async function POST(request, { params }) {
       {
         $set: {
           'data.objects.$.userData.bookingStatus': 'booked',
-          'data.objects.$.userData.currentBooking': booking._id,
-          'data.objects.$.userData.bookingHistory': []
+          'data.objects.$.userData.currentBooking': booking._id
         }
       }
     );

@@ -67,7 +67,22 @@ const bookingSchema = new mongoose.Schema({
     specialRequests: {
         type: String,
         default: ''
-    }
+    },
+    history: [{
+        action: {
+            type: String,
+            enum: ['created', 'modified', 'cancelled', 'completed'],
+            required: true
+        },
+        timestamp: {
+            type: Date,
+            default: Date.now
+        },
+        details: {
+            type: Map,
+            of: mongoose.Schema.Types.Mixed
+        }
+    }]
 }, {
     timestamps: true
 });
@@ -103,25 +118,45 @@ bookingSchema.index({ restaurantId: 1, date: 1 });
 bookingSchema.index({ tableId: 1, date: 1 });
 bookingSchema.index({ userId: 1 });
 bookingSchema.index({ bookingRef: 1 }, { unique: true });
+bookingSchema.index({ 'history.timestamp': 1 });
 
 // Method to check if table is available for a specific time
 bookingSchema.statics.isTableAvailable = async function(tableId, date, startTime, endTime) {
+    console.log('Checking availability for:', { tableId, date, startTime, endTime });
+    
+    const bookingDate = new Date(date);
+    bookingDate.setHours(0, 0, 0, 0);
+
+    const timeToMinutes = (timeStr) => {
+        const [time, period] = timeStr.split(' ');
+        let [hours, minutes] = time.split(':').map(Number);
+        if (period === 'PM' && hours !== 12) hours += 12;
+        if (period === 'AM' && hours === 12) hours = 0;
+        return hours * 60 + minutes;
+    };
+
+    const requestStart = timeToMinutes(startTime);
+    const requestEnd = timeToMinutes(endTime);
+
+    // Find any overlapping bookings
     const existingBooking = await this.findOne({
-        $or: [
-            { tableId: tableId },
-            { originalTableId: tableId }
-        ],
-        date,
+        tableId: tableId,
+        date: bookingDate,
+        status: { $in: ['pending', 'confirmed'] },
         $or: [
             {
                 $and: [
-                    { startTime: { $lt: endTime } },
+                    { startTime: { $lte: endTime } },
                     { endTime: { $gt: startTime } }
                 ]
             }
-        ],
-        status: { $in: ['pending', 'confirmed'] }
+        ]
     });
+
+    console.log(`Checking table ${tableId} for date ${bookingDate}:`, 
+        existingBooking ? 'Booked' : 'Available'
+    );
+
     return !existingBooking;
 };
 
@@ -160,6 +195,14 @@ bookingSchema.statics.getUserBookings = async function(userId) {
     return this.find({ userId })
         .populate('restaurantId')
         .sort({ date: -1, time: -1 });
+};
+
+// Add a method to record history
+bookingSchema.methods.addToHistory = function(action, details = {}) {
+    this.history.push({
+        action,
+        details
+    });
 };
 
 const Booking = mongoose.models.Booking || mongoose.model('Booking', bookingSchema);
