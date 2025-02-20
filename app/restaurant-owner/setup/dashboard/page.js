@@ -11,6 +11,9 @@ import { motion } from 'framer-motion'
 import OwnerProfile from '@/components/OwnerProfile'
 import RestaurantFloorPlan from '@/components/RestaurantFloorPlan'
 import RestaurantOwnerChat from '@/components/RestaurantOwnerChat'
+import RestaurantBookingManager from '@/components/RestaurantBookingManager'
+import RestaurantReservation from '@/components/RestaurantReservation'
+
 const RESTAURANT_CATEGORIES = [
   "Buffet",
   "Cafe",
@@ -42,6 +45,7 @@ export default function RestaurantSetupDashboard() {
   const [floorplan, setFloorplan] = useState(null)
   const [token, setToken] = useState(null)
   const [restaurantId, setRestaurantId] = useState(null)
+  const [activeTab, setActiveTab] = useState('list')
 
   const fetchRestaurantProfile = async () => {
     try {
@@ -283,7 +287,50 @@ export default function RestaurantSetupDashboard() {
               </div>
             )}
             {activeSection === 'reservation' && (
-              <div>Reservation Component</div>
+              <div className="bg-white rounded-xl shadow-sm border border-[#F2F4F7] h-[calc(100vh-120px)]">
+                {restaurant ? (
+                  <div className="h-full flex flex-col">
+                    {/* Tab Navigation */}
+                    <div className="border-b border-[#F2F4F7]">
+                      <div className="flex space-x-4 px-6 py-4">
+                        <button
+                          onClick={() => setActiveTab('list')}
+                          className={`px-4 py-2 rounded-lg transition-all duration-200 ${
+                            activeTab === 'list'
+                              ? 'bg-[#FF4F18] text-white'
+                              : 'text-[#64748B] hover:bg-[#F8FAFC]'
+                          }`}
+                        >
+                          List View
+                        </button>
+                        <button
+                          onClick={() => setActiveTab('floorplan')}
+                          className={`px-4 py-2 rounded-lg transition-all duration-200 ${
+                            activeTab === 'floorplan'
+                              ? 'bg-[#FF4F18] text-white'
+                              : 'text-[#64748B] hover:bg-[#F8FAFC]'
+                          }`}
+                        >
+                          Floor Plan View
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Tab Content */}
+                    <div className="flex-1 overflow-hidden">
+                      {activeTab === 'list' ? (
+                        <RestaurantReservation restaurantId={restaurant._id} />
+                      ) : (
+                        <RestaurantBookingManager restaurantId={restaurant._id} />
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <p className="text-[#64748B]">Please create a restaurant profile first</p>
+                  </div>
+                )}
+              </div>
             )}
             {activeSection === 'subscription' && (
               <div className="bg-white p-6 rounded-xl shadow-sm border border-[#F2F4F7] mt-4">

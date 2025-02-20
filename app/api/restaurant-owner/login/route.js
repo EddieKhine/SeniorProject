@@ -32,7 +32,8 @@ export async function POST(req) {
     const token = jwt.sign(
       { 
         userId: owner._id, 
-        email: owner.email, 
+        email: owner.email,
+        isRestaurantOwner: true,
         role: "restaurantOwner",
         hasRestaurant 
       },
@@ -49,6 +50,7 @@ export async function POST(req) {
         firstName: owner.firstName,
         lastName: owner.lastName,
         role: "restaurantOwner",
+        isRestaurantOwner: true,
         subscriptionPlan: owner.subscriptionPlan || "Basic",
         hasRestaurant
       },
