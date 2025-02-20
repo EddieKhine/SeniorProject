@@ -15,7 +15,12 @@ export default function PublicFloorPlan({ floorplanData, floorplanId, restaurant
   const sceneRef = useRef(null);
   const doorManagerRef = useRef(null);
   const windowManagerRef = useRef(null);
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [selectedDate, setSelectedDate] = useState(() => {
+    const today = new Date();
+    // Adjust for local timezone
+    today.setMinutes(today.getMinutes() - today.getTimezoneOffset());
+    return today.toISOString().split('T')[0];
+  });
   const [selectedTime, setSelectedTime] = useState('');
   const [availableTimeSlots, setAvailableTimeSlots] = useState([]);
   const [restaurant, setRestaurant] = useState(null);
@@ -553,26 +558,30 @@ export default function PublicFloorPlan({ floorplanData, floorplanId, restaurant
 
   const handleDateChange = async (date) => {
     console.log('Changing date to:', date);
-    setSelectedDate(date);
+    // Ensure consistent timezone handling
+    const selectedDate = new Date(date);
+    selectedDate.setMinutes(selectedDate.getMinutes() - selectedDate.getTimezoneOffset());
+    const formattedDate = selectedDate.toISOString().split('T')[0];
+    setSelectedDate(formattedDate);
     
     if (!date || !restaurant) return;
 
     try {
-        const dayOfWeek = new Date(date)
-            .toLocaleDateString('en-US', { weekday: 'long' })
-            .toLowerCase();
-        const dayHours = restaurant.openingHours[dayOfWeek];
+      const dayOfWeek = selectedDate
+        .toLocaleDateString('en-US', { weekday: 'long' })
+        .toLowerCase();
+      const dayHours = restaurant.openingHours[dayOfWeek];
 
-        if (!dayHours || dayHours.isClosed) {
-            setAvailableTimeSlots([]);
-            return;
-        }
-
-        const timeSlots = generateTimeSlots(dayHours.open, dayHours.close);
-        setAvailableTimeSlots(timeSlots);
-    } catch (error) {
-        console.error('Error generating time slots:', error);
+      if (!dayHours || dayHours.isClosed) {
         setAvailableTimeSlots([]);
+        return;
+      }
+
+      const timeSlots = generateTimeSlots(dayHours.open, dayHours.close);
+      setAvailableTimeSlots(timeSlots);
+    } catch (error) {
+      console.error('Error generating time slots:', error);
+      setAvailableTimeSlots([]);
     }
   };
 
@@ -839,15 +848,18 @@ export default function PublicFloorPlan({ floorplanData, floorplanId, restaurant
               {[...Array(14)].map((_, index) => {
                 const date = new Date();
                 date.setDate(date.getDate() + index);
+                // Adjust for local timezone
+                date.setMinutes(date.getMinutes() - date.getTimezoneOffset());
                 const dayName = date.toLocaleDateString('en-US', { weekday: 'short' });
                 const dayDate = date.getDate();
                 const month = date.toLocaleDateString('en-US', { month: 'short' });
                 const dateString = date.toISOString().split('T')[0];
+                const isToday = index === 0;
                 
                 return (
                   <div
                     key={dateString}
-                    className={`date-option ${selectedDate === dateString ? 'selected' : ''}`}
+                    className={`date-option ${selectedDate === dateString ? 'selected' : ''} ${isToday ? 'today' : ''}`}
                     onClick={() => {
                       console.log('Selected date:', dateString);
                       handleDateChange(dateString);

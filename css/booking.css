@@ -177,14 +177,13 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    min-width: 80px;
     padding: 0.75rem;
     border: 1px solid #e2e8f0;
     border-radius: 8px;
     cursor: pointer;
     transition: all 0.2s;
+    min-width: 80px;
     background: white;
-    color: #1a1a1a;
   }
   
   .date-option:hover {
@@ -195,6 +194,27 @@
     background: #FF4F18;
     color: white;
     border-color: #FF4F18;
+  }
+  
+  .date-option.today {
+    border-color: #FF4F18;
+    position: relative;
+  }
+  
+  .date-option.today::after {
+    content: 'Today';
+    position: absolute;
+    top: -10px;
+    font-size: 0.75rem;
+    color: #FF4F18;
+    background: white;
+    padding: 0 0.5rem;
+    border-radius: 10px;
+  }
+  
+  .date-option.today.selected::after {
+    color: white;
+    background: #FF4F18;
   }
   
   .date-day {

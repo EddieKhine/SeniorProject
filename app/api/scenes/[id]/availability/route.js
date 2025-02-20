@@ -73,19 +73,30 @@ export async function POST(request, { params }) {
     try {
       // Find bookings for the given date
       const bookingDate = new Date(date);
-      bookingDate.setUTCHours(0, 0, 0, 0);
+      // Ensure consistent timezone handling
+      const offset = bookingDate.getTimezoneOffset();
+      bookingDate.setMinutes(bookingDate.getMinutes() - offset);
+      bookingDate.setHours(0, 0, 0, 0);
 
       console.log('3. Searching for bookings with:', {
         floorplanId,
         tableIds,
-        date: bookingDate,
+        date: bookingDate.toISOString(),
+        requestedDate: date,
+        timezoneOffset: offset,
         status: ['pending', 'confirmed']
       });
+
+      const endDate = new Date(bookingDate);
+      endDate.setDate(endDate.getDate() + 1);
 
       const bookings = await Booking.find({
         floorplanId: floorplanId,
         tableId: { $in: tableIds },
-        date: bookingDate,
+        date: {
+          $gte: bookingDate,
+          $lt: endDate
+        },
         status: { $in: ['pending', 'confirmed'] }
       });
 
