@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { RiImageAddLine, RiTimeLine, RiCloseLine } from "react-icons/ri";
+import { RiImageAddLine, RiTimeLine, RiCloseLine, RiDeleteBinLine } from "react-icons/ri";
 import { motion } from "framer-motion";
 import LocationSelector from './LocationSelector';
 import ImageUpload from './ImageUpload';
@@ -213,18 +213,46 @@ export default function RestaurantProfileForm({
         {/* Left Column */}
         <div className="space-y-6">
           {/* Restaurant Image */}
-          <div className="bg-white rounded-xl shadow-sm p-6">
-            <label className="block text-sm font-semibold text-gray-900 mb-4">
-              Restaurant Image
-            </label>
-            <ImageUpload
-              onImageUpload={(url) => setFormData(prev => ({
-                ...prev,
-                images: { ...prev.images, main: url }
-              }))}
-              currentImage={formData.images.main}
-            />
-          </div>
+          {/* Restaurant Image */}
+<div className="bg-white rounded-xl shadow-sm p-6">
+  <label className="block text-sm font-semibold text-gray-900 mb-4">
+    Restaurant Image
+  </label>
+  <div className="relative">
+    {formData.images.main && (
+      <button
+        type="button"
+        onClick={() => {
+          setFormData(prev => ({
+            ...prev,
+            images: { ...prev.images, main: null }
+          }));
+          // Also clear the image preview if you're using one
+          setImagePreview(null);
+          // Reset the file input if you have a ref to it
+          const fileInput = document.querySelector('input[type="file"]');
+          if (fileInput) fileInput.value = '';
+        }}
+        className="absolute top-2 right-2 z-10 bg-white/90 text-red-500 p-2 rounded-lg 
+          shadow-lg hover:bg-white transition-all duration-200 group"
+        title="Remove Image"
+      >
+        <RiDeleteBinLine className="text-xl group-hover:scale-110 transition-transform" />
+      </button>
+    )}
+    <ImageUpload
+      onImageUpload={(url) => {
+        setFormData(prev => ({
+          ...prev,
+          images: { ...prev.images, main: url }
+        }));
+        setImagePreview(url);
+      }}
+      currentImage={formData.images.main}
+      key={formData.images.main} // Force re-render when image is removed
+    />
+  </div>
+</div>
 
           {/* Basic Information */}
           <div className="bg-white rounded-xl shadow-sm p-6 space-y-6">

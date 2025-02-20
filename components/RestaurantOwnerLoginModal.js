@@ -59,7 +59,7 @@ export default function RestaurantOwnerLoginModal({ isOpen, onClose, onLoginSucc
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+        className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4"
         onClick={onClose}
       >
         <motion.div
@@ -67,11 +67,10 @@ export default function RestaurantOwnerLoginModal({ isOpen, onClose, onLoginSucc
           animate={{ scale: 1, opacity: 1 }}
           exit={{ scale: 0.95, opacity: 0 }}
           onClick={(e) => e.stopPropagation()}
-          className="bg-[#141517]/90 backdrop-blur-md rounded-3xl shadow-2xl w-full max-w-md overflow-hidden border border-white/20"
+          className="bg-white rounded-3xl shadow-xl w-full max-w-md overflow-hidden"
         >
-          {/* Header with Icon */}
-          <div className="bg-[#FF4F18] p-8 text-center relative">
-            {/* Close Button */}
+          {/* Header */}
+          <div className="bg-gradient-to-r from-[#FF4F18] to-[#FF8F6B] p-8 text-center relative">
             <button
               onClick={onClose}
               className="absolute right-4 top-4 text-white/80 hover:text-white transition-colors duration-200"
@@ -95,21 +94,22 @@ export default function RestaurantOwnerLoginModal({ isOpen, onClose, onLoginSucc
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
               transition={{ type: "spring", stiffness: 200, damping: 15 }}
+              className="w-16 h-16 bg-white/10 rounded-2xl flex items-center justify-center mx-auto mb-4"
             >
               <FontAwesomeIcon 
                 icon={faUtensils} 
-                className="text-white text-4xl mb-4"
+                className="text-white text-2xl"
               />
             </motion.div>
-            <h2 className="text-3xl font-bold text-white mb-2">
+            <h2 className="text-2xl font-bold text-white mb-2">
               Welcome Back
             </h2>
-            <p className="text-white/80 text-sm">
+            <p className="text-white/90 text-sm">
               Login to manage your restaurant
             </p>
           </div>
 
-          <form onSubmit={handleLogin} className="p-8 space-y-6">
+          <form onSubmit={handleLogin} className="p-8 space-y-6 bg-gray-50">
             <div className="space-y-4">
               <div className="relative group">
                 <FontAwesomeIcon 
@@ -122,7 +122,7 @@ export default function RestaurantOwnerLoginModal({ isOpen, onClose, onLoginSucc
                   onChange={(e) => setEmail(e.target.value)} 
                   placeholder="Email" 
                   required 
-                  className="w-full pl-12 pr-4 py-4 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-400 focus:ring-2 focus:ring-[#FF4F18] focus:border-transparent transition-all outline-none" 
+                  className="w-full pl-12 pr-4 py-3 bg-white border border-gray-200 rounded-xl text-gray-700 placeholder-gray-400 focus:ring-2 focus:ring-[#FF4F18]/20 focus:border-[#FF4F18] transition-all outline-none" 
                 />
               </div>
 
@@ -137,7 +137,7 @@ export default function RestaurantOwnerLoginModal({ isOpen, onClose, onLoginSucc
                   onChange={(e) => setPassword(e.target.value)} 
                   placeholder="Password" 
                   required 
-                  className="w-full pl-12 pr-4 py-4 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-400 focus:ring-2 focus:ring-[#FF4F18] focus:border-transparent transition-all outline-none" 
+                  className="w-full pl-12 pr-4 py-3 bg-white border border-gray-200 rounded-xl text-gray-700 placeholder-gray-400 focus:ring-2 focus:ring-[#FF4F18]/20 focus:border-[#FF4F18] transition-all outline-none" 
                 />
               </div>
             </div>
@@ -146,7 +146,7 @@ export default function RestaurantOwnerLoginModal({ isOpen, onClose, onLoginSucc
               <motion.p 
                 initial={{ opacity: 0 }} 
                 animate={{ opacity: 1 }} 
-                className="text-center p-4 rounded-xl bg-red-500/20 text-red-300"
+                className="text-center p-4 rounded-xl bg-red-50 text-red-500 border border-red-100"
               >
                 {error}
               </motion.p>
@@ -155,7 +155,7 @@ export default function RestaurantOwnerLoginModal({ isOpen, onClose, onLoginSucc
             <motion.button 
               type="submit" 
               disabled={loading}
-              className="w-full py-4 bg-[#FF4F18] text-white font-semibold rounded-xl hover:opacity-90 transition-all transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+              className="w-full py-3 bg-[#FF4F18] text-white font-semibold rounded-xl hover:bg-[#FF4F18]/90 transition-all transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 shadow-lg shadow-[#FF4F18]/20"
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
             >
@@ -170,7 +170,7 @@ export default function RestaurantOwnerLoginModal({ isOpen, onClose, onLoginSucc
               ) : "Login"}
             </motion.button>
 
-            <p className="text-center text-gray-400 text-sm">
+            <p className="text-center text-gray-600 text-sm">
               Don't have an account?{" "}
               <button
                 type="button"

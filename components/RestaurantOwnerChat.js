@@ -45,10 +45,12 @@ export default function RestaurantOwnerChat() {
   useEffect(() => {
     const newSocket = io(process.env.NEXT_PUBLIC_FRONTEND_URL || 'http://localhost:3000', {
       path: '/api/socket',
-      transports: ['websocket', 'polling'],
+      transports: ['websocket'],
       reconnection: true,
       reconnectionAttempts: 5,
-      reconnectionDelay: 1000
+      reconnectionDelay: 1000,
+      autoConnect: true,
+      withCredentials: true
     });
     
     newSocket.on('connect_error', (error) => {

@@ -27,7 +27,7 @@ const RestaurantOwnerNavbar = ({ onLoginClick }) => {
   const CustomerSideButton = () => (
     <Link
       href="/"
-      className="flex items-center space-x-2 px-3 py-2 rounded-lg text-gray-600 hover:text-[#F4A261] hover:bg-orange-50 transition-colors"
+      className="flex items-center space-x-2 px-3 py-2 rounded-lg text-white hover:text-[#FF4F18] hover:bg-orange-50 transition-colors"
     >
       <FaUtensils className="rotate-180" />
       <span>Customer View</span>
@@ -110,14 +110,14 @@ const RestaurantOwnerNavbar = ({ onLoginClick }) => {
                   </div>
                   <Link
                     href="/"
-                    className="text-gray-600 hover:text-[#F4A261]"
+                    className="text-gray-600 hover:text-[#FF4F18]"
                     title="Customer View"
                   >
                     <FaUtensils className="rotate-180" />
                   </Link>
                   <button
                     onClick={handleLogout}
-                    className="text-gray-600 hover:text-[#F4A261]"
+                    className="text-gray-600 hover:text-[#FF4F18]"
                     title="Logout"
                   >
                     <FaSignOutAlt />
