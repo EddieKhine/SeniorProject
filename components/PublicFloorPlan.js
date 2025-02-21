@@ -828,6 +828,18 @@ export default function PublicFloorPlan({ floorplanData, floorplanId, restaurant
     setSelectedTime(slot);
   };
 
+  // Adjust the date slider logic
+  const dateSliderLogic = () => {
+    // Create date in Bangkok timezone
+    const bangkokDate = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Bangkok' }));
+    return bangkokDate;
+  };
+
+  // Use the adjusted date in your date slider
+  const adjustedToday = dateSliderLogic();
+  // Update the date slider logic to use adjustedToday
+  // ... existing code ...
+
   return (
     <div className="flex flex-col h-screen">
       <div className="booking-panel">
@@ -846,14 +858,20 @@ export default function PublicFloorPlan({ floorplanData, floorplanId, restaurant
             
             <div className="date-container">
               {[...Array(14)].map((_, index) => {
-                const date = new Date();
-                date.setDate(date.getDate() + index);
-                // Adjust for local timezone
-                date.setMinutes(date.getMinutes() - date.getTimezoneOffset());
-                const dayName = date.toLocaleDateString('en-US', { weekday: 'short' });
-                const dayDate = date.getDate();
-                const month = date.toLocaleDateString('en-US', { month: 'short' });
-                const dateString = date.toISOString().split('T')[0];
+                // Create date in Bangkok timezone
+                const bangkokDate = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Bangkok' }));
+                bangkokDate.setDate(bangkokDate.getDate() + index);
+                
+                const dayName = bangkokDate.toLocaleDateString('en-US', { weekday: 'short', timeZone: 'Asia/Bangkok' });
+                const dayDate = bangkokDate.getDate();
+                const month = bangkokDate.toLocaleDateString('en-US', { month: 'short', timeZone: 'Asia/Bangkok' });
+                
+                // Fix the date string format to ensure YYYY-MM-DD
+                const year = bangkokDate.toLocaleDateString('en-US', { year: 'numeric', timeZone: 'Asia/Bangkok' });
+                const monthNum = String(bangkokDate.getMonth() + 1).padStart(2, '0');
+                const dayNum = String(bangkokDate.getDate()).padStart(2, '0');
+                const dateString = `${year}-${monthNum}-${dayNum}`;
+                
                 const isToday = index === 0;
                 
                 return (

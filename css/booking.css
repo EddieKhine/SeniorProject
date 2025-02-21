@@ -229,3 +229,240 @@
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
   }
+
+.booking-panel {
+  background: white;
+  border-bottom: 1px solid #e5e7eb;
+  padding: 1rem;
+}
+
+.booking-columns-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* Date Slider Styles */
+.date-slider {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.date-container {
+  display: flex;
+  gap: 0.5rem;
+  overflow-x: auto;
+  scroll-behavior: smooth;
+  padding: 0.5rem;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.date-container::-webkit-scrollbar {
+  display: none;
+}
+
+.date-option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0.75rem;
+  min-width: 80px;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  border: 1px solid #e5e7eb;
+  transition: all 0.2s;
+}
+
+.date-option:hover {
+  background-color: #f3f4f6;
+}
+
+.date-option.selected {
+  background-color: #FF4F18;
+  color: white;
+  border-color: #FF4F18;
+}
+
+.date-option.today {
+  border-color: #FF4F18;
+}
+
+.date-day {
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.date-date {
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.date-month {
+  font-size: 0.75rem;
+}
+
+/* Time Slots Styles */
+.time-slots-slider {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.time-slots-container {
+  display: flex;
+  gap: 0.5rem;
+  overflow-x: auto;
+  scroll-behavior: smooth;
+  padding: 0.5rem;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.time-slots-container::-webkit-scrollbar {
+  display: none;
+}
+
+.time-slot-btn {
+  padding: 0.5rem 1rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.5rem;
+  white-space: nowrap;
+  transition: all 0.2s;
+  font-size: 0.875rem;
+}
+
+.time-slot-btn:hover {
+  background-color: #f3f4f6;
+}
+
+.time-slot-btn.selected {
+  background-color: #FF4F18;
+  color: white;
+  border-color: #FF4F18;
+}
+
+.slider-arrow {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  background-color: white;
+  border: 1px solid #e5e7eb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.slider-arrow:hover {
+  background-color: #f3f4f6;
+  border-color: #FF4F18;
+  color: #FF4F18;
+}
+
+/* Floor Plan Container */
+.floorplan-container {
+  flex: 1;
+  position: relative;
+  background-color: #f8fafc;
+  min-height: 400px;
+}
+
+/* Booking Dialog */
+.booking-dialog {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.booking-dialog-content {
+  background: white;
+  padding: 1.5rem;
+  border-radius: 0.75rem;
+  width: 90%;
+  max-width: 400px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.booking-details {
+  margin-bottom: 1rem;
+}
+
+.booking-details p {
+  margin: 0.5rem 0;
+  color: #4b5563;
+}
+
+.form-group {
+  margin-bottom: 1.5rem;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: #374151;
+  font-weight: 500;
+}
+
+.form-group input {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.375rem;
+  outline: none;
+}
+
+.form-group input:focus {
+  border-color: #FF4F18;
+  box-shadow: 0 0 0 2px rgba(255, 79, 24, 0.1);
+}
+
+.dialog-buttons {
+  display: flex;
+  gap: 1rem;
+  justify-content: flex-end;
+  margin-top: 1.5rem;
+}
+
+.dialog-buttons button {
+  padding: 0.5rem 1rem;
+  border-radius: 0.375rem;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.dialog-buttons button:hover {
+  opacity: 0.9;
+}
+
+/* Tooltip */
+.booking-tooltip {
+  position: fixed;
+  z-index: 1000;
+  background: white;
+  border-radius: 0.5rem;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  padding: 1rem;
+  max-width: 300px;
+  animation: fadeIn 0.2s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
