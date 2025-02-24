@@ -238,52 +238,62 @@ export default function HomePage() {
       }`} />
       
       <main className="min-h-screen bg-[#FFFFFF]">
-        {/* Hero Section with Refined Parallax */}
+        {/* Hero Section with Enhanced Luxury Elements */}
         <section className="relative h-[90vh] overflow-hidden">
           {/* Background Layers */}
           <div className="absolute inset-0">
             <div 
-              className="absolute inset-0 bg-gradient-to-b from-[#141517]/80 via-[#141517]/40 to-[#141517]/20 z-10" 
-              style={{ backdropFilter: 'blur(2px)' }}
+              className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/40 to-transparent z-10"
+              style={{ backdropFilter: 'blur(1px)' }}
             />
             <motion.div
               animate={{
                 scale: [1, 1.05, 1],
-                opacity: [0.8, 0.9, 0.8],
+                opacity: [0.95, 1, 0.95],
               }}
               transition={{
-                duration: 20,
+                duration: 25,
                 repeat: Infinity,
                 repeatType: "reverse",
               }}
               className="absolute inset-0"
             >
               <img
-                src="https://images.unsplash.com/photo-1552566626-52f8b828add9?q=80&w=2070&auto=format&fit=crop"
+                src="/images/body-images/gastraeum-features-contemporary-dining-atmosphere-where-elegant-design-meets-exquisite-culinary-creations.jpg"
                 alt="Modern Restaurant Interior"
                 className="w-full h-full object-cover"
               />
             </motion.div>
           </div>
 
-          {/* Hero Content */}
-          <div className="relative z-20 h-full container mx-auto px-6 flex flex-col justify-center">
+          {/* Hero Content with Enhanced Typography and Closer Spacing */}
+          <div className="relative z-20 h-full container mx-auto px-6 flex flex-col justify-end pb-36">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8 }}
-              className="max-w-3xl"
+              className="max-w-3xl space-y-6"
             >
-              <h1 className="text-5xl md:text-6xl font-bold text-white mb-6">
-                Find and Reserve Your
-                <span className="text-[#FF4F18]"> Perfect Table</span>
-              </h1>
-              <p className="text-lg md:text-xl text-white/80 mb-8">
-                Discover the best restaurants in your area and book your dining experience with ease
-              </p>
+              <div className="space-y-2">
+                <h1 className="text-5xl md:text-6xl font-bold">
+                  <span className="text-[#FF4F18] block mb-2">CHOOSE, CLICK,</span>
+                  <span className="text-[#FF4F18]"> and RESERVE</span>
+                  <span className="text-white text-3xl md:text-4xl block mt-4 font-normal">
+                    your seat on an 
+                  </span>
+                  <span className="text-white text-3xl md:text-5xl block mt-4 font-normal">
+                    Interactive 3D Floorplan
+                  </span>
+                </h1>
+              </div>
 
-              {/* Simplified Search Bar */}
-              <div className="bg-white p-2 rounded-2xl shadow-2xl">
+              {/* Enhanced Search Bar with White Theme */}
+              <motion.div 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
+                className="bg-white p-2 rounded-2xl shadow-2xl "
+              >
                 <div className="flex items-center gap-4">
                   <div className="flex-1 relative">
                     <FontAwesomeIcon
@@ -295,43 +305,74 @@ export default function HomePage() {
                       placeholder="Search restaurants..."
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
-                      className="w-full pl-12 pr-4 py-4 bg-[#F2F4F7] rounded-xl text-[#141517] placeholder-[#141517]/40 focus:ring-2 focus:ring-[#FF4F18] focus:border-transparent transition-all outline-none"
+                      className="w-full pl-12 pr-4 py-4 bg-gray-50/80 rounded-xl text-[#141517] 
+                               placeholder-[#141517]/40 focus:ring-2 focus:ring-[#FF4F18] 
+                               focus:border-transparent transition-all duration-300 outline-none"
                     />
                   </div>
                   <motion.button
-                    whileHover={{ scale: 1.02 }}
+                    whileHover={{ scale: 1.02, backgroundColor: '#FF6B18' }}
                     whileTap={{ scale: 0.98 }}
-                    className="py-4 px-8 bg-[#FF4F18] text-white font-semibold rounded-xl hover:bg-[#FF4F18]/90 transition-all whitespace-nowrap"
+                    className="py-4 px-8 bg-[#FF4F18] text-white font-semibold rounded-xl 
+                             shadow-lg shadow-[#FF4F18]/20 transition-all duration-300 
+                             whitespace-nowrap hover:shadow-xl"
                   >
                     Find Table
                   </motion.button>
                 </div>
-              </div>
+              </motion.div>
+
+              {/* Feature Tags */}
+              <motion.div 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.6 }}
+                className="flex flex-wrap gap-4 mt-8"
+              >
+                {['Interactive 3D View', 'Real-time Availability', 'Instant Booking'].map((feature, index) => (
+                  <div 
+                    key={feature}
+                    className="px-4 py-2 bg-white/5 backdrop-blur-sm rounded-full border border-white/10
+                             text-white/80 text-sm font-medium"
+                  >
+                    {feature}
+                  </div>
+                ))}
+              </motion.div>
             </motion.div>
           </div>
 
-          {/* Decorative Elements */}
-          <div className="absolute bottom-0 left-0 w-full h-32 bg-gradient-to-t from-white to-transparent z-10" />
-          <div className="absolute -bottom-32 -left-32 w-64 h-64 bg-[#FF4F18]/10 rounded-full blur-3xl" />
-          <div className="absolute -top-32 -right-32 w-64 h-64 bg-[#FF4F18]/10 rounded-full blur-3xl" />
+          {/* Enhanced Decorative Elements */}
+          <div className="absolute -bottom-32 -left-32 w-96 h-96 bg-[#FF4F18]/20 rounded-full blur-[100px]" />
+          <div className="absolute -top-32 -right-32 w-96 h-96 bg-[#FF4F18]/10 rounded-full blur-[100px]" />
         </section>
 
-        {/* Redesigned Cuisines Section */}
-        <section className="py-16 px-6 relative bg-[#FFFFFF]">
+        {/* Cuisines Section with Enhanced Luxury */}
+        <section className="py-20 px-6 relative bg-[#FFFFFF]">
           <div className="container mx-auto relative">
-            <div className="flex justify-between items-end mb-8">
-              <div>
-                <h2 className="text-3xl font-bold text-[#141517]">Explore Cuisines</h2>
-                <p className="text-[#141517]/70 mt-2">Discover restaurants by cuisine type</p>
+            <div className="flex justify-between items-end mb-12">
+              <div className="space-y-2">
+                <motion.h2 
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  className="text-4xl font-bold text-[#141517]"
+                >
+                  Explore Cuisines
+                </motion.h2>
+                <div className="h-1 w-20 bg-[#FF4F18] rounded-full" />
+                <p className="text-[#141517]/70 mt-4">Discover restaurants by cuisine type</p>
               </div>
               {selectedCategory && (
-                <button
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
                   onClick={() => setSelectedCategory("")}
                   className="text-[#FF4F18] hover:text-[#FF4F18]/80 transition-colors flex items-center gap-2"
                 >
                   Clear Filter
                   <span className="text-sm">×</span>
-                </button>
+                </motion.button>
               )}
             </div>
 
@@ -461,7 +502,7 @@ export default function HomePage() {
                       transition={{ duration: 0.6 }}
                       className="absolute inset-0"
                     >
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent z-10" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/40 to-transparent z-10" />
                       {restaurant.images?.main ? (
                         <Image
                           src={restaurant.images.main}

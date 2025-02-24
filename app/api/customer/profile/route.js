@@ -1,32 +1,38 @@
-import { MongoClient } from "mongodb";
+import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
-
-// Function to connect to MongoDB
-async function connectDB() {
-  const client = new MongoClient(process.env.MONGODB_URI);
-  await client.connect();
-  return client;
-}
+import { headers } from 'next/headers';
+import jwt from "jsonwebtoken";
+import dbConnect from "@/lib/mongodb";
+import User from "@/models/user";
 
 // 🚀 GET Request: Fetch User Data
 export async function GET(req) {
   try {
-    const { searchParams } = new URL(req.url);
-    const email = searchParams.get("email");
-
-    if (!email) {
-      return new Response(JSON.stringify({ message: "Email is required" }), {
-        status: 400,
+    const headersList = headers();
+    const token = headersList.get('authorization')?.split(' ')[1];
+    
+    if (!token) {
+      return new Response(JSON.stringify({ message: "Unauthorized" }), {
+        status: 401,
         headers: { "Content-Type": "application/json" },
       });
     }
 
-    const client = await connectDB();
-    const db = client.db("cluster0");
-    const usersCollection = db.collection("users");
+    // Verify token using jwt directly
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    if (!decoded) {
+      return new Response(JSON.stringify({ message: "Invalid token" }), {
+        status: 401,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
 
-    const user = await usersCollection.findOne({ email }, { projection: { password: 0 } }); // Exclude password
-    await client.close();
+    await dbConnect();
+    
+    const user = await User.findOne(
+      { email: decoded.email },
+      { password: 0 }
+    );
 
     if (!user) {
       return new Response(JSON.stringify({ message: "User not found" }), {
@@ -51,35 +57,39 @@ export async function GET(req) {
 // 🚀 PUT Request: Update User Information
 export async function PUT(req) {
   try {
-    const body = await req.text();
-    console.log("Raw request body:", body);
-
-    const { email, firstName, lastName, contactNumber, newPassword, profileImage } = JSON.parse(body);
-
-    if (!email) {
-      return new Response(JSON.stringify({ message: "Email is required" }), {
-        status: 400,
+    const headersList = headers();
+    const token = headersList.get('authorization')?.split(' ')[1];
+    
+    if (!token) {
+      return new Response(JSON.stringify({ message: "Unauthorized" }), {
+        status: 401,
         headers: { "Content-Type": "application/json" },
       });
     }
 
-    const client = await connectDB();
-    const db = client.db("cluster0");
-    const usersCollection = db.collection("users");
-
-    const user = await usersCollection.findOne({ email });
-    if (!user) {
-      await client.close();
-      return new Response(JSON.stringify({ message: "User not found" }), {
-        status: 404,
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    if (!decoded) {
+      return new Response(JSON.stringify({ message: "Invalid token" }), {
+        status: 401,
         headers: { "Content-Type": "application/json" },
       });
     }
 
-    // Prepare update object
+    const body = await req.json();
+    const { email, firstName, lastName, contactNumber, newPassword, profileImage } = body;
+
+    await dbConnect();
+
+    const user = await User.findOne({ email: decoded.email });
+    if (!user || user.email !== email) {
+      return new Response(JSON.stringify({ message: "Unauthorized access" }), {
+        status: 403,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
     let updateFields = { firstName, lastName, contactNumber };
     
-    // Add profileImage to updateFields if it exists
     if (profileImage) {
       updateFields.profileImage = profileImage;
     }
@@ -89,8 +99,10 @@ export async function PUT(req) {
       updateFields.password = hashedPassword;
     }
 
-    await usersCollection.updateOne({ email }, { $set: updateFields });
-    await client.close();
+    await User.updateOne(
+      { email: decoded.email },
+      { $set: updateFields }
+    );
 
     return new Response(JSON.stringify({ message: "Profile updated successfully!" }), {
       status: 200,
@@ -98,7 +110,7 @@ export async function PUT(req) {
     });
   } catch (error) {
     console.error("Error updating profile:", error);
-    return new Response(JSON.stringify({ message: "Invalid request format" }), {
+    return new Response(JSON.stringify({ message: "Internal Server Error" }), {
       status: 500,
       headers: { "Content-Type": "application/json" },
     });

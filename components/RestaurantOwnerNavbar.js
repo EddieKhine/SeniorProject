@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { FaUtensils, FaChartBar, FaCalendarAlt, FaCog, FaSignOutAlt, FaBars, FaTimes } from 'react-icons/fa';
+import Image from 'next/image';
 
 const RestaurantOwnerNavbar = ({ onLoginClick }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -27,7 +28,7 @@ const RestaurantOwnerNavbar = ({ onLoginClick }) => {
   const CustomerSideButton = () => (
     <Link
       href="/"
-      className="flex items-center space-x-2 px-3 py-2 rounded-lg text-white hover:text-[#FF4F18] hover:bg-orange-50 transition-colors"
+      className="flex items-center space-x-2 px-3 py-2 rounded-lg text-black hover:text-[#FF4F18] hover:bg-orange-50 transition-colors"
     >
       <FaUtensils className="rotate-180" />
       <span>Customer View</span>
@@ -85,8 +86,14 @@ const RestaurantOwnerNavbar = ({ onLoginClick }) => {
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link href="/restaurant-owner" className="flex items-center space-x-2">
-            <FaUtensils className="h-6 w-6 text-[#FF4F18]" />
-            <span className="font-['Pacifico'] text-2xl text-[#FF4F18]">FoodLoft</span>
+            <Image
+              src={isScrolled ? "/images/FoodLoft_Logo-02.png" : "/images/FoodLoft_Logo-03.png"}
+              alt="FoodLoft Logo"
+              width={150}
+              height={50}
+              className="h-auto w-auto transition-all duration-300"
+              priority
+            />
           </Link>
 
           {/* Desktop Navigation */}
@@ -95,29 +102,37 @@ const RestaurantOwnerNavbar = ({ onLoginClick }) => {
               <>
                 <Link
                   href="/restaurant-owner/setup/dashboard"
-                  className={`flex items-center space-x-2 px-3 py-2 rounded-lg transition-colors ${
+                  className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-all duration-300 ${
                     pathname === '/restaurant-owner/setup/dashboard'
-                      ? 'text-[#FF4F18] bg-[#FF4F18]/10'
+                      ? 'text-[#FF4F18] bg-[#FF4F18]/10 font-medium'
                       : 'text-gray-600 hover:text-[#FF4F18] hover:bg-[#FF4F18]/10'
                   }`}
                 >
                   <span className="text-lg"><FaUtensils /></span>
                   <span>Restaurant Portal</span>
                 </Link>
-                <div className="flex items-center space-x-4 border-l pl-4">
-                  <div className="text-gray-600">
+                <div className="flex items-center space-x-4 border-l border-gray-200 pl-4">
+                  <div className={`font-medium ${isScrolled ? 'text-[#141517]' : 'text-white'}`}>
                     Welcome, {user.firstName} {user.lastName}
                   </div>
                   <Link
                     href="/"
-                    className="text-gray-600 hover:text-[#FF4F18]"
-                    title="Customer View"
+                    className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-all duration-300
+                      ${isScrolled 
+                        ? 'bg-[#FF4F18] text-white hover:bg-[#FF6B18] shadow-md hover:shadow-lg' 
+                        : 'bg-white text-[#FF4F18] hover:bg-white/90 shadow-md hover:shadow-lg'
+                      }`}
                   >
                     <FaUtensils className="rotate-180" />
+                    <span>Customer View</span>
                   </Link>
                   <button
                     onClick={handleLogout}
-                    className="text-gray-600 hover:text-[#FF4F18]"
+                    className={`p-2 rounded-lg transition-all duration-300 ${
+                      isScrolled 
+                        ? 'text-gray-600 hover:text-[#FF4F18] hover:bg-[#FF4F18]/10' 
+                        : 'text-white/80 hover:text-white hover:bg-white/10'
+                    }`}
                     title="Logout"
                   >
                     <FaSignOutAlt />
@@ -128,11 +143,18 @@ const RestaurantOwnerNavbar = ({ onLoginClick }) => {
               <div className="flex items-center space-x-4">
                 <button
                   onClick={onLoginClick}
-                  className="flex items-center space-x-2 px-4 py-2 rounded-lg text-white bg-[#FF4F18] hover:bg-[#FF4F18]/90 transition-opacity"
+                  className="flex items-center space-x-2 px-4 py-2 rounded-lg text-white bg-[#FF4F18] hover:bg-[#FF6B18] transition-all duration-300 shadow-md hover:shadow-lg"
                 >
                   <span>Restaurant Login</span>
                 </button>
-                <CustomerSideButton />
+                <Link
+                  href="/"
+                  className="flex items-center space-x-2 px-4 py-2 rounded-lg bg-[#FF4F18] text-white 
+                           hover:bg-[#FF6B18] transition-all duration-300 shadow-md hover:shadow-lg"
+                >
+                  <FaUtensils className="rotate-180" />
+                  <span>Customer View</span>
+                </Link>
               </div>
             )}
           </div>

@@ -9,6 +9,8 @@ import { DoorManager } from '@/scripts/managers/DoorManager';
 import { WindowManager } from '@/scripts/managers/WindowManager';
 import '@/css/booking.css';
 import { toast } from 'react-hot-toast';
+import { createRoot } from 'react-dom/client';
+import PaymentDialog from '@/components/PaymentDialog';
 
 export default function PublicFloorPlan({ floorplanData, floorplanId, restaurantId }) {
   const containerRef = useRef(null);
@@ -403,26 +405,26 @@ export default function PublicFloorPlan({ floorplanData, floorplanId, restaurant
           guestCountDialog.className = 'booking-dialog';
           guestCountDialog.innerHTML = `
             <div class="booking-dialog-content">
-              <h3 class="text-xl font-bold mb-4">Complete Booking</h3>
+              <h3 class="text-xl font-bold mb-4 text-[#141517]">Complete Booking</h3>
               <div class="booking-details mb-4">
-                <p>Date: ${new Date(dateRef.current).toLocaleDateString()}</p>
-                <p>Time: ${timeRef.current}</p>
-                <p>Table ID: ${tableId}</p>
+                <p class="text-[#141517]">Date: ${new Date(dateRef.current).toLocaleDateString()}</p>
+                <p class="text-[#141517]">Time: ${timeRef.current}</p>
+                <p class="text-[#141517]">Table ID: ${tableId}</p>
               </div>
               <div class="form-group">
-                <label for="guest-count">Number of Guests</label>
+                <label for="guest-count" class="text-[#141517] font-medium block mb-2">Number of Guests</label>
                 <input 
                   type="number" 
                   id="guest-count" 
                   min="1" 
                   max="${table.userData.maxCapacity || 4}" 
                   required
-                  class="w-full p-2 border rounded"
+                  class="w-full p-2 border rounded focus:ring-2 focus:ring-[#FF4F18] focus:border-transparent text-[#141517] font-medium text-lg"
                 >
               </div>
-              <div class="dialog-buttons">
-                <button type="button" id="cancel-booking" class="px-4 py-2 bg-gray-200 rounded">Cancel</button>
-                <button type="button" id="confirm-booking" class="px-4 py-2 bg-orange-500 text-white rounded">Confirm Booking</button>
+              <div class="dialog-buttons mt-6 flex justify-end gap-3">
+                <button type="button" id="cancel-booking" class="px-4 py-2 bg-gray-200 text-[#141517] rounded hover:bg-gray-300 transition-all font-medium">Cancel</button>
+                <button type="button" id="confirm-booking" class="px-4 py-2 bg-[#FF4F18] text-white rounded hover:bg-[#FF4F18]/90 transition-all font-medium">Confirm Booking</button>
               </div>
             </div>
           `;
@@ -446,15 +448,15 @@ export default function PublicFloorPlan({ floorplanData, floorplanId, restaurant
             }
 
             try {
+              document.body.removeChild(guestCountDialog); // Remove the dialog first
               await handleBookingSubmission(table, tableId, {
                 date: dateRef.current,
                 time: timeRef.current,
                 guestCount
               });
-              document.body.removeChild(guestCountDialog);
             } catch (error) {
               console.error('Booking error:', error);
-              alert(error.message || 'Failed to book table');
+              toast.error(error.message || 'Failed to book table');
             }
           });
         };
@@ -632,12 +634,46 @@ export default function PublicFloorPlan({ floorplanData, floorplanId, restaurant
         throw new Error(availabilityData.error || 'Failed to verify table availability');
     }
 
-    // Check if the table is still available from server response
+    // Add after availability check but before booking API call
     const availableTableArray = Array.isArray(availabilityData.availableTables) ? availabilityData.availableTables : [];
     if (availableTableArray.length > 0 && !availableTableArray.includes(tableId)) {
         throw new Error('This table has just been booked by someone else');
     }
 
+    // Show payment dialog before proceeding with booking
+    const paymentResult = await new Promise((resolve) => {
+      const paymentDialog = document.createElement('div');
+      paymentDialog.id = 'payment-dialog-container';
+      document.body.appendChild(paymentDialog);
+
+      const root = createRoot(paymentDialog);
+      root.render(
+        <PaymentDialog
+          bookingDetails={{
+            date: dateRef.current,
+            time: timeRef.current,
+            tableId,
+            guestCount: bookingDetails.guestCount
+          }}
+          onClose={() => {
+            root.unmount();
+            document.body.removeChild(paymentDialog);
+            resolve(false);
+          }}
+          onSuccess={() => {
+            root.unmount();
+            document.body.removeChild(paymentDialog);
+            resolve(true);
+          }}
+        />
+      );
+    });
+
+    if (!paymentResult) {
+      throw new Error('Payment cancelled');
+    }
+
+    // Proceed with booking API call if payment was successful
     const response = await fetch(`/api/scenes/${floorplanId}/book`, {
         method: 'POST',
         headers: {
@@ -778,7 +814,6 @@ export default function PublicFloorPlan({ floorplanData, floorplanId, restaurant
     sceneRef.current.traverse((object) => {
         if (object.userData?.isTable) {
             const tableId = object.userData.objectId;
-            // If availableTables is empty, consider all tables available
             const isAvailable = availableTables.size === 0 || availableTables.has(tableId);
             
             console.log('6. Table check:', {
@@ -792,7 +827,8 @@ export default function PublicFloorPlan({ floorplanData, floorplanId, restaurant
             // Update all meshes in the table object
             object.traverse((child) => {
                 if (child.isMesh) {
-                    const color = isAvailable ? 0xffffff : 0xff0000;
+                    // Use the website's theme colors
+                    const color = isAvailable ? 0xFFFFFF : 0xFF4F18; // White for available, theme orange for unavailable
                     
                     if (Array.isArray(child.material)) {
                         child.material.forEach(mat => {
@@ -839,6 +875,179 @@ export default function PublicFloorPlan({ floorplanData, floorplanId, restaurant
   const adjustedToday = dateSliderLogic();
   // Update the date slider logic to use adjustedToday
   // ... existing code ...
+
+  // Add or update the CSS styles for the date selection
+  const dateSliderStyles = `
+    .date-option {
+      background: white;
+      color: #141517;
+      border: 1px solid #e5e7eb;
+      transition: all 0.2s ease;
+    }
+
+    .date-option:hover {
+      background: #fff5f2;
+      border-color: #FF4F18;
+      transform: translateY(-2px);
+    }
+
+    .date-option.selected {
+      background: #FF4F18;
+      color: white;
+      border-color: #FF4F18;
+      box-shadow: 0 4px 12px rgba(255, 79, 24, 0.2);
+    }
+
+    .date-option.today {
+      border-color: #FF4F18;
+      position: relative;
+    }
+
+    .date-option.today:after {
+      content: 'Today';
+      position: absolute;
+      top: -8px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #FF4F18;
+      color: white;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 0.7rem;
+      font-weight: 500;
+    }
+
+    .date-day {
+      color: inherit;
+      font-weight: 600;
+    }
+
+    .date-date {
+      color: inherit;
+      font-size: 1.2rem;
+      font-weight: 700;
+    }
+
+    .date-month {
+      color: inherit;
+      font-weight: 500;
+    }
+  `;
+
+  // Add the styles to the document
+  useEffect(() => {
+    const style = document.createElement('style');
+    style.textContent = dateSliderStyles;
+    document.head.appendChild(style);
+
+    return () => {
+      document.head.removeChild(style);
+    };
+  }, []);
+
+  // Add or update the styles for time selection
+  const timeSlotStyles = `
+    .time-slots-container {
+      display: flex;
+      gap: 0.5rem;
+      overflow-x: auto;
+      scroll-behavior: smooth;
+      padding: 0.5rem;
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+
+    .time-slots-container::-webkit-scrollbar {
+      display: none;
+    }
+
+    .time-slot-btn {
+      padding: 0.75rem 1rem;
+      background: white;
+      color: #141517;
+      border: 2px solid #e5e7eb;
+      border-radius: 0.5rem;
+      white-space: nowrap;
+      transition: all 0.2s;
+      font-size: 0.85rem;
+      font-weight: 500;
+      min-width: 140px;
+      height: 45px;
+      text-align: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .time-slot-btn:hover {
+      background: #fff5f2;
+      border-color: #FF4F18;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(255, 79, 24, 0.1);
+    }
+
+    .time-slot-btn.selected {
+      background: #FF4F18;
+      color: white;
+      border-color: #FF4F18;
+      box-shadow: 0 4px 12px rgba(255, 79, 24, 0.2);
+    }
+
+    /* Add a subtle indicator for available slots */
+    .time-slot-btn:before {
+      content: '';
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      background: #22c55e;
+      border-radius: 50%;
+      margin-right: 8px;
+      flex-shrink: 0;
+    }
+
+    /* Slider arrow styles for both date and time sections */
+    .slider-arrow {
+      width: 2rem;
+      height: 2rem;
+      border-radius: 50%;
+      background-color: #FF4F18;
+      color: white;
+      border: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-size: 1rem;
+      font-weight: bold;
+      flex-shrink: 0;
+    }
+
+    .slider-arrow:hover {
+      background-color: #e63900;
+      transform: scale(1.1);
+    }
+
+    /* Common styles for both sliders */
+    .date-slider,
+    .time-slots-slider {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: 0.5rem 0;
+    }
+  `;
+
+  // Add the styles to the document
+  useEffect(() => {
+    const style = document.createElement('style');
+    style.textContent = timeSlotStyles;
+    document.head.appendChild(style);
+
+    return () => {
+      document.head.removeChild(style);
+    };
+  }, []);
 
   return (
     <div className="flex flex-col h-screen">
@@ -904,7 +1113,7 @@ export default function PublicFloorPlan({ floorplanData, floorplanId, restaurant
 
           {/* Time Selection with Slider */}
           <div className="booking-column">
-            <h4 className="text-lg font-semibold mb-3">Available Times</h4>
+            <h4 className="text-lg font-semibold mb-3 text-[#FF4F18]">Available Times</h4>
             <div className="time-slots-slider">
               <button 
                 className="slider-arrow left"

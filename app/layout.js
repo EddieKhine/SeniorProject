@@ -4,6 +4,7 @@ import "./globals.css";
 import Navbar from '../components/navbar';
 import { AuthProvider } from '@/context/AuthContext';
 import { GoogleMapsProvider } from '../contexts/GoogleMapsContext';
+import { Toaster } from 'react-hot-toast';
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -26,6 +27,7 @@ export default function RootLayout({ children }) {
             {children}
           </GoogleMapsProvider>
         </AuthProvider>
+        <Toaster position="top-center" />
       </body>
     </html>
   );

@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { format, parseISO, isToday, isPast } from 'date-fns';
 import { motion } from 'framer-motion';
 import { RiCalendarLine, RiTimeLine, RiUserLine, RiPhoneLine, RiMailLine } from 'react-icons/ri';
-import { FaCheckCircle, FaTimesCircle, FaSpinner } from 'react-icons/fa';
+import { FaCheckCircle, FaTimesCircle, FaSpinner, FaTrash } from 'react-icons/fa';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
 
@@ -137,15 +137,15 @@ export default function RestaurantReservation({ restaurantId }) {
   const getStatusBadgeStyle = (status) => {
     switch (status) {
       case 'confirmed':
-        return 'bg-green-100 text-green-800 border-green-200';
+        return 'bg-green-100 text-green-800 border border-green-300';
       case 'cancelled':
-        return 'bg-red-100 text-red-800 border-red-200';
+        return 'bg-red-100 text-red-800 border border-red-300';
       case 'pending':
-        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+        return 'bg-yellow-100 text-yellow-800 border border-yellow-300';
       case 'completed':
-        return 'bg-blue-100 text-blue-800 border-blue-200';
+        return 'bg-blue-100 text-blue-800 border border-blue-300';
       default:
-        return 'bg-gray-100 text-gray-800 border-gray-200';
+        return 'bg-gray-100 text-gray-800 border border-gray-300';
     }
   };
 
@@ -233,187 +233,175 @@ export default function RestaurantReservation({ restaurantId }) {
   };
 
   return (
-    <div className="h-full flex flex-col">
-      {/* Filters and Stats Panel */}
-      <div className="p-6 border-b border-gray-200">
-        <div className="flex flex-wrap gap-4 items-center justify-between mb-6">
-          {/* Date and Time Range Filters */}
-          <div className="flex gap-4">
-            <input
-              type="date"
-              value={selectedDate}
-              onChange={handleDateChange}
-              className="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#FF4F18]"
-              disabled={timeRange !== ''}
-            />
-            <select
-              value={timeRange}
-              onChange={handleTimeRangeChange}
-              className="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#FF4F18]"
-            >
-              <option value="">Select Specific Date</option>
-              <option value="today">Today</option>
-              <option value="week">This Week</option>
-              <option value="month">This Month</option>
-            </select>
-            <select
-              value={filterStatus}
-              onChange={handleFilterChange}
-              className="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#FF4F18]"
-            >
-              <option value="all">All Statuses</option>
-              <option value="pending">Pending</option>
-              <option value="confirmed">Confirmed</option>
-              <option value="cancelled">Cancelled</option>
-              <option value="completed">Completed</option>
-            </select>
-          </div>
-
-          {/* Bulk Actions */}
-          {selectedBookings.size > 0 && (
-            <div className="flex items-center gap-4">
-              <select
-                value={bulkAction}
-                onChange={(e) => setBulkAction(e.target.value)}
-                className="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#FF4F18]"
-              >
-                <option value="">Bulk Actions</option>
-                <option value="confirmed">Confirm Selected</option>
-                <option value="cancelled">Cancel Selected</option>
-                <option value="completed">Mark Selected as Completed</option>
-              </select>
-              <button
-                onClick={handleBulkAction}
-                disabled={!bulkAction}
-                className="px-4 py-2 bg-[#FF4F18] text-white rounded-lg hover:bg-[#FF4F18]/90 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Apply to {selectedBookings.size} Selected
-              </button>
-            </div>
-          )}
+    <div className="bg-white rounded-xl shadow-md p-6 max-h-[calc(100vh-200px)] flex flex-col">
+      {/* Stats Section */}
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
+        <div className="bg-[#FF4F18]/10 rounded-lg p-4">
+          <h3 className="text-[#FF4F18] font-semibold">Total Bookings</h3>
+          <p className="text-2xl font-bold text-[#FF4F18]">{stats.total}</p>
         </div>
-
-        {/* Statistics Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-          <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-100">
-            <p className="text-sm text-gray-600">Total Bookings</p>
-            <p className="text-2xl font-semibold text-[#141517]">{stats.total}</p>
-          </div>
-          <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-100">
-            <p className="text-sm text-gray-600">Confirmed</p>
-            <p className="text-2xl font-semibold text-green-500">{stats.confirmed}</p>
-          </div>
-          <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-100">
-            <p className="text-sm text-gray-600">Pending</p>
-            <p className="text-2xl font-semibold text-yellow-500">{stats.pending}</p>
-          </div>
-          <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-100">
-            <p className="text-sm text-gray-600">Cancelled</p>
-            <p className="text-2xl font-semibold text-red-500">{stats.cancelled}</p>
-          </div>
-          <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-100">
-            <p className="text-sm text-gray-600">Completed</p>
-            <p className="text-2xl font-semibold text-blue-500">{stats.completed}</p>
-          </div>
-          <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-100">
-            <p className="text-sm text-gray-600">Total Guests</p>
-            <p className="text-2xl font-semibold text-[#FF4F18]">{stats.totalGuests}</p>
-          </div>
+        <div className="bg-[#FF4F18]/10 rounded-lg p-4">
+          <h3 className="text-[#FF4F18] font-semibold">Confirmed</h3>
+          <p className="text-2xl font-bold text-[#FF4F18]">{stats.confirmed}</p>
+        </div>
+        <div className="bg-[#FF4F18]/10 rounded-lg p-4">
+          <h3 className="text-[#FF4F18] font-semibold">Pending</h3>
+          <p className="text-2xl font-bold text-[#FF4F18]">{stats.pending}</p>
+        </div>
+        <div className="bg-[#FF4F18]/10 rounded-lg p-4">
+          <h3 className="text-[#FF4F18] font-semibold">Cancelled</h3>
+          <p className="text-2xl font-bold text-[#FF4F18]">{stats.cancelled}</p>
+        </div>
+        <div className="bg-[#FF4F18]/10 rounded-lg p-4">
+          <h3 className="text-[#FF4F18] font-semibold">Completed</h3>
+          <p className="text-2xl font-bold text-[#FF4F18]">{stats.completed}</p>
         </div>
       </div>
 
-      {/* Bookings List */}
-      <div className="flex-1 overflow-auto p-6">
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-          {/* Table Header */}
-          <div className="grid grid-cols-[auto,1fr,1fr,1fr,1fr,1fr,auto] gap-4 p-4 bg-gray-50 border-b border-gray-200 font-medium text-gray-700">
-            <div className="flex items-center">
-              <input
-                type="checkbox"
-                checked={selectedBookings.size === bookings.length}
-                onChange={selectAllBookings}
-                className="w-4 h-4 rounded border-gray-300 text-[#FF4F18] focus:ring-[#FF4F18]"
-              />
-            </div>
-            <div>Booking ID</div>
-            <div>Customer</div>
-            <div>Date & Time</div>
-            <div>Table & Guests</div>
-            <div>Status</div>
-            <div>Actions</div>
-          </div>
+      {/* Filters Section */}
+      <div className="flex flex-wrap text-black gap-4 mb-6">
+        <input
+          type="date"
+          value={selectedDate}
+          onChange={(e) => setSelectedDate(e.target.value)}
+          className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#FF4F18] focus:border-transparent"
+        />
+        <select
+          value={filterStatus}
+          onChange={(e) => setFilterStatus(e.target.value)}
+          className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#FF4F18] focus:border-transparent"
+        >
+          <option value="all">All Status</option>
+          <option value="pending">Pending</option>
+          <option value="confirmed">Confirmed</option>
+          <option value="cancelled">Cancelled</option>
+          <option value="completed">Completed</option>
+        </select>
+        <select
+          value={timeRange}
+          onChange={(e) => setTimeRange(e.target.value)}
+          className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#FF4F18] focus:border-transparent"
+        >
+          <option value="today">Today</option>
+          <option value="week">This Week</option>
+          <option value="month">This Month</option>
+        </select>
+      </div>
 
-          {/* Table Body */}
-          <div className="divide-y divide-gray-200">
-            {bookings.map((booking) => (
-              <div
-                key={booking._id}
-                className="grid grid-cols-[auto,1fr,1fr,1fr,1fr,1fr,auto] gap-4 p-4 items-center hover:bg-gray-50"
-              >
-                <div className="flex items-center">
-                  <input
-                    type="checkbox"
-                    checked={selectedBookings.has(booking._id)}
-                    onChange={() => toggleBookingSelection(booking._id)}
-                    className="w-4 h-4 rounded border-gray-300 text-[#FF4F18] focus:ring-[#FF4F18]"
-                  />
-                </div>
-                <div className="text-gray-900 font-medium">#{booking._id.slice(-6)}</div>
-                <div>
-                  <div className="text-gray-900">{booking.customerName}</div>
-                  <div className="text-sm text-gray-500">{booking.customerEmail}</div>
-                </div>
-                <div>
-                  <div className="text-gray-900">{format(parseISO(booking.date), 'MMM dd, yyyy')}</div>
-                  <div className="text-sm text-gray-500">{booking.startTime} - {booking.endTime}</div>
-                </div>
-                <div>
-                  <div className="text-gray-900">Table {booking.tableId}</div>
-                  <div className="text-sm text-gray-500">{booking.guestCount} Guests</div>
-                </div>
-                <div>
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getStatusBadgeStyle(booking.status)}`}>
-                    {booking.status.charAt(0).toUpperCase() + booking.status.slice(1)}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2">
-                  {booking.status === 'pending' && (
-                    <>
-                      <button
-                        onClick={() => handleBookingAction(booking._id, 'confirm')}
-                        className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
-                        title="Confirm Booking"
-                      >
-                        <FaCheckCircle className="w-5 h-5" />
-                      </button>
-                      <button
-                        onClick={() => handleBookingAction(booking._id, 'cancel')}
-                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                        title="Cancel Booking"
-                      >
-                        <FaTimesCircle className="w-5 h-5" />
-                      </button>
-                    </>
-                  )}
-                  {booking.status === 'confirmed' && (
-                    <button
-                      onClick={() => handleBookingAction(booking._id, 'complete')}
-                      className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                      title="Mark as Completed"
-                    >
-                      <FaCheckCircle className="w-5 h-5" />
-                    </button>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
+      {/* Table Layout - Added overflow handling */}
+      <div className="flex-1 overflow-y-auto">
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-[#111827] uppercase tracking-wider">Customer</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-[#111827] uppercase tracking-wider">Contact</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-[#111827] uppercase tracking-wider">Date & Time</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-[#111827] uppercase tracking-wider">Status</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-[#111827] uppercase tracking-wider">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {filteredBookings.map((booking) => (
+                <motion.tr
+                  key={booking._id}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="hover:bg-gray-50"
+                >
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex items-center">
+                      <RiUserLine className="text-[#FF4F18] mr-2" />
+                      <div className="text-sm font-medium text-[#111827]">{booking.customerName}</div>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm text-[#111827]">
+                      <div className="flex items-center mb-1">
+                        <RiPhoneLine className="text-[#FF4F18] mr-2" />
+                        {booking.customerPhone}
+                      </div>
+                      <div className="flex items-center">
+                        <RiMailLine className="text-[#FF4F18] mr-2" />
+                        {booking.customerEmail}
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm text-[#111827]">
+                      <div className="flex items-center mb-1">
+                        <RiCalendarLine className="text-[#FF4F18] mr-2" />
+                        {format(parseISO(booking.date), 'MMM dd, yyyy')}
+                      </div>
+                      <div className="flex items-center">
+                        <RiTimeLine className="text-[#FF4F18] mr-2" />
+                        {`${booking.startTime} - ${booking.endTime}`}
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusBadgeStyle(booking.status)}`}>
+                      {booking.status.charAt(0).toUpperCase() + booking.status.slice(1)}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <div className="flex items-center gap-2">
+                      {booking.status === 'pending' && (
+                        <>
+                          <motion.button
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={() => handleBookingAction(booking._id, 'confirm')}
+                            className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-all"
+                            title="Confirm Booking"
+                          >
+                            <FaCheckCircle className="w-5 h-5" />
+                          </motion.button>
+                          <motion.button
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={() => handleBookingAction(booking._id, 'cancel')}
+                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                            title="Cancel Booking"
+                          >
+                            <FaTimesCircle className="w-5 h-5" />
+                          </motion.button>
+                        </>
+                      )}
+                      {booking.status === 'confirmed' && (
+                        <motion.button
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                          onClick={() => handleBookingAction(booking._id, 'complete')}
+                          className="p-2 text-[#FF4F18] hover:bg-[#FF4F18]/10 rounded-lg transition-all"
+                          title="Mark as Completed"
+                        >
+                          <FaCheckCircle className="w-5 h-5" />
+                        </motion.button>
+                      )}
+                      {(booking.status === 'cancelled' || booking.status === 'completed') && (
+                        <motion.button
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                          onClick={() => handleDeleteBooking(booking._id)}
+                          className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                          title="Delete Booking"
+                        >
+                          <FaTrash className="w-5 h-5" />
+                        </motion.button>
+                      )}
+                    </div>
+                  </td>
+                </motion.tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </div>
 
       {/* Loading Indicator */}
       {loading && (
-        <div className="absolute inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center">
+        <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center">
           <div className="p-4 rounded-lg bg-white shadow-lg">
             <FaSpinner className="w-8 h-8 text-[#FF4F18] animate-spin" />
           </div>

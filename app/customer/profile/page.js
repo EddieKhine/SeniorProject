@@ -15,10 +15,15 @@ import {
   FaBookmark,
   FaHistory,
   FaCalendarAlt,
-  FaUtensils
+  FaUtensils,
+  FaClock,
+  FaUsers,
+  FaTable,
+  FaTrash
 } from "react-icons/fa";
 import Image from "next/image";
 import { RiCameraLine } from 'react-icons/ri';
+import { toast } from "react-hot-toast";
 
 export default function CustomerProfile() {
   const router = useRouter();
@@ -36,6 +41,8 @@ export default function CustomerProfile() {
     newPassword: "",
     profileImage: "",
   });
+  const [bookings, setBookings] = useState([]);
+  const [bookingsLoading, setBookingsLoading] = useState(false);
 
   useEffect(() => {
     const storedUser = localStorage.getItem("customerUser");
@@ -116,49 +123,131 @@ export default function CustomerProfile() {
     }
   }, [user, activeTab, activeSubTab]);
 
+  const fetchUserBookings = async () => {
+    if (!user?.email) return;
+    
+    setBookingsLoading(true);
+    try {
+      const token = localStorage.getItem('customerToken');
+      const response = await fetch('/api/bookings/customer', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch bookings');
+      }
+
+      const data = await response.json();
+      
+      // Process bookings to update status for past bookings
+      const processedBookings = data.bookings.map(booking => {
+        // Convert booking date and time to a proper Date object
+        const [hours, minutes] = booking.endTime.split(':');
+        const bookingDateTime = new Date(booking.date);
+        bookingDateTime.setHours(parseInt(hours, 10), parseInt(minutes, 10), 0, 0);
+        const currentDateTime = new Date();
+        
+        // If booking is in the past and not cancelled, mark as completed
+        if (bookingDateTime < currentDateTime && booking.status !== 'cancelled') {
+          // Update the booking status in the database
+          updateBookingStatus(booking._id, 'completed');
+          return { ...booking, status: 'completed' };
+        }
+        return booking;
+      });
+
+      setBookings(processedBookings);
+    } catch (error) {
+      console.error('Error fetching bookings:', error);
+      toast.error('Failed to fetch your reservations');
+    } finally {
+      setBookingsLoading(false);
+    }
+  };
+
+  // Add new function to update booking status
+  const updateBookingStatus = async (bookingId, status) => {
+    try {
+      const token = localStorage.getItem('customerToken');
+      const response = await fetch(`/api/bookings/${bookingId}/status`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ status })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update booking status');
+      }
+    } catch (error) {
+      console.error('Error updating booking status:', error);
+      toast.error('Failed to update booking status');
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === "activities" && activeSubTab === "reservations") {
+      fetchUserBookings();
+    }
+  }, [activeTab, activeSubTab, user]);
+
   const handleLogout = () => {
     localStorage.removeItem("customerUser");
     router.push("/");
   };
 
   const handleUpdateProfile = async () => {
-    if (!user || !user.email) {
-      alert("User email is missing.");
-      return;
-    }
-  
-    const payload = {
-      email: user.email,
-      firstName: updatedUser.firstName || user.firstName,
-      lastName: updatedUser.lastName || user.lastName,
-      contactNumber: updatedUser.contactNumber || user.contactNumber,
-      newPassword: updatedUser.newPassword || undefined,  // Optional password update
-    };
-  
-    console.log("Sending payload:", payload); // Debugging
-  
-    try {
-      const response = await fetch("/api/customer/profile", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload), // Ensure valid JSON
-      });
-  
-      const result = await response.json();
-  
-      if (response.ok) {
-        alert("Profile updated successfully!");
-        setUser({ ...user, ...payload });
-        localStorage.setItem("user", JSON.stringify({ ...user, ...payload }));
-        setUpdatedUser({ ...updatedUser, newPassword: "" }); // Clear password input field
-      } else {
-        alert(result.message || "Failed to update profile.");
-      }
-    } catch (error) {
-      console.error("Error updating profile:", error);
-      alert("An error occurred while updating your profile.");
-    }
+  if (!user || !user.email) {
+    alert("User email is missing.");
+    return;
+  }
+
+  const token = localStorage.getItem('customerToken');
+  if (!token) {
+    alert("Please log in again.");
+    return;
+  }
+
+  const payload = {
+    email: user.email,
+    firstName: updatedUser.firstName || user.firstName,
+    lastName: updatedUser.lastName || user.lastName,
+    contactNumber: updatedUser.contactNumber || user.contactNumber,
+    newPassword: updatedUser.newPassword || undefined,  // Optional password update
   };
+
+  console.log("Sending payload:", payload); // Debugging
+
+  try {
+    const response = await fetch("/api/customer/profile", {
+      method: "PUT",
+      headers: { 
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      },
+      body: JSON.stringify(payload),
+    });
+
+    const result = await response.json();
+
+    if (response.ok) {
+      alert("Profile updated successfully!");
+      setUser({ ...user, ...payload });
+      localStorage.setItem("customerUser", JSON.stringify({ ...user, ...payload }));
+      setUpdatedUser({ ...updatedUser, newPassword: "" }); // Clear password input field
+    } else {
+      alert(result.message || "Failed to update profile.");
+    }
+  } catch (error) {
+    console.error("Error updating profile:", error);
+    alert("An error occurred while updating your profile.");
+  }
+};
 
   const handleImageUpload = async (e) => {
     const file = e.target.files[0];
@@ -211,6 +300,59 @@ export default function CustomerProfile() {
       setUploadError("Failed to upload image. Please try again.");
     } finally {
       setIsUploading(false);
+    }
+  };
+
+  const handleCancelBooking = async (bookingId) => {
+    if (!confirm('Are you sure you want to cancel this reservation?')) return;
+    
+    try {
+      const token = localStorage.getItem('customerToken');
+      const response = await fetch(`/api/bookings/customer`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ bookingId })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to cancel booking');
+      }
+
+      toast.success('Reservation cancelled successfully');
+      fetchUserBookings(); // Refresh the bookings list
+    } catch (error) {
+      console.error('Error cancelling booking:', error);
+      toast.error('Failed to cancel reservation');
+    }
+  };
+
+  // Add this function after fetchUserBookings
+  const handleDeleteBooking = async (bookingId) => {
+    if (!confirm('Are you sure you want to delete this reservation?')) return;
+
+    try {
+      const token = localStorage.getItem('customerToken');
+      const response = await fetch(`/api/bookings/${bookingId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete booking');
+      }
+
+      // Refresh bookings after successful deletion
+      fetchUserBookings();
+      toast.success('Booking deleted successfully');
+    } catch (error) {
+      console.error('Error deleting booking:', error);
+      toast.error('Failed to delete booking');
     }
   };
 
@@ -396,21 +538,6 @@ export default function CustomerProfile() {
                     >
                       <FaCalendarAlt className="text-sm" />
                       <span>Reservations</span>
-                    </motion.button>
-
-                    <motion.button
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: 0.2 }}
-                      onClick={() => setActiveSubTab("history")}
-                      className={`w-full flex items-center space-x-3 px-4 py-2 rounded-lg text-sm transition-all ${
-                        activeSubTab === "history"
-                          ? "bg-[#F2F4F7] text-[#FF4F18]"
-                          : "hover:bg-[#F2F4F7] text-[#141517]/70"
-                      }`}
-                    >
-                      <FaHistory className="text-sm" />
-                      <span>History</span>
                     </motion.button>
                   </div>
                 )}
@@ -600,7 +727,113 @@ export default function CustomerProfile() {
                       </div>
                     )}
 
-                    {/* Similar updates for reservations and history sections */}
+                    {/* Reservations */}
+                    {activeSubTab === "reservations" && (
+                      <div className="bg-white rounded-2xl shadow-sm p-8 border border-gray-100">
+                        <h2 className="text-2xl font-bold text-gray-900 mb-6">Your Reservations</h2>
+                        {bookingsLoading ? (
+                          <div className="flex justify-center py-8">
+                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#FF4F18]"></div>
+                          </div>
+                        ) : bookings.length > 0 ? (
+                          <div className="grid grid-cols-1 gap-6">
+                            {bookings.map((booking) => (
+                              <motion.div
+                                key={booking._id}
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                className="bg-gray-50 rounded-xl p-6 hover:shadow-md transition-all duration-300"
+                              >
+                                <div className="flex flex-col md:flex-row justify-between gap-4">
+                                  <div className="space-y-2">
+                                    <h3 className="text-lg font-semibold text-gray-800">
+                                      {booking.restaurantName}
+                                    </h3>
+                                    <div className="flex items-center space-x-4 text-sm text-gray-600">
+                                      <span className="flex items-center">
+                                        <FaCalendarAlt className="mr-2" />
+                                        {new Date(booking.date).toLocaleDateString()}
+                                      </span>
+                                      <span className="flex items-center">
+                                        <FaClock className="mr-2" />
+                                        {booking.startTime} - {booking.endTime}
+                                      </span>
+                                    </div>
+                                    <div className="flex items-center space-x-4 text-sm text-gray-600">
+                                      <span className="flex items-center">
+                                        <FaUsers className="mr-2" />
+                                        {booking.guestCount} guests
+                                      </span>
+                                      <span className="flex items-center">
+                                        <FaTable className="mr-2" />
+                                        Table {booking.tableId}
+                                      </span>
+                                    </div>
+                                    <div className="flex items-center space-x-2">
+                                      <span className="text-sm text-gray-600">Status:</span>
+                                      <span className={`px-3 py-1 rounded-full text-xs font-medium
+                                        ${booking.status === 'confirmed' ? 'bg-green-100 text-green-800' :
+                                        booking.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                                        booking.status === 'cancelled' ? 'bg-red-100 text-red-800' :
+                                        'bg-gray-100 text-gray-800'}`}>
+                                        {booking.status.charAt(0).toUpperCase() + booking.status.slice(1)}
+                                      </span>
+                                    </div>
+                                    {booking.paymentStatus && (
+                                      <div className="flex items-center space-x-2">
+                                        <span className="text-sm text-gray-600">Payment:</span>
+                                        <span className={`px-3 py-1 rounded-full text-xs font-medium
+                                          ${booking.paymentStatus === 'paid' ? 'bg-green-100 text-green-800' :
+                                          'bg-red-100 text-red-800'}`}>
+                                          {booking.paymentStatus.charAt(0).toUpperCase() + booking.paymentStatus.slice(1)}
+                                        </span>
+                                      </div>
+                                    )}
+                                  </div>
+                                  
+                                  <div className="flex flex-col gap-2">
+                                    <motion.button
+                                      whileHover={{ scale: 1.02 }}
+                                      whileTap={{ scale: 0.98 }}
+                                      onClick={() => router.push(`/customer/restaurants/${booking.restaurantId}`)}
+                                      className="px-4 py-2 bg-[#FF4F18] text-white rounded-lg hover:bg-[#FF4F18]/90 transition-all"
+                                    >
+                                      View Restaurant
+                                    </motion.button>
+                                    {booking.status !== 'cancelled' && (
+                                      <motion.button
+                                        whileHover={{ scale: 1.02 }}
+                                        whileTap={{ scale: 0.98 }}
+                                        onClick={() => handleCancelBooking(booking._id)}
+                                        className="px-4 py-2 border border-red-500 text-red-500 rounded-lg hover:bg-red-50 transition-all"
+                                      >
+                                        Cancel Reservation
+                                      </motion.button>
+                                    )}
+                                    {(booking.status === 'cancelled' || booking.status === 'completed') && (
+                                      <motion.button
+                                        whileHover={{ scale: 1.02 }}
+                                        whileTap={{ scale: 0.98 }}
+                                        onClick={() => handleDeleteBooking(booking._id)}
+                                        className="mt-4 px-4 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 
+                                                   transition-all duration-300 flex items-center space-x-2"
+                                      >
+                                        <FaTrash className="text-sm" />
+                                        <span>Delete Booking</span>
+                                      </motion.button>
+                                    )}
+                                  </div>
+                                </div>
+                              </motion.div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="text-center py-8 text-gray-500">
+                            No reservations found
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </motion.div>
                 )}
               </>

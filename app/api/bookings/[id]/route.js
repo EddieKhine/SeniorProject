@@ -3,11 +3,10 @@ import dbConnect from '@/lib/mongodb';
 import Booking from '@/models/Booking';
 import jwt from 'jsonwebtoken';
 
-export async function PATCH(request, { params }) {
+export async function DELETE(request, { params }) {
   try {
     await dbConnect();
     const bookingId = params.id;
-    const { status } = await request.json();
 
     // Verify token
     const authHeader = request.headers.get('authorization');
@@ -30,16 +29,7 @@ export async function PATCH(request, { params }) {
       );
     }
 
-    // Validate status
-    const validStatuses = ['pending', 'confirmed', 'cancelled', 'completed'];
-    if (!validStatuses.includes(status)) {
-      return NextResponse.json(
-        { error: 'Invalid status' },
-        { status: 400 }
-      );
-    }
-
-    // Find and update the booking
+    // Find the booking
     const booking = await Booking.findById(bookingId);
     if (!booking) {
       return NextResponse.json(
@@ -56,28 +46,23 @@ export async function PATCH(request, { params }) {
       );
     }
 
-    // Add to history before updating status
-    booking.addToHistory('modified', {
-      previousStatus: booking.status,
-      newStatus: status,
-      updatedAt: new Date()
-    });
+    // Only allow deletion of cancelled or completed bookings
+    if (!['cancelled', 'completed'].includes(booking.status)) {
+      return NextResponse.json(
+        { error: 'Only cancelled or completed bookings can be deleted' },
+        { status: 400 }
+      );
+    }
 
-    booking.status = status;
-    await booking.save();
+    await Booking.findByIdAndDelete(bookingId);
 
     return NextResponse.json({ 
-      message: 'Booking status updated successfully',
-      booking: {
-        _id: booking._id,
-        status: booking.status,
-        updatedAt: new Date()
-      }
+      message: 'Booking deleted successfully'
     });
   } catch (error) {
-    console.error('Error updating booking status:', error);
+    console.error('Error deleting booking:', error);
     return NextResponse.json(
-      { error: error.message || 'Failed to update booking status' },
+      { error: error.message || 'Failed to delete booking' },
       { status: 500 }
     );
   }

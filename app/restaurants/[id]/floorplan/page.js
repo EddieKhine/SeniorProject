@@ -252,7 +252,7 @@ export default function RestaurantFloorplanPage({ params }) {
         <div className="flex-1 p-6 bg-gray-50 overflow-y-auto">
           {/* Floorplan Section with adjusted height */}
           <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-            <h2 className="text-xl font-bold p-4 border-b">Floor Plan</h2>
+            <h2 className="text-xl font-bold p-4 text-[#FF4F18] border-b">Floor Plan</h2>
             <div className="p-6">
               {restaurant.floorplanData ? (
                 <PublicFloorPlan 
