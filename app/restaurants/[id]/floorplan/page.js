@@ -9,6 +9,7 @@ import PublicFloorPlan from '@/components/PublicFloorPlan';
 import { GoogleMap, Marker } from '@react-google-maps/api';
 import ReviewSection from '@/components/ReviewSection';
 import CustomerChat from '@/components/CustomerChat';
+import { MdRestaurantMenu } from 'react-icons/md';
 
 export default function RestaurantFloorplanPage({ params }) {
   const restaurantId = use(params).id;
@@ -29,15 +30,19 @@ export default function RestaurantFloorplanPage({ params }) {
         }
         
         const data = await response.json();
-        console.log('Received restaurant data:', data);
+        console.log('DEBUG - Full restaurant data:', data);
+        console.log('DEBUG - Images object:', data.images);
+        console.log('DEBUG - Menu images array:', data.images?.menu);
+        console.log('DEBUG - Number of menu images:', data.images?.menu?.length || 0);
         
-        if (!data.floorplanId) {
-          console.warn('No floorplan ID in restaurant data');
+        // Ensure menu images is always an array
+        if (data.images && !Array.isArray(data.images.menu)) {
+          data.images.menu = data.images.menu ? [data.images.menu] : [];
         }
         
         setRestaurant(data);
       } catch (error) {
-        console.error('Error:', error);
+        console.error('Error fetching restaurant data:', error);
       } finally {
         setLoading(false);
       }
@@ -105,6 +110,71 @@ export default function RestaurantFloorplanPage({ params }) {
         return `${formattedDay}: ${formatDayHours(hours)}`;
       })
       .join('\n');
+  };
+
+  // Add a separate function to render menu section with debugging
+  const renderMenuSection = () => {
+    console.log('DEBUG - Rendering menu section');
+    console.log('DEBUG - Current restaurant state:', restaurant);
+    console.log('DEBUG - Menu images in state:', restaurant?.images?.menu);
+    console.log('DEBUG - Menu images count:', restaurant?.images?.menu?.length || 0);
+
+    // Ensure menu images is an array
+    const menuImages = Array.isArray(restaurant?.images?.menu) 
+      ? restaurant.images.menu 
+      : restaurant?.images?.menu 
+        ? [restaurant.images.menu] 
+        : [];
+
+    return (
+      <div id="menuSection" className="bg-white rounded-xl shadow-lg p-6 mb-8">
+        <h2 className="text-xl font-bold text-[#FF4F18] border-b pb-4 mb-6 flex items-center gap-2">
+          <MdRestaurantMenu />
+          Menu
+        </h2>
+        
+        {menuImages.length > 0 ? (
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {menuImages.map((url, index) => {
+                console.log('DEBUG - Rendering menu image:', url);
+                return (
+                  <div key={index} className="relative group">
+                    <div className="aspect-[3/4] relative rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300">
+                      <Image
+                        src={url}
+                        alt={`Menu page ${index + 1}`}
+                        fill
+                        className="object-cover"
+                        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                      />
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all duration-200 flex items-center justify-center">
+                        <div className="transform scale-0 group-hover:scale-100 transition-transform duration-200">
+                          <button 
+                            onClick={() => window.open(url, '_blank')}
+                            className="bg-white/90 text-[#FF4F18] px-4 py-2 rounded-lg hover:bg-white transition-all duration-200"
+                          >
+                            View Full Size
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <p className="text-sm text-gray-500 mt-4">
+              Click any menu image to view in full size
+            </p>
+          </>
+        ) : (
+          <div className="text-center py-12">
+            <MdRestaurantMenu className="text-6xl text-gray-300 mx-auto mb-4" />
+            <p className="text-gray-500">Menu images are not available at the moment.</p>
+          </div>
+        )}
+      </div>
+    );
   };
 
   if (loading) {
@@ -184,13 +254,57 @@ export default function RestaurantFloorplanPage({ params }) {
             <button className="w-full bg-[#FF4F18] text-white rounded-lg py-3 hover:bg-[#FF4F18]/90 transition-all shadow-md hover:shadow-lg">
               Make a Reservation
             </button>
-            <button className="w-full bg-white text-[#FF4F18] border-2 border-[#FF4F18] rounded-lg py-3 hover:bg-[#FF4F18]/5 transition-all">
-              View Menu
-            </button>
           </div>
 
           {/* Restaurant Details with Cards */}
           <div className="space-y-6">
+            {/* Menu Images Card */}
+            <div className="bg-white rounded-xl p-4 shadow-sm hover:shadow-md transition-all">
+              <div className="flex items-center gap-3 text-[#141517] mb-4">
+                <MdRestaurantMenu className="text-[#FF4F18]" />
+                <span className="font-medium">Menu</span>
+              </div>
+              {restaurant.images?.menu && restaurant.images.menu.length > 0 ? (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-2">
+                    {restaurant.images.menu.map((url, index) => (
+                      <div key={index} className="relative group aspect-[3/4]">
+                        <div className="w-full h-full relative rounded-lg overflow-hidden">
+                          <Image
+                            src={url}
+                            alt={`Menu page ${index + 1}`}
+                            fill
+                            className="object-cover"
+                            sizes="(max-width: 400px) 50vw, 33vw"
+                          />
+                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all duration-200 flex items-center justify-center">
+                            <div className="transform scale-0 group-hover:scale-100 transition-transform duration-200">
+                              <button 
+                                onClick={() => window.open(url, '_blank')}
+                                className="bg-white/90 text-[#FF4F18] px-3 py-1 text-sm rounded-lg hover:bg-white transition-all duration-200"
+                              >
+                                View
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <button 
+                    onClick={() => document.getElementById('menuSection').scrollIntoView({ behavior: 'smooth' })}
+                    className="w-full text-sm text-[#FF4F18] hover:text-[#FF4F18]/80 transition-colors"
+                  >
+                    View all menu images
+                  </button>
+                </div>
+              ) : (
+                <p className="text-gray-500 text-sm pl-8">
+                  Menu images not available
+                </p>
+              )}
+            </div>
+
             {/* Description Card */}
             <div className="bg-white rounded-xl p-4 shadow-sm hover:shadow-md transition-all">
               <div className="flex items-center gap-3 text-[#141517] mb-2">
@@ -248,10 +362,10 @@ export default function RestaurantFloorplanPage({ params }) {
           </div>
         </div>
 
-        {/* Main Panel - Floor Plan */}
+        {/* Main Panel - Floor Plan and Menu */}
         <div className="flex-1 p-6 bg-gray-50 overflow-y-auto">
-          {/* Floorplan Section with adjusted height */}
-          <div className="bg-white rounded-xl shadow-lg overflow-hidden">
+          {/* Floorplan Section */}
+          <div className="bg-white rounded-xl shadow-lg overflow-hidden mb-8">
             <h2 className="text-xl font-bold p-4 text-[#FF4F18] border-b">Floor Plan</h2>
             <div className="p-6">
               {restaurant.floorplanData ? (
@@ -270,7 +384,7 @@ export default function RestaurantFloorplanPage({ params }) {
           </div>
 
           {/* Reviews Section */}
-          <div className="mt-8 bg-white rounded-xl shadow-lg p-6">
+          <div className="bg-white rounded-xl shadow-lg p-6">
             <ReviewSection restaurantId={restaurantId} />
           </div>
         </div>

@@ -39,14 +39,15 @@ export async function GET(request, { params }) {
     return NextResponse.json({
       _id: restaurant._id,
       floorplanId: restaurant.floorplanId,
-      floorplanData: floorplanData, // Include the actual floorplan data
+      floorplanData: floorplanData,
       restaurantName: restaurant.restaurantName,
       description: restaurant.description,
       location: restaurant.location,
       rating: restaurant.rating,
       openingHours: restaurant.openingHours,
       phone: restaurant.phone,
-      cuisine: restaurant.cuisineType
+      cuisine: restaurant.cuisineType,
+      images: restaurant.images
     });
   } catch (error) {
     console.error('Error in public-floorplan route:', error);

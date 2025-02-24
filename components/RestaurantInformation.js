@@ -1,7 +1,7 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { useState } from 'react';
 import Image from 'next/image';
-import { RiRestaurantLine, RiTimeLine, RiMapPinLine, RiEdit2Line } from 'react-icons/ri';
+import { RiRestaurantLine, RiTimeLine, RiMapPinLine, RiEdit2Line, RiDeleteBinLine, RiImageAddLine } from 'react-icons/ri';
 import { MdRestaurantMenu, MdAnalytics } from 'react-icons/md';
 import { GoogleMap, Marker } from '@react-google-maps/api';
 import RestaurantProfileForm from './RestaurantProfileForm';
@@ -30,6 +30,20 @@ const formatOpeningHours = (hours) => {
 export default function RestaurantInformation({ restaurant, onEditClick, onUpdateSuccess }) {
   const [isEditing, setIsEditing] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
+
+  // Ensure menu images is always an array
+  const menuImages = Array.isArray(restaurant?.images?.menu) 
+    ? restaurant.images.menu 
+    : restaurant?.images?.menu 
+      ? [restaurant.images.menu] 
+      : [];
+
+  console.log('DEBUG - Menu Images:', {
+    original: restaurant?.images?.menu,
+    processed: menuImages,
+    isArray: Array.isArray(restaurant?.images?.menu),
+    length: menuImages.length
+  });
 
   // Add console log to debug component state
   console.log('RestaurantInformation render:', { isEditing, restaurant });
@@ -154,46 +168,97 @@ export default function RestaurantInformation({ restaurant, onEditClick, onUpdat
           <MdRestaurantMenu className="text-[#FF4F18]" />
           Menu Images
         </h3>
-        {isEditing ? (
-          <MenuImageUpload
-            initialImages={restaurant.images?.menu || []}
-            onUpdate={async (menuImages) => {
-              try {
-                const token = localStorage.getItem("restaurantOwnerToken");
-                const response = await fetch(`/api/restaurants/${restaurant._id}/menu-images`, {
-                  method: 'PUT',
-                  headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                  },
-                  body: JSON.stringify({ menuImages })
-                });
-
-                if (response.ok) {
-                  const updatedRestaurant = await response.json();
-                  onUpdateSuccess(updatedRestaurant);
-                }
-              } catch (error) {
-                console.error('Error updating menu images:', error);
-              }
-            }}
-          />
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {restaurant.images?.menu?.map((image, index) => (
-              <div key={index} className="aspect-[3/4] relative rounded-lg overflow-hidden">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {menuImages.map((url, index) => (
+            <div key={index} className="relative group">
+              <div className="aspect-[3/4] relative rounded-lg overflow-hidden">
                 <Image
-                  src={image}
+                  src={url}
                   alt={`Menu page ${index + 1}`}
                   fill
                   className="object-cover"
                 />
               </div>
-            ))}
-            {(!restaurant.images?.menu || restaurant.images.menu.length === 0) && (
-              <p className="text-gray-500 italic">No menu images uploaded yet.</p>
-            )}
-          </div>
+              {isEditing && (
+                <button
+                  onClick={async () => {
+                    const updatedMenu = menuImages.filter((_, i) => i !== index);
+                    try {
+                      const response = await fetch(`/api/restaurants/${restaurant._id}`, {
+                        method: 'PUT',
+                        headers: {
+                          'Content-Type': 'application/json',
+                          'Authorization': `Bearer ${localStorage.getItem('restaurantOwnerToken')}`
+                        },
+                        body: JSON.stringify({
+                          images: {
+                            ...restaurant.images,
+                            menu: updatedMenu
+                          }
+                        })
+                      });
+                      
+                      if (response.ok) {
+                        const updatedRestaurant = await response.json();
+                        onUpdateSuccess(updatedRestaurant);
+                      }
+                    } catch (error) {
+                      console.error('Error updating menu images:', error);
+                    }
+                  }}
+                  className="absolute top-2 right-2 p-2 bg-white/90 rounded-full text-red-500 
+                    opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:bg-white"
+                >
+                  <RiDeleteBinLine className="text-xl" />
+                </button>
+              )}
+            </div>
+          ))}
+          
+          {isEditing && menuImages.length < 5 && (
+            <div className="aspect-[3/4] border-2 border-dashed border-gray-300 rounded-lg 
+              hover:border-[#FF4F18] transition-colors">
+              <ImageUpload
+                onImageUpload={async (url) => {
+                  const newMenuImages = [...menuImages, url];
+                  try {
+                    const response = await fetch(`/api/restaurants/${restaurant._id}`, {
+                      method: 'PUT',
+                      headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('restaurantOwnerToken')}`
+                      },
+                      body: JSON.stringify({
+                        images: {
+                          ...restaurant.images,
+                          menu: newMenuImages
+                        }
+                      })
+                    });
+                    
+                    if (response.ok) {
+                      const updatedRestaurant = await response.json();
+                      onUpdateSuccess(updatedRestaurant);
+                    }
+                  } catch (error) {
+                    console.error('Error updating menu images:', error);
+                  }
+                }}
+                type="restaurant"
+                className="w-full h-full flex flex-col items-center justify-center"
+              >
+                <RiImageAddLine className="text-3xl text-gray-400 mb-2" />
+                <span className="text-sm text-gray-500">Add Menu Image</span>
+                <span className="text-xs text-gray-400">
+                  ({menuImages.length}/5)
+                </span>
+              </ImageUpload>
+            </div>
+          )}
+        </div>
+        
+        {menuImages.length === 0 && !isEditing && (
+          <p className="text-gray-500 italic">No menu images uploaded yet.</p>
         )}
       </div>
     </div>

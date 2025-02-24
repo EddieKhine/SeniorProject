@@ -72,7 +72,8 @@ export default function RestaurantProfileForm({
     },
     images: {
       main: initialData?.images?.main || "",
-      gallery: initialData?.images?.gallery || []
+      gallery: initialData?.images?.gallery || [],
+      menu: initialData?.images?.menu || []
     }
   });
 
@@ -325,6 +326,69 @@ export default function RestaurantProfileForm({
               initialLocation={formData.location}
               className="text-gray-900"
             />
+          </div>
+
+          {/* Menu Images Section */}
+          <div className="bg-white rounded-xl shadow-sm p-6">
+            <label className="block text-sm font-semibold text-gray-900 mb-4">
+              Menu Images
+            </label>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {formData.images.menu?.map((url, index) => (
+                <div key={index} className="relative group">
+                  <div className="aspect-[3/4] relative rounded-lg overflow-hidden">
+                    <Image
+                      src={url}
+                      alt={`Menu page ${index + 1}`}
+                      fill
+                      className="object-cover"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const updatedMenu = formData.images.menu.filter((_, i) => i !== index);
+                      setFormData(prev => ({
+                        ...prev,
+                        images: { ...prev.images, menu: updatedMenu }
+                      }));
+                    }}
+                    className="absolute top-2 right-2 p-2 bg-white/90 rounded-full text-red-500 
+                      opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:bg-white"
+                  >
+                    <RiDeleteBinLine className="text-xl" />
+                  </button>
+                </div>
+              ))}
+              
+              {formData.images.menu.length < 5 && (
+                <div className="aspect-[3/4] border-2 border-dashed border-gray-300 rounded-lg 
+                  hover:border-[#FF4F18] transition-colors">
+                  <ImageUpload
+                    onImageUpload={(url) => {
+                      setFormData(prev => ({
+                        ...prev,
+                        images: {
+                          ...prev.images,
+                          menu: [...prev.images.menu, url]
+                        }
+                      }));
+                    }}
+                    type="restaurant"
+                    className="w-full h-full flex flex-col items-center justify-center"
+                  >
+                    <RiImageAddLine className="text-3xl text-gray-400 mb-2" />
+                    <span className="text-sm text-gray-500">Add Menu Image</span>
+                    <span className="text-xs text-gray-400">
+                      ({formData.images.menu.length}/5)
+                    </span>
+                  </ImageUpload>
+                </div>
+              )}
+            </div>
+            <p className="text-sm text-gray-500 mt-2">
+              Upload up to 5 menu images. Recommended aspect ratio is 3:4.
+            </p>
           </div>
         </div>
 
