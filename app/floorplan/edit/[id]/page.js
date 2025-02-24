@@ -10,7 +10,7 @@ import { DragManager } from '@/scripts/managers/DragManager';
 import { WallManager } from '@/scripts/wallManager';
 import { DoorManager } from '@/scripts/managers/DoorManager';
 import { WindowManager } from '@/scripts/managers/WindowManager';
-import { chair, table, sofa, roundTable } from '@/scripts/asset';
+import { chair, table, sofa, roundTable, create2SeaterTable } from '@/scripts/asset';
 import { FaBoxOpen, FaTrash, FaArrowsAltH, FaSave, FaFolderOpen } from "react-icons/fa";
 import { RiLayoutGridFill } from "react-icons/ri";
 import styles from "@/css/ui.css";
@@ -112,7 +112,6 @@ export default function EditFloorplan() {
         uiManagerRef.current = uiManager;
 
         // Initialize wall preview properly
-        uiManager.wallManager.isAddWallMode = true;
         uiManager.wallManager.createPreviewWall();
         scene.add(uiManager.wallManager.previewWall);
 
@@ -183,7 +182,7 @@ export default function EditFloorplan() {
                   isInteractable: true,
                   // Add table-specific properties if it's a table
                   ...(objData.userData.isTable && {
-                    maxCapacity: objData.userData.maxCapacity || 4,
+                    maxCapacity: objData.userData.is2SeaterTable ? 2 : (objData.userData.maxCapacity || 4),
                     bookingStatus: objData.userData.bookingStatus || 'available',
                     currentBooking: objData.userData.currentBooking || null,
                     bookingHistory: objData.userData.bookingHistory || []

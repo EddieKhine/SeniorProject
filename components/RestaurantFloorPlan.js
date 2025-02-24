@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 import { useRouter } from 'next/navigation';
 import { createScene, createFloor } from '@/scripts/floor';
-import { chair, table, roundTable,sofa } from '@/scripts/asset';
+import { chair, table, roundTable, sofa, create2SeaterTable } from '@/scripts/asset';
 import { DoorManager} from '@/scripts/managers/DoorManager';
 import { WindowManager } from '@/scripts/managers/WindowManager';
 
@@ -293,6 +293,8 @@ export default function RestaurantFloorPlan({ token, restaurantId, isCustomerVie
                 } else if (objData.userData.isTable) {
                   if (objData.userData.isRoundTable) {
                     model = await roundTable(scene);
+                  } else if (objData.userData.maxCapacity === 2) {
+                    model = await create2SeaterTable(scene);
                   } else {
                     model = await table(scene);
                   }

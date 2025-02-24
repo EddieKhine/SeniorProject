@@ -129,7 +129,7 @@ export async function roundTable(scene) {
                 isTable: true,
                 isRotatable: true,
                 isRoundTable: true,
-                maxCapacity: 2,
+                maxCapacity: 4,
 
             };
             scene.add(group);
@@ -140,3 +140,37 @@ export async function roundTable(scene) {
         return null;
     }
 }
+export async function create2SeaterTable(scene){
+    const loader = new OBJLoader();
+    try {
+        const group = await loader.loadAsync('/models/table/2seater_squareTable/3d-model.obj');
+        if (group.children.length > 0) {
+            const material = new THREE.MeshPhongMaterial({
+                color: 0xffffff,
+                shininess: 30
+            });
+            group.children.forEach(child => {
+                if (child.isMesh) {
+                    child.material = material;
+                    child.castShadow = true;
+                    child.receiveShadow = true;
+                    child.scale.set(0.02, 0.02, 0.02);
+                }
+            });
+            group.position.set(0, 0.01, 0);
+            group.userData = {
+                isMovable: true,
+                isTable: true,
+                isRotatable: true,
+                is2SeaterTable: true,
+                maxCapacity: 2,
+            };
+            scene.add(group);
+        }
+        return group;
+    } catch (error) {
+        console.error("Error loading 2 seater table:", error);
+        return null;
+    }
+}
+

@@ -2,7 +2,7 @@ import { WallManager } from '../wallManager.js';
 import { SidebarManager } from './SidebarManager.js';
 import { FileManager } from './FileManager.js';
 import { DragManager } from './DragManager.js';
-import { chair, table, sofa, roundTable } from '../asset.js';
+import { chair, table, sofa, roundTable, create2SeaterTable } from '../asset.js';
 import * as THREE from 'three';
 import { DoorManager } from './DoorManager.js';
 import { WindowManager } from './WindowManager.js';
@@ -223,6 +223,21 @@ export class UIManager {
                 isRotatable: true,
                 isTable: true,
                 isRoundTable: true,
+                maxCapacity: 4
+            };
+        }
+        return tableModel;
+    }
+
+    async create2SeaterTable() {
+        const tableModel = await create2SeaterTable(this.scene);
+        if (tableModel) {
+            tableModel.userData = {
+                isFurniture: true,
+                isMovable: true,
+                isRotatable: true,
+                isTable: true,
+                is2SeaterTable: true,
                 maxCapacity: 2
             };
         }

@@ -10,6 +10,7 @@ import { DragManager } from '@/scripts/managers/DragManager';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 import { FaBoxOpen, FaTrash, FaArrowsAltH, FaSave } from "react-icons/fa";
 import styles from "@/css/ui.css";
+import { chair, table, sofa, roundTable, create2SeaterTable } from '@/scripts/asset';
 
 export default function FloorplanEditor() {
   const router = useRouter();
@@ -107,7 +108,7 @@ export default function FloorplanEditor() {
                   userData: {
                     ...obj.userData,
                     isTable: true,
-                    maxCapacity: obj.userData.maxCapacity || 4,
+                    maxCapacity: obj.userData.is2SeaterTable ? 2 : (obj.userData.maxCapacity || 4),
                     bookingStatus: obj.userData.bookingStatus || 'available',
                     currentBooking: obj.userData.currentBooking || null,
                     bookingHistory: obj.userData.bookingHistory || []
@@ -199,6 +200,10 @@ export default function FloorplanEditor() {
         );
         uiManager.onSave = handleSave;
         uiManager.restaurantData = restaurantData;
+
+        // Ensure wall mode starts as false
+        uiManager.wallManager.isAddWallMode = false;
+        uiManager.wallManager.previewWall.visible = false;
 
         // Initialize just the dragManager
         const dragManager = new DragManager(uiManager);

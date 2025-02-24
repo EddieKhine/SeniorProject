@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { create2SeaterTable } from '../asset.js';
 
 export class FileManager {
     constructor(uiManager) {
@@ -283,7 +284,7 @@ export class FileManager {
             // Reset wall manager state if not in view-only mode
             if (!isViewOnly) {
                 // Reset wall manager state
-                this.ui.wallManager.isAddWallMode = true;
+                this.ui.wallManager.isAddWallMode = false;
                 this.ui.wallManager.direction = 'horizontal';
                 
                 // Recreate preview wall if needed
@@ -409,6 +410,8 @@ export class FileManager {
                 } else if (data.userData.isTable) {
                     if (data.userData.isRoundTable) {
                         model = await this.ui.createRoundTable();
+                    } else if (data.userData.maxCapacity === 2) {
+                        model = await this.ui.create2SeaterTable();
                     } else {
                         model = await this.ui.createTable();
                     }
@@ -424,7 +427,7 @@ export class FileManager {
                         ...data.userData,
                         _id: data._id,
                         isInteractable: !isViewOnly,
-                        maxCapacity: data.userData.isTable ? (data.userData.maxCapacity || 4) : undefined
+                        maxCapacity: data.userData.maxCapacity || 4
                     };
                 }
             }
@@ -437,11 +440,14 @@ export class FileManager {
     }
 
     clearScene() {
+        // Store reference to preview wall
+        const previewWall = this.ui.wallManager.previewWall;
+        
         // Remove all objects except floor
         const objectsToRemove = [];
         this.ui.scene.traverse((object) => {
-            // Skip the floor and essential objects
-            if (object === this.ui.floor || !object.isMesh) return;
+            // Skip the floor, preview wall, and non-mesh objects
+            if (object === this.ui.floor || object === previewWall || !object.isMesh) return;
             
             objectsToRemove.push(object);
         });
@@ -462,6 +468,11 @@ export class FileManager {
         // Clear walls array in WallManager
         if (this.ui.wallManager) {
             this.ui.wallManager.walls = [];
+            
+            // Ensure preview wall exists and is in scene
+            if (!previewWall || !this.ui.scene.children.includes(previewWall)) {
+                this.ui.wallManager.createPreviewWall();
+            }
         }
     }
 }

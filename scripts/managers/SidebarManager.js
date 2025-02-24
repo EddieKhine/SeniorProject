@@ -1,4 +1,4 @@
-import { chair, table, sofa, roundTable } from '../asset.js';
+import { chair, table, sofa, roundTable, create2SeaterTable } from '../asset.js';
 
 export class SidebarManager {
     constructor(uiManager) {
@@ -39,7 +39,7 @@ export class SidebarManager {
                         }
                     },
                     {
-                        name: "Table",
+                        name: "4 seater Table",
                         thumbnail: "./assets/thumbnails/table.jpg",
                         icon: "bi-table",
                         action: async () => {
@@ -49,7 +49,8 @@ export class SidebarManager {
                                 tableModel.userData = {
                                     isTable: true,
                                     isMovable: true,
-                                    isRotatable: true
+                                    isRotatable: true,
+                                    maxCapacity: 4
                                 };
                             }
                         }
@@ -71,7 +72,7 @@ export class SidebarManager {
                         }
                     },
                     {
-                        name: "Round Table",
+                        name: "4 seater Round Table",
                         thumbnail: "./assets/thumbnails/roundTable.jpg",
                         icon: "bi-lightbulb",
                         action: async () => {
@@ -82,7 +83,26 @@ export class SidebarManager {
                                     isTable: true,
                                     isRoundTable: true,
                                     isMovable: true,
-                                    isRotatable: true
+                                    isRotatable: true,
+                                    maxCapacity: 4
+                                };
+                            }
+                        }
+                    },
+                    {
+                        name: "2 Seater Table",
+                        thumbnail: "./assets/thumbnails/table.jpg",
+                        icon: "bi-table",
+                        action: async () => {
+                            const tableModel = await this.ui.create2SeaterTable();
+                            if (tableModel) {
+                                tableModel.position.set(0, 0.5, 0);
+                                tableModel.userData = {
+                                    isTable: true,
+                                    is2SeaterTable: true,
+                                    isMovable: true,
+                                    isRotatable: true,
+                                    maxCapacity: 2
                                 };
                             }
                         }

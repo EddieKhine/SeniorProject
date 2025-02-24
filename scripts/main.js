@@ -2,7 +2,6 @@ import { createScene, createFloor, initializeOrbitControls } from './floor.js';
 import * as THREE from 'three';
 import { UIManager } from './managers/UIManager.js';  // Updated import path
 import { DragManager } from './managers/DragManager.js';
-import { WallManager } from './wallManager.js';
 
 // Scene Setup
 const renderer = new THREE.WebGLRenderer({ 
@@ -53,8 +52,6 @@ const uiManager = new UIManager(
 
 const dragManager = new DragManager(uiManager);
 uiManager.dragManager = dragManager;
-
-const wallManager = new WallManager(scene, floor, gridSize, renderer);
 
 // Animation Loop
 function animate() {
