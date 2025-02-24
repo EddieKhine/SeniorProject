@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { create2SeaterTable } from '../asset.js';
+import { create2SeaterTable, create8SeaterTable } from '../asset.js';
 
 export class FileManager {
     constructor(uiManager) {
@@ -412,11 +412,19 @@ export class FileManager {
                         model = await this.ui.createRoundTable();
                     } else if (data.userData.maxCapacity === 2) {
                         model = await this.ui.create2SeaterTable();
+                    } else if (data.userData.maxCapacity === 8) {
+                        model = await this.ui.create8SeaterTable();
                     } else {
                         model = await this.ui.createTable();
                     }
                 } else if (data.userData.isSofa) {
                     model = await this.ui.createSofa();
+                } else if (data.userData.isPlant) {
+                    if (data.userData.isPlant01) {
+                        model = await this.ui.createPlant01();
+                    } else if (data.userData.isPlant02) {
+                        model = await this.ui.createPlant02();
+                    }
                 }
 
                 if (model) {

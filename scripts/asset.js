@@ -173,4 +173,102 @@ export async function create2SeaterTable(scene){
         return null;
     }
 }
+export async function create8SeaterTable(scene){
+    const loader = new OBJLoader();
+    try {
+        const group = await loader.loadAsync('/models/table/6seater_roundtable/6seaterRound.obj');
+        if (group.children.length > 0) {
+            const material = new THREE.MeshPhongMaterial({
+                color: 0xffffff,
+                shininess: 30
+            });
+            group.children.forEach(child => {
+                if (child.isMesh) {
+                    child.material = material;
+                    child.castShadow = true;
+                    child.receiveShadow = true;
+                    child.scale.set(0.03, 0.03, 0.03);
+                }
+            });
+            group.position.set(0, 0.01, 0);
+            group.userData = {
+                isMovable: true,
+                isTable: true,
+                isRotatable: true,
+                is8SeaterTable: true,
+                maxCapacity: 8,
+            };
+            scene.add(group);
+        }
+        return group;
+    } catch (error) {
+        console.error("Error loading 8 seater table:", error);
+        return null;
+    }
+}
+
+export async function plant01(scene){
+    const loader = new OBJLoader();
+    try {
+        const group = await loader.loadAsync('/models/decorations/indoorPlants/vase01.obj');
+        if (group.children.length > 0) {
+            const material = new THREE.MeshPhongMaterial({
+                color: 0xffffff,
+                shininess: 30
+            });
+            group.children.forEach(child => {
+                if (child.isMesh) {
+                    child.material = material;
+                    child.castShadow = true;
+                    child.receiveShadow = true;
+                    child.scale.set(0.01, 0.01, 0.01);
+                }
+            });
+            group.position.set(0, 0.01, 0);
+            group.userData = {
+                isMovable: true,
+                isPlant: true,
+                isPlant01: true,
+                isRotatable: true,
+            };
+            scene.add(group);
+        }   
+        return group;
+    } catch (error) {
+        console.error("Error loading plant01:", error);
+        return null;
+    }
+}
+export async function plant02(scene){
+    const loader = new OBJLoader();
+    try {
+        const group = await loader.loadAsync('/models/decorations/indoorPlants/vase02.obj');
+        if (group.children.length > 0) {
+            const material = new THREE.MeshPhongMaterial({
+                color: 0xffffff,
+                shininess: 30
+            });
+            group.children.forEach(child => {
+                if (child.isMesh) {
+                    child.material = material;
+                    child.castShadow = true;
+                    child.receiveShadow = true;
+                    child.scale.set(0.001, 0.001, 0.001);
+                }
+            });
+            group.position.set(0, 0.01, 0);
+            group.userData = {
+                isMovable: true,
+                isPlant: true,
+                isPlant02: true,
+                isRotatable: true,
+            };
+            scene.add(group);
+        }
+        return group;
+    } catch (error) {
+        console.error("Error loading plant02:", error);
+        return null;
+    }
+}       
 

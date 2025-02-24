@@ -1,4 +1,4 @@
-import { chair, table, sofa, roundTable, create2SeaterTable } from '../asset.js';
+import { chair, table, sofa, roundTable, create2SeaterTable, create8SeaterTable, plant01, plant02 } from '../asset.js';
 
 export class SidebarManager {
     constructor(uiManager) {
@@ -103,6 +103,64 @@ export class SidebarManager {
                                     isMovable: true,
                                     isRotatable: true,
                                     maxCapacity: 2
+                                };
+                            }
+                        }
+                    },
+                    {
+                        name: "8 Seater Table",
+                        thumbnail: "./assets/thumbnails/roundTable.jpg",
+                        icon: "bi-table",
+                        action: async () => {
+                            const tableModel = await this.ui.create8SeaterTable();
+                            if (tableModel) {
+                                tableModel.position.set(0, 0.5, 0);
+                                tableModel.userData = {
+                                    isTable: true,
+                                    is8SeaterTable: true,
+                                    isMovable: true,
+                                    isRotatable: true,
+                                    maxCapacity: 8
+                                };
+                            }
+                        }
+                    }
+                ]
+            },
+            {
+                title: "Decorations",
+                icon: "bi-flower1",
+                items: [
+                    {
+                        name: "Plant 1",
+                        thumbnail: "./assets/thumbnails/plant.jpg",
+                        icon: "bi-flower1",
+                        action: async () => {
+                            const plantModel = await this.ui.createPlant01();
+                            if (plantModel) {
+                                plantModel.position.set(0, 0.5, 0);
+                                plantModel.userData = {
+                                    isPlant: true,
+                                    isPlant01: true,
+                                    isMovable: true,
+                                    isRotatable: true
+                                };
+                            }
+                        }
+                    },
+                    {
+                        name: "Plant 2",
+                        thumbnail: "./assets/thumbnails/plant.jpg",
+                        icon: "bi-flower2",
+                        action: async () => {
+                            const plantModel = await this.ui.createPlant02();
+                            if (plantModel) {
+                                plantModel.position.set(0, 0.5, 0);
+                                plantModel.userData = {
+                                    isPlant: true,
+                                    isPlant02: true,
+                                    isMovable: true,
+                                    isRotatable: true
                                 };
                             }
                         }

@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 import { createScene, createFloor } from '@/scripts/floor';
-import { chair, table, roundTable, sofa, create2SeaterTable } from '@/scripts/asset';
+import { chair, table, roundTable, sofa, create2SeaterTable, create8SeaterTable, plant01, plant02 } from '@/scripts/asset';
 import { DoorManager } from '@/scripts/managers/DoorManager';
 import { WindowManager } from '@/scripts/managers/WindowManager';
 import '@/css/booking.css';
@@ -206,11 +206,19 @@ export default function PublicFloorPlan({ floorplanData, floorplanId, restaurant
                 model = await roundTable(scene);
               } else if (objData.userData.maxCapacity === 2) {
                 model = await create2SeaterTable(scene);
+              } else if (objData.userData.maxCapacity === 8) {
+                model = await create8SeaterTable(scene);
               } else {
                 model = await table(scene);
               }
             } else if (objData.userData.isSofa) {
               model = await sofa(scene);
+            } else if (objData.userData.isPlant) {
+              if (objData.userData.isPlant01) {
+                model = await plant01(scene);
+              } else if (objData.userData.isPlant02) {
+                model = await plant02(scene);
+              }
             }
 
             if (model) {

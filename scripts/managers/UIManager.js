@@ -2,7 +2,7 @@ import { WallManager } from '../wallManager.js';
 import { SidebarManager } from './SidebarManager.js';
 import { FileManager } from './FileManager.js';
 import { DragManager } from './DragManager.js';
-import { chair, table, sofa, roundTable, create2SeaterTable } from '../asset.js';
+import { chair, table, sofa, roundTable, create2SeaterTable, create8SeaterTable, plant01, plant02 } from '../asset.js';
 import * as THREE from 'three';
 import { DoorManager } from './DoorManager.js';
 import { WindowManager } from './WindowManager.js';
@@ -167,7 +167,8 @@ export class UIManager {
                  current.userData.isDoor ||
                  current.userData.isWindow ||
                  current.userData.isSofa ||
-                 current.userData.isTable)) {
+                 current.userData.isTable ||
+                 current.userData.isPlant)) {
                 return current;
             }
             current = current.parent;
@@ -242,6 +243,49 @@ export class UIManager {
             };
         }
         return tableModel;
+    }
+
+    async create8SeaterTable() {
+        const tableModel = await create8SeaterTable(this.scene);
+        if (tableModel) {
+            tableModel.userData = {
+                isFurniture: true,
+                isMovable: true,
+                isRotatable: true,
+                isTable: true,
+                is8SeaterTable: true,
+                maxCapacity: 8
+            };
+        }
+        return tableModel;
+    }
+
+    async createPlant01() {
+        const plantModel = await plant01(this.scene);
+        if (plantModel) {
+            plantModel.userData = {
+                isFurniture: true,
+                isMovable: true,
+                isRotatable: true,
+                isPlant: true,
+                isPlant01: true
+            };
+        }
+        return plantModel;
+    }
+
+    async createPlant02() {
+        const plantModel = await plant02(this.scene);
+        if (plantModel) {
+            plantModel.userData = {
+                isFurniture: true,
+                isMovable: true,
+                isRotatable: true,
+                isPlant: true,
+                isPlant02: true
+            };
+        }
+        return plantModel;
     }
 
     toggleRemoveMode() {
