@@ -4,6 +4,7 @@ import Review from '@/models/Review';
 import mongoose from 'mongoose';
 import jwt from 'jsonwebtoken';
 import Restaurant from '@/models/Restaurants';
+import User from '@/models/user';
 
 // GET: Fetch reviews for a restaurant
 export async function GET(req, { params }) {
@@ -14,11 +15,29 @@ export async function GET(req, { params }) {
     const reviews = await Review.find({ 
       restaurantId: new mongoose.Types.ObjectId(id) 
     })
-    .populate('userId', 'firstName lastName')
+    .populate({
+      path: 'userId',
+      model: User,
+      select: 'firstName lastName profileImage email'
+    })
     .sort({ createdAt: -1 });
 
-    return NextResponse.json({ reviews });
+    // Ensure each review has a valid profile image
+    const processedReviews = reviews.map(review => ({
+      ...review.toObject(),
+      userId: {
+        ...review.userId.toObject(),
+        profileImage: review.userId.profileImage || '/default-avatar.png'
+      },
+      // Ensure review images are full S3 URLs
+      images: review.images.map(img => 
+        img.startsWith('https://') ? img : `https://${process.env.AWS_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${img}`
+      )
+    }));
+
+    return NextResponse.json({ reviews: processedReviews });
   } catch (error) {
+    console.error('Error fetching reviews:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
@@ -29,7 +48,7 @@ export async function POST(req, { params }) {
   const { id } = params;
 
   try {
-    const { rating, comment } = await req.json();
+    const { rating, comment, images } = await req.json();
     const token = req.headers.get('authorization')?.split(' ')[1];
     
     if (!token) {
@@ -42,11 +61,30 @@ export async function POST(req, { params }) {
       restaurantId: new mongoose.Types.ObjectId(id),
       userId: new mongoose.Types.ObjectId(decoded.userId),
       rating,
-      comment
+      comment,
+      images: images || [] // Make sure images array is properly formatted
+    });
+
+    // Update restaurant rating
+    const allReviews = await Review.find({ restaurantId: id });
+    const totalRating = allReviews.reduce((sum, review) => sum + review.rating, 0);
+    const averageRating = totalRating / allReviews.length;
+
+    await Restaurant.findByIdAndUpdate(id, {
+      rating: averageRating,
+      totalReviews: allReviews.length
+    });
+
+    // Populate user data before sending response
+    await review.populate({
+      path: 'userId',
+      model: User,
+      select: 'firstName lastName profileImage'
     });
 
     return NextResponse.json({ review });
   } catch (error) {
+    console.error('Error creating review:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
@@ -65,7 +103,6 @@ export async function DELETE(req, { params }) {
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     
-    // Find the review and check ownership
     const review = await Review.findById(reviewId);
     if (!review) {
       return NextResponse.json({ error: "Review not found" }, { status: 404 });

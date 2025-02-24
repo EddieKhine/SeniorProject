@@ -56,7 +56,7 @@ export default function RestaurantOwnerHome() {
             className="absolute inset-0"
           >
             <img
-              src="https://images.unsplash.com/photo-1414235077428-338989a2e8c0?q=80&w=2070&auto=format&fit=crop"
+              src="/images/body-images/photo-1578474846511-04ba529f0b88.avif"
               alt="Modern Restaurant Kitchen"
               className="w-full h-full object-cover"
             />

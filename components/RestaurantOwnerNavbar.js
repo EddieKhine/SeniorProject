@@ -105,33 +105,23 @@ const RestaurantOwnerNavbar = ({ onLoginClick }) => {
                   className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-all duration-300 ${
                     pathname === '/restaurant-owner/setup/dashboard'
                       ? 'text-[#FF4F18] bg-[#FF4F18]/10 font-medium'
-                      : 'text-gray-600 hover:text-[#FF4F18] hover:bg-[#FF4F18]/10'
+                      : 'text-[#FF4F18] hover:text-[#FF4F18] hover:bg-[#FF4F18]/10'
                   }`}
                 >
                   <span className="text-lg"><FaUtensils /></span>
                   <span>Restaurant Portal</span>
                 </Link>
                 <div className="flex items-center space-x-4 border-l border-gray-200 pl-4">
-                  <div className={`font-medium ${isScrolled ? 'text-[#141517]' : 'text-white'}`}>
+                  <div className={`font-medium ${isScrolled ? 'text-[#FF4F18]' : 'text-[#FF4F18]'}`}>
                     Welcome, {user.firstName} {user.lastName}
                   </div>
-                  <Link
-                    href="/"
-                    className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-all duration-300
-                      ${isScrolled 
-                        ? 'bg-[#FF4F18] text-white hover:bg-[#FF6B18] shadow-md hover:shadow-lg' 
-                        : 'bg-white text-[#FF4F18] hover:bg-white/90 shadow-md hover:shadow-lg'
-                      }`}
-                  >
-                    <FaUtensils className="rotate-180" />
-                    <span>Customer View</span>
-                  </Link>
+                  
                   <button
                     onClick={handleLogout}
                     className={`p-2 rounded-lg transition-all duration-300 ${
                       isScrolled 
-                        ? 'text-gray-600 hover:text-[#FF4F18] hover:bg-[#FF4F18]/10' 
-                        : 'text-white/80 hover:text-white hover:bg-white/10'
+                        ? 'text-[#FF4F18] hover:text-[#FF4F18] hover:bg-[#FF4F18]/10' 
+                        : 'text-[#FF4F18] hover:text-[#FF4F18] hover:bg-white/10'
                     }`}
                     title="Logout"
                   >

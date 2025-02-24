@@ -5,6 +5,7 @@ import { RiRestaurantLine, RiTimeLine, RiMapPinLine, RiEdit2Line } from 'react-i
 import { MdRestaurantMenu, MdAnalytics } from 'react-icons/md';
 import { GoogleMap, Marker } from '@react-google-maps/api';
 import RestaurantProfileForm from './RestaurantProfileForm';
+import MenuImageUpload from './MenuImageUpload';
 
 const formatOpeningHours = (hours) => {
   if (!hours || typeof hours !== 'object') return [];
@@ -142,6 +143,55 @@ export default function RestaurantInformation({ restaurant, onEditClick, onUpdat
                   <Marker position={restaurant.location.coordinates} />
                 </GoogleMap>
               </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Menu Images Section */}
+      <div className="bg-white rounded-xl shadow-lg p-6">
+        <h3 className="text-xl font-semibold mb-4 flex items-center gap-2 text-black">
+          <MdRestaurantMenu className="text-[#FF4F18]" />
+          Menu Images
+        </h3>
+        {isEditing ? (
+          <MenuImageUpload
+            initialImages={restaurant.images?.menu || []}
+            onUpdate={async (menuImages) => {
+              try {
+                const token = localStorage.getItem("restaurantOwnerToken");
+                const response = await fetch(`/api/restaurants/${restaurant._id}/menu-images`, {
+                  method: 'PUT',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                  },
+                  body: JSON.stringify({ menuImages })
+                });
+
+                if (response.ok) {
+                  const updatedRestaurant = await response.json();
+                  onUpdateSuccess(updatedRestaurant);
+                }
+              } catch (error) {
+                console.error('Error updating menu images:', error);
+              }
+            }}
+          />
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {restaurant.images?.menu?.map((image, index) => (
+              <div key={index} className="aspect-[3/4] relative rounded-lg overflow-hidden">
+                <Image
+                  src={image}
+                  alt={`Menu page ${index + 1}`}
+                  fill
+                  className="object-cover"
+                />
+              </div>
+            ))}
+            {(!restaurant.images?.menu || restaurant.images.menu.length === 0) && (
+              <p className="text-gray-500 italic">No menu images uploaded yet.</p>
             )}
           </div>
         )}

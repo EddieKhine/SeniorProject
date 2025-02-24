@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { FaStar, FaImage, FaTimes, FaTrash, FaRegSmile, FaRegMeh, FaRegFrown } from 'react-icons/fa';
 import Image from 'next/image';
+import ImageUpload from '@/components/ImageUpload';
 
 export default function ReviewSection({ restaurantId, onLoginClick }) {
   const [reviews, setReviews] = useState([]);
@@ -43,7 +44,7 @@ export default function ReviewSection({ restaurantId, onLoginClick }) {
         throw new Error(errorData.error || 'Failed to fetch reviews');
       }
       const data = await response.json();
-      console.log('Review data structure:', JSON.stringify(data.reviews[0], null, 2));
+      console.log('Fetched reviews with images:', data.reviews);
       setReviews(data.reviews || []);
     } catch (error) {
       console.error('Error fetching reviews:', error);
@@ -54,25 +55,39 @@ export default function ReviewSection({ restaurantId, onLoginClick }) {
   };
 
   const handleImageUpload = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
+    const files = Array.from(e.target.files);
+    if (files.length === 0) return;
 
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('type', 'review');
+    if (newReview.images.length + files.length > 5) {
+      setError('Maximum 5 images allowed per review');
+      return;
+    }
 
-    try {
-      const response = await fetch('/api/upload', {
-        method: 'POST',
-        body: formData,
-      });
-      const data = await response.json();
-      setNewReview(prev => ({
-        ...prev,
-        images: [...prev.images, data.url]
-      }));
-    } catch (error) {
-      console.error('Error uploading image:', error);
+    for (const file of files) {
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('type', 'review');
+
+        const response = await fetch('/api/upload', {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to upload image');
+        }
+
+        const { url } = await response.json();
+        // Store the full S3 URL
+        setNewReview(prev => ({
+          ...prev,
+          images: [...prev.images, url]
+        }));
+      } catch (error) {
+        console.error('Error uploading image:', error);
+        setError('Failed to upload image. Please try again.');
+      }
     }
   };
 
@@ -120,26 +135,45 @@ export default function ReviewSection({ restaurantId, onLoginClick }) {
   };
 
   const submitReview = async () => {
+    if (!validateReview()) {
+      return;
+    }
+
     setIsSubmitting(true);
     setError('');
+    
     try {
       const token = localStorage.getItem('customerToken');
+      if (!token) {
+        setError('Please log in to submit a review');
+        return;
+      }
+
+      console.log('Submitting review with images:', newReview.images);
+
       const response = await fetch(`/api/restaurants/${restaurantId}/reviews`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify(newReview)
+        body: JSON.stringify({
+          rating: newReview.rating,
+          comment: newReview.comment,
+          images: newReview.images
+        })
       });
 
       if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || 'Failed to submit review');
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to submit review');
       }
 
-      await fetchReviews();
+      const { review } = await response.json();
+      console.log('Submitted review:', review);
+      setReviews(prevReviews => [review, ...prevReviews]);
       setNewReview({ rating: 5, comment: '', images: [] });
+      setError('');
     } catch (error) {
       console.error('Error:', error);
       setError(error.message);
@@ -198,6 +232,24 @@ export default function ReviewSection({ restaurantId, onLoginClick }) {
     </div>
   );
 
+  const getFullImageUrl = (imageUrl) => {
+    if (!imageUrl) return '/default-image.jpg';
+    if (imageUrl.startsWith('http') || imageUrl.startsWith('blob')) {
+      return imageUrl;
+    }
+    // If it's a relative path from your upload API
+    return `${process.env.NEXT_PUBLIC_API_URL || ''}${imageUrl}`;
+  };
+
+  const getProfileImageUrl = (user) => {
+    if (!user || !user.profileImage) return '/default-avatar.png';
+    // If it's already a full S3 URL, return it
+    if (user.profileImage.startsWith('https://')) {
+      return user.profileImage;
+    }
+    return '/default-avatar.png';
+  };
+
   const renderReviewForm = () => {
     if (!isLoggedIn) {
       return (
@@ -222,9 +274,9 @@ export default function ReviewSection({ restaurantId, onLoginClick }) {
         <div className="flex items-center gap-4 pb-4 border-b border-gray-100">
           <div className="w-12 h-12 bg-gray-100 rounded-full overflow-hidden">
             <Image 
-              src={currentUser?.profileImage || "/default-avatar.png"} 
-              alt="Profile" 
-              width={48} 
+              src={getProfileImageUrl(currentUser)}
+              alt={`${currentUser?.firstName || 'Anonymous'}'s profile`}
+              width={48}
               height={48}
               className="object-cover"
             />
@@ -268,7 +320,7 @@ export default function ReviewSection({ restaurantId, onLoginClick }) {
               value={newReview.comment}
               onChange={(e) => setNewReview(prev => ({ ...prev, comment: e.target.value }))}
               placeholder="Tell us more about your experience..."
-              className="w-full p-4 border rounded-xl focus:ring-2 focus:ring-[#FF4F18]/20 focus:border-[#FF4F18] transition-all"
+              className="w-full p-4 border text-black rounded-xl focus:ring-2 focus:ring-[#FF4F18]/20 focus:border-[#FF4F18] transition-all"
               rows={4}
               required
             />
@@ -302,11 +354,13 @@ export default function ReviewSection({ restaurantId, onLoginClick }) {
                 <input
                   type="file"
                   accept="image/*"
+                  multiple
                   onChange={handleImageUpload}
                   className="hidden"
                 />
                 <FaImage className="text-gray-400 text-xl mb-1" />
-                <span className="text-xs text-gray-500">Add Photo</span>
+                <span className="text-xs text-gray-500">Add Photos</span>
+                <span className="text-xs text-gray-400">({newReview.images.length}/5)</span>
               </label>
             </div>
           </div>
@@ -333,14 +387,15 @@ export default function ReviewSection({ restaurantId, onLoginClick }) {
     <div className="space-y-6">
       {reviews.map((review) => (
         <div key={review._id} 
-          className="bg-white rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow border border-gray-100">
+          className="bg-white rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow border border-gray-100"
+        >
           <div className="flex justify-between items-start mb-4">
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 bg-gray-100 rounded-full overflow-hidden">
                 <Image 
-                  src={review.userId?.profileImage || "/default-avatar.png"} 
-                  alt="Profile" 
-                  width={48} 
+                  src={getProfileImageUrl(review.userId)}
+                  alt={`${review.userId?.firstName || 'Anonymous'}'s profile`}
+                  width={48}
                   height={48}
                   className="object-cover"
                 />
@@ -374,12 +429,24 @@ export default function ReviewSection({ restaurantId, onLoginClick }) {
               </button>
             )}
           </div>
-          <p className="text-gray-600 ml-16">{review.comment}</p>
-          {review.images?.length > 0 && (
-            <div className="mt-4 ml-16 flex gap-3 flex-wrap">
-              {review.images.map((url, index) => (
-                <div key={index} className="relative w-24 h-24 rounded-lg overflow-hidden">
-                  <Image src={url} alt="Review" fill className="object-cover" />
+          <p className="text-gray-600 ml-16 mb-4">{review.comment}</p>
+          
+          {review.images && review.images.length > 0 && (
+            <div className="ml-16 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+              {review.images.map((imageUrl, index) => (
+                <div 
+                  key={index} 
+                  className="relative aspect-square rounded-lg overflow-hidden hover:opacity-90 transition-opacity cursor-pointer group"
+                >
+                  <Image
+                    src={getFullImageUrl(imageUrl)}
+                    alt={`Review image ${index + 1}`}
+                    fill
+                    className="object-cover"
+                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                    onClick={() => window.open(getFullImageUrl(imageUrl), '_blank')}
+                  />
+                  <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-opacity" />
                 </div>
               ))}
             </div>

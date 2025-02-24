@@ -1,15 +1,15 @@
 import mongoose from 'mongoose';
 
 const reviewSchema = new mongoose.Schema({
-  userId: {
-    type: mongoose.Schema.Types.ObjectId,
-    required: true,
-    ref: 'user'
-  },
   restaurantId: {
     type: mongoose.Schema.Types.ObjectId,
-    required: true,
-    ref: 'Restaurant'
+    ref: 'Restaurant',
+    required: true
+  },
+  userId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
   },
   rating: {
     type: Number,
@@ -19,17 +19,13 @@ const reviewSchema = new mongoose.Schema({
   },
   comment: {
     type: String,
-    required: true,
-    maxLength: 500
+    required: true
   },
-  images: [{
-    type: String
-  }],
-  createdAt: {
-    type: Date,
-    default: Date.now
+  images: {
+    type: [String],
+    default: []
   }
-});
+}, { timestamps: true });
 
 // Compound index to ensure a user can only review a restaurant once
 reviewSchema.index({ userId: 1, restaurantId: 1 }, { unique: true });

@@ -24,6 +24,9 @@ import {
 import Image from "next/image";
 import { RiCameraLine } from 'react-icons/ri';
 import { toast } from "react-hot-toast";
+import ImageUpload from '@/components/ImageUpload';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faCamera } from '@fortawesome/free-solid-svg-icons';
 
 export default function CustomerProfile() {
   const router = useRouter();
@@ -43,24 +46,30 @@ export default function CustomerProfile() {
   });
   const [bookings, setBookings] = useState([]);
   const [bookingsLoading, setBookingsLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const storedUser = localStorage.getItem("customerUser");
-    if (storedUser) {
-      const parsedUser = JSON.parse(storedUser);
-      setUser(parsedUser);
-      setUpdatedUser({
-        firstName: parsedUser.firstName,
-        lastName: parsedUser.lastName,
-        email: parsedUser.email,
-        contactNumber: parsedUser.contactNumber,
-        newPassword: "",
-        profileImage: parsedUser.profileImage || "",
-      });
-    } else {
-      router.push("/");
-    }
-  }, [router]);
+    const loadUserData = () => {
+      const storedUser = localStorage.getItem('customerUser');
+      const storedToken = localStorage.getItem('customerToken');
+      
+      if (!storedUser || !storedToken) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const userData = JSON.parse(storedUser);
+        setUser(userData);
+      } catch (error) {
+        console.error('Error parsing user data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadUserData();
+  }, []);
 
   useEffect(() => {
     const fetchSavedRestaurants = async () => {
@@ -249,59 +258,74 @@ export default function CustomerProfile() {
   }
 };
 
-  const handleImageUpload = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
+const handleImageUpload = async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
 
-    setIsUploading(true);
-    setUploadError("");
+  setIsUploading(true);
+  setUploadError("");
 
+  try {
     const formData = new FormData();
     formData.append('file', file);
     formData.append('type', 'customer');
 
-    try {
-      // Upload image to S3
-      const uploadResponse = await fetch('/api/upload', {
-        method: 'POST',
-        body: formData,
-      });
+    const uploadResponse = await fetch('/api/upload', {
+      method: 'POST',
+      body: formData,
+    });
 
-      if (!uploadResponse.ok) throw new Error('Failed to upload image');
-      
-      const { url } = await uploadResponse.json();
-
-      // Update profile with new image URL
-      const token = localStorage.getItem('customerToken');
-      const updateResponse = await fetch('/api/customer/profile', {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email: user.email,
-          firstName: user.firstName,
-          lastName: user.lastName,
-          contactNumber: user.contactNumber,
-          profileImage: url,
-        }),
-      });
-
-      if (!updateResponse.ok) throw new Error('Failed to update profile');
-
-      // Update local state
-      const updatedUserData = { ...user, profileImage: url };
-      setUser(updatedUserData);
-      localStorage.setItem('customerUser', JSON.stringify(updatedUserData));
-      setUpdatedUser(prev => ({ ...prev, profileImage: url }));
-    } catch (error) {
-      console.error('Error:', error);
-      setUploadError("Failed to upload image. Please try again.");
-    } finally {
-      setIsUploading(false);
+    if (!uploadResponse.ok) {
+      throw new Error('Failed to upload image');
     }
-  };
+
+    const { url } = await uploadResponse.json();
+    
+    // Update profile with new image URL
+    const token = localStorage.getItem('customerToken');
+    const updateResponse = await fetch('/api/customer/profile', {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        contactNumber: user.contactNumber,
+        profileImage: url,
+      }),
+    });
+
+    if (!updateResponse.ok) {
+      throw new Error('Failed to update profile');
+    }
+
+    const result = await updateResponse.json();
+    console.log('Profile update response:', result);
+
+    // Update local state and storage with the returned user data
+    const updatedUserData = { 
+      ...user,
+      ...result.user, // Use the user data from the response
+      profileImage: url
+    };
+    
+    setUser(updatedUserData);
+    localStorage.setItem('customerUser', JSON.stringify(updatedUserData));
+    setUpdatedUser(prev => ({ ...prev, profileImage: url }));
+    
+    toast.success('Profile image updated successfully');
+
+  } catch (error) {
+    console.error('Error:', error);
+    setUploadError("Failed to upload image. Please try again.");
+    toast.error('Failed to update profile image');
+  } finally {
+    setIsUploading(false);
+  }
+};
 
   const handleCancelBooking = async (bookingId) => {
     if (!confirm('Are you sure you want to cancel this reservation?')) return;
@@ -357,42 +381,42 @@ export default function CustomerProfile() {
   };
 
   // Render profile image section
-  const renderProfileImage = () => (
-    <div className="relative w-32 h-32 mx-auto mb-6">
-      <div className="w-full h-full rounded-full overflow-hidden border-4 border-[#FF4F18] shadow-lg">
-        {user?.profileImage ? (
-          <Image
-            src={user.profileImage}
-            alt="Profile"
-            fill
-            className="object-cover"
-          />
-        ) : (
-          <div className="w-full h-full bg-gradient-to-r from-[#FF4F18] to-[#FF6B18] flex items-center justify-center">
-            <FaUser className="text-white text-3xl" />
-          </div>
-        )}
-      </div>
-      <label 
-        htmlFor="profileImageUpload"
-        className="absolute bottom-0 right-0 p-2 rounded-full bg-white shadow-md hover:shadow-lg transition-all duration-200 cursor-pointer text-[#FF4F18] border border-gray-100"
-      >
-        <RiCameraLine className="text-xl" />
-      </label>
-      <input
-        id="profileImageUpload"
-        type="file"
-        accept="image/*"
-        onChange={handleImageUpload}
-        className="hidden"
-      />
-      {isUploading && (
-        <div className="absolute inset-0 bg-black bg-opacity-50 rounded-full flex items-center justify-center">
-          <div className="loader"></div>
+  const renderProfileImage = () => {
+    if (!user) return null;
+
+    return (
+      <div className="relative group">
+        <div className="w-32 h-32 rounded-2xl overflow-hidden ring-4 ring-[#FF4F18]/20 group-hover:ring-[#FF4F18] transition-all duration-300 shadow-xl">
+          {user.profileImage ? (
+            <img
+              src={user.profileImage}
+              alt="Profile"
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <div className="w-full h-full bg-gradient-to-br from-[#FF4F18] to-[#FF8F6B] flex items-center justify-center">
+              <span className="text-white font-semibold text-3xl">
+                {user.firstName?.charAt(0)}{user.lastName?.charAt(0)}
+              </span>
+            </div>
+          )}
         </div>
-      )}
-    </div>
-  );
+        
+        <label className="absolute bottom-0 right-0 w-10 h-10 bg-white rounded-xl shadow-lg cursor-pointer transform translate-x-1/4 translate-y-1/4 hover:scale-110 transition-all duration-300 flex items-center justify-center group-hover:bg-[#FF4F18]">
+          <FontAwesomeIcon 
+            icon={faCamera} 
+            className="text-[#FF4F18] group-hover:text-white transition-colors duration-300" 
+          />
+          <input
+            type="file"
+            accept="image/*"
+            onChange={handleImageUpload}
+            className="hidden"
+          />
+        </label>
+      </div>
+    );
+  };
 
   // Update the view profile section to include the profile image
   const renderViewProfile = () => (
@@ -434,6 +458,28 @@ export default function CustomerProfile() {
       100% { transform: rotate(360deg); }
     }
   `;
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-pulse flex flex-col items-center space-y-4">
+          <div className="w-32 h-32 bg-gray-200 rounded-2xl"></div>
+          <div className="h-4 w-48 bg-gray-200 rounded"></div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-2xl font-semibold text-gray-800">Please log in to view your profile</h2>
+          <p className="mt-2 text-gray-600">You need to be logged in to access this page</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>

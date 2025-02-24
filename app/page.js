@@ -248,7 +248,7 @@ export default function HomePage() {
             />
             <motion.div
               animate={{
-                scale: [1, 1.05, 1],
+                scale: [1.25, 1.1, 1.25],
                 opacity: [0.95, 1, 0.95],
               }}
               transition={{

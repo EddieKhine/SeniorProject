@@ -2,11 +2,12 @@ import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import dbConnect from "@/lib/mongodb";
-import User from "@/models/user";
+import mongoose from 'mongoose';
 
 export async function POST(req) {
   try {
     const { email, password } = await req.json();
+    console.log('Login attempt for email:', email);
 
     // Basic validation
     if (!email || !password) {
@@ -18,9 +19,18 @@ export async function POST(req) {
 
     await dbConnect();
 
-    // Find user by email using Mongoose model
-    const user = await User.findOne({ email });
+    // Use direct MongoDB query
+    const collection = mongoose.connection.collection('users');
+    const user = await collection.findOne({ email });
+
+    console.log('Found user data:', {
+      id: user?._id,
+      email: user?.email,
+      profileImage: user?.profileImage
+    });
+
     if (!user) {
+      console.log('No user found for email:', email);
       return NextResponse.json(
         { message: "User not found" },
         { status: 404 }
@@ -30,6 +40,7 @@ export async function POST(req) {
     // Compare provided password with stored hashed password
     const isPasswordMatch = await bcrypt.compare(password, user.password);
     if (!isPasswordMatch) {
+      console.log('Invalid password for user:', email);
       return NextResponse.json(
         { message: "Invalid password" },
         { status: 401 }
@@ -43,16 +54,32 @@ export async function POST(req) {
       { expiresIn: "1h" }
     );
 
+    // Get the full profile image URL
+    const profileImage = user.profileImage 
+      ? (user.profileImage.startsWith('http') 
+          ? user.profileImage 
+          : `https://${process.env.AWS_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${user.profileImage}`)
+      : null;
+
+    console.log('Processed profile image URL:', profileImage);
+    console.log('AWS bucket name:', process.env.AWS_BUCKET_NAME);
+    console.log('AWS region:', process.env.AWS_REGION);
+
+    const userData = {
+      firstName: user.firstName,
+      lastName: user.lastName,
+      email: user.email,
+      contactNumber: user.contactNumber,
+      role: user.role,
+      profileImage: user.profileImage
+    };
+
+    console.log('Sending user data:', userData);
+
     return NextResponse.json({
       message: "Login successful",
       token,
-      user: {
-        firstName: user.firstName,
-        lastName: user.lastName,
-        email: user.email,
-        contactNumber: user.contactNumber,
-        role: user.role,
-      },
+      user: userData
     });
   } catch (error) {
     console.error("Error in login API:", error);

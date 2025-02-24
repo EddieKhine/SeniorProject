@@ -13,6 +13,9 @@ import RestaurantFloorPlan from '@/components/RestaurantFloorPlan'
 import RestaurantOwnerChat from '@/components/RestaurantOwnerChat'
 import RestaurantBookingManager from '@/components/RestaurantBookingManager'
 import RestaurantReservation from '@/components/RestaurantReservation'
+import Link from 'next/link'
+import Image from 'next/image'
+import { FaHome, FaSignOutAlt } from 'react-icons/fa'
 
 const RESTAURANT_CATEGORIES = [
   "Buffet",
@@ -110,246 +113,296 @@ export default function RestaurantSetupDashboard() {
     }
   }, [restaurant, activeSection, token]);
 
-  if (loading) {
-    return (
-      <>
-        <RestaurantOwnerNavbar />
-        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-          <div className="text-xl">Loading...</div>
-        </div>
-      </>
-    );
-  }
+  const handleLogout = () => {
+    try {
+      localStorage.removeItem("restaurantOwnerUser");
+      localStorage.removeItem("restaurantOwnerToken");
+      localStorage.removeItem("restaurantData");
+      router.push("/restaurant-owner");
+    } catch (error) {
+      console.error("Error during logout:", error);
+    }
+  };
 
   return (
-    <>
-      <RestaurantOwnerNavbar />
-      <div className="flex min-h-[calc(100vh-64px)] bg-gradient-to-b from-[#FFFFFF] to-[#F8FAFC] pt-16">
-        {/* Sidebar */}
-        <div className="w-64 bg-white/95 backdrop-blur-lg shadow-lg fixed left-0 top-16 h-[calc(100vh-64px)] border-r border-[#F2F4F7] rounded-r-2xl">
-          <div className="p-4">
-            <h2 className="text-lg font-semibold text-[#141517] mb-6 px-3">Dashboard</h2>
-            <nav className="space-y-2">
-              <button
-                onClick={() => setActiveSection('owner-profile')}
-                className={`flex items-center space-x-3 w-full p-3 rounded-lg transition-all duration-200 ${
-                  activeSection === 'owner-profile'
-                    ? 'bg-[#FF4F18] text-white font-medium shadow-lg'
-                    : 'text-[#64748B] hover:bg-[#F8FAFC] hover:text-[#141517]'
-                }`}
-              >
-                <RiUserLine className={`text-xl ${activeSection === 'owner-profile' ? 'text-white' : 'text-[#64748B]'}`} />
-                <span>Profile</span>
-              </button>
-              <button
-                onClick={() => setActiveSection('profile')}
-                className={`flex items-center space-x-3 w-full p-3 rounded-lg transition-all duration-200 ${
-                  activeSection === 'profile'
-                    ? 'bg-[#FF4F18] text-white font-medium shadow-lg'
-                    : 'text-[#64748B] hover:bg-[#F8FAFC] hover:text-[#141517]'
-                }`}
-                type="button"
-              >
-                <RiRestaurantLine className={`text-xl ${activeSection === 'profile' ? 'text-white' : 'text-[#64748B]'}`} />
-                <span>Restaurant Profile</span>
-              </button>
-              
-              <button
-                onClick={() => setActiveSection('floorplan')}
-                className={`flex items-center space-x-3 w-full p-3 rounded-lg transition-all duration-200 ${
-                  activeSection === 'floorplan'
-                    ? 'bg-[#FF4F18] text-white font-medium shadow-lg'
-                    : 'text-[#64748B] hover:bg-[#F8FAFC] hover:text-[#141517]'
-                }`}
-                type="button"
-              >
-                <RiLayoutLine className={`text-xl ${activeSection === 'floorplan' ? 'text-white' : 'text-[#64748B]'}`} />
-                <span>Floor Plan</span>
-              </button>
-              
-              <button
-                onClick={() => setActiveSection('reservation')}
-                className={`flex items-center space-x-3 w-full p-3 rounded-lg transition-all duration-200 ${
-                  activeSection === 'reservation'
-                    ? 'bg-[#FF4F18] text-white font-medium shadow-lg'
-                    : 'text-[#64748B] hover:bg-[#F8FAFC] hover:text-[#141517]'
-                }`}
-              >
-                <RiCalendarLine className={`text-xl ${activeSection === 'reservation' ? 'text-white' : 'text-[#64748B]'}`} />
-                <span>Reservation</span>
-              </button>
-              
-              <button
-                onClick={() => setActiveSection('subscription')}
-                className={`flex items-center space-x-3 w-full p-3 rounded-lg transition-all duration-200 ${
-                  activeSection === 'subscription'
-                    ? 'bg-[#FF4F18] text-white font-medium shadow-lg'
-                    : 'text-[#64748B] hover:bg-[#F8FAFC] hover:text-[#141517]'
-                }`}
-              >
-                <RiVipCrownLine className={`text-xl ${activeSection === 'subscription' ? 'text-white' : 'text-[#64748B]'}`} />
-                <span>Subscription</span>
-              </button>
-              
-              <button
-                onClick={() => setActiveSection('messages')}
-                className={`flex items-center space-x-3 w-full p-3 rounded-lg transition-all duration-200 ${
-                  activeSection === 'messages'
-                    ? 'bg-[#FF4F18] text-white font-medium shadow-lg'
-                    : 'text-[#64748B] hover:bg-[#F8FAFC] hover:text-[#141517]'
-                }`}
-              >
-                <RiMessage2Line className={`text-xl ${activeSection === 'messages' ? 'text-white' : 'text-[#64748B]'}`} />
-                <span>Messages</span>
-              </button>
-            </nav>
+    <div className="flex min-h-screen bg-gradient-to-b from-gray-50 to-white">
+      {/* Sidebar */}
+      <div className="w-64 bg-white/80 backdrop-blur-lg shadow-lg fixed left-0 top-0 h-screen border-r border-gray-100">
+        <div className="p-6 flex flex-col h-full">
+          {/* Logo or Brand Name */}
+          <div className="mb-8">
+            <Link href="/restaurant-owner" className="flex items-center space-x-3">
+              <Image
+                src="/images/FoodLoft_Logo-02.png"
+                alt="FoodLoft Logo"
+                width={130}
+                height={40}
+                className="h-auto w-auto"
+                priority
+              />
+            </Link>
           </div>
-        </div>
 
-        {/* Main Content */}
-        <div className="flex-1 ml-64 px-8 py-6">
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-            className="max-w-4xl mx-auto"
-          >
-            {activeSection === 'profile' && (
-              <div className="space-y-6">
-                {!restaurant && !isCreatingNew ? (
-                  <div className="bg-white p-6 rounded-xl shadow-sm border border-[#F2F4F7] mb-6">
-                    <h2 className="text-xl font-semibold text-[#141517] mb-4">Create Your Restaurant Profile</h2>
-                    <button
-                      onClick={() => setIsCreatingNew(true)}
-                      className="px-4 py-2 rounded-lg bg-[#FF4F18] text-white hover:opacity-90 transition-all duration-200 flex items-center gap-2"
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                        <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
-                      </svg>
-                      Create Restaurant Profile
-                    </button>
-                  </div>
-                ) : (
-                  <div className="bg-white p-6 rounded-xl shadow-sm border border-[#F2F4F7]">
-                    {isCreatingNew ? (
-                      <div>
-                        <div className="flex justify-between items-center mb-4">
-                          <h2 className="text-xl font-semibold text-[#141517]">
-                            Create Restaurant Profile
-                          </h2>
-                          <button 
-                            onClick={() => setIsCreatingNew(false)}
-                            className="text-[#64748B] hover:text-[#141517]"
-                          >
-                            Cancel
-                          </button>
-                        </div>
-                        <RestaurantProfileForm 
-                          mode="create"
-                          initialData={null}
-                          onSubmitSuccess={(newRestaurant) => {
-                            console.log('Create success:', newRestaurant);
-                            setRestaurant(newRestaurant);
-                            setIsCreatingNew(false);
-                          }}
-                          onCancel={() => setIsCreatingNew(false)}
-                        />
-                      </div>
-                    ) : (
-                      <RestaurantInformation 
-                        restaurant={restaurant}
-                        onEditClick={(updatedRestaurant) => {
-                          console.log('Edit click:', updatedRestaurant);
-                          setRestaurant(updatedRestaurant);
-                        }}
-                        onUpdateSuccess={(updatedRestaurant) => {
-                          console.log('Update success:', updatedRestaurant);
-                          setRestaurant(updatedRestaurant);
-                        }}
-                      />
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
-            {activeSection === 'floorplan' && (
-              <div className="bg-white p-6 rounded-xl shadow-sm border border-[#F2F4F7]">
-                {restaurant ? (
-                  <RestaurantFloorPlan 
-                    token={token}
-                    restaurantId={restaurant._id}
-                  />
-                ) : (
-                  <div className="text-center py-8">
-                    <p className="text-[#64748B]">No restaurant selected.</p>
-                  </div>
-                )}
-              </div>
-            )}
-            {activeSection === 'reservation' && (
-              <div className="bg-white rounded-xl shadow-sm border border-[#F2F4F7] h-[calc(100vh-120px)]">
-                {restaurant ? (
-                  <div className="h-full flex flex-col">
-                    {/* Tab Navigation */}
-                    <div className="border-b border-[#F2F4F7]">
-                      <div className="flex space-x-4 px-6 py-4">
-                        <button
-                          onClick={() => setActiveTab('list')}
-                          className={`px-4 py-2 rounded-lg transition-all duration-200 ${
-                            activeTab === 'list'
-                              ? 'bg-[#FF4F18] text-white'
-                              : 'text-[#64748B] hover:bg-[#F8FAFC]'
-                          }`}
-                        >
-                          List View
-                        </button>
-                        <button
-                          onClick={() => setActiveTab('floorplan')}
-                          className={`px-4 py-2 rounded-lg transition-all duration-200 ${
-                            activeTab === 'floorplan'
-                              ? 'bg-[#FF4F18] text-white'
-                              : 'text-[#64748B] hover:bg-[#F8FAFC]'
-                          }`}
-                        >
-                          Floor Plan View
-                        </button>
-                      </div>
-                    </div>
+          {/* Navigation Menu */}
+          <nav className="flex-1 space-y-2">
+            <button
+              onClick={() => setActiveSection('owner-profile')}
+              className={`flex items-center space-x-3 w-full p-3 rounded-lg transition-all duration-200 ${
+                activeSection === 'owner-profile'
+                  ? 'bg-[#FF4F18] text-white font-medium shadow-lg'
+                  : 'text-gray-600 hover:bg-gray-50 hover:text-[#FF4F18]'
+              }`}
+            >
+              <RiUserLine className="text-xl" />
+              <span>Profile</span>
+            </button>
 
-                    {/* Tab Content */}
-                    <div className="flex-1 overflow-hidden">
-                      {activeTab === 'list' ? (
-                        <RestaurantReservation restaurantId={restaurant._id} />
-                      ) : (
-                        <RestaurantBookingManager restaurantId={restaurant._id} />
-                      )}
-                    </div>
-                  </div>
-                ) : (
-                  <div className="text-center py-8">
-                    <p className="text-[#64748B]">Please create a restaurant profile first</p>
-                  </div>
-                )}
-              </div>
-            )}
-            {activeSection === 'subscription' && (
-              <div className="bg-white p-6 rounded-xl shadow-sm border border-[#F2F4F7] mt-4">
-                <SubscriptionPlans />
-              </div>
-            )}
-            {activeSection === 'owner-profile' && (
-              <div className="bg-white p-6 rounded-xl shadow-sm border border-[#F2F4F7]">
-                <OwnerProfile />
-              </div>
-            )}
-            {activeSection === 'messages' && (
-              <div className="bg-white p-6 rounded-xl shadow-sm border border-[#F2F4F7]">
-                <RestaurantOwnerChat restaurantId={restaurantId} />
-              </div>
-            )}
-          </motion.div>
+            <button
+              onClick={() => setActiveSection('profile')}
+              className={`flex items-center space-x-3 w-full p-3 rounded-lg transition-all duration-200 ${
+                activeSection === 'profile'
+                  ? 'bg-[#FF4F18] text-white font-medium shadow-lg'
+                  : 'text-gray-600 hover:bg-gray-50 hover:text-[#FF4F18]'
+              }`}
+              type="button"
+            >
+              <RiRestaurantLine className="text-xl" />
+              <span>Restaurant Profile</span>
+            </button>
+            
+            <button
+              onClick={() => setActiveSection('floorplan')}
+              className={`flex items-center space-x-3 w-full p-3 rounded-lg transition-all duration-200 ${
+                activeSection === 'floorplan'
+                  ? 'bg-[#FF4F18] text-white font-medium shadow-lg'
+                  : 'text-gray-600 hover:bg-gray-50 hover:text-[#FF4F18]'
+              }`}
+              type="button"
+            >
+              <RiLayoutLine className="text-xl" />
+              <span>Floor Plan</span>
+            </button>
+            
+            <button
+              onClick={() => setActiveSection('reservation')}
+              className={`flex items-center space-x-3 w-full p-3 rounded-lg transition-all duration-200 ${
+                activeSection === 'reservation'
+                  ? 'bg-[#FF4F18] text-white font-medium shadow-lg'
+                  : 'text-gray-600 hover:bg-gray-50 hover:text-[#FF4F18]'
+              }`}
+            >
+              <RiCalendarLine className="text-xl" />
+              <span>Reservation</span>
+            </button>
+            
+            <button
+              onClick={() => setActiveSection('subscription')}
+              className={`flex items-center space-x-3 w-full p-3 rounded-lg transition-all duration-200 ${
+                activeSection === 'subscription'
+                  ? 'bg-[#FF4F18] text-white font-medium shadow-lg'
+                  : 'text-gray-600 hover:bg-gray-50 hover:text-[#FF4F18]'
+              }`}
+            >
+              <RiVipCrownLine className="text-xl" />
+              <span>Subscription</span>
+            </button>
+            
+            <button
+              onClick={() => setActiveSection('messages')}
+              className={`flex items-center space-x-3 w-full p-3 rounded-lg transition-all duration-200 ${
+                activeSection === 'messages'
+                  ? 'bg-[#FF4F18] text-white font-medium shadow-lg'
+                  : 'text-gray-600 hover:bg-gray-50 hover:text-[#FF4F18]'
+              }`}
+            >
+              <RiMessage2Line className="text-xl" />
+              <span>Messages</span>
+            </button>
+            <Link
+              href="/restaurant-owner"
+              className="flex items-center space-x-3 w-full p-3 rounded-lg transition-all duration-200
+                text-gray-600 hover:bg-gray-50 hover:text-[#FF4F18]"
+            >
+              <FaHome className="text-xl" />
+              <span>Home</span>
+            </Link>
+
+            {/* Sign Out Button at Bottom */}
+            <div className="absolute bottom-0 left-0 w-full p-4 border-t border-gray-100">
+              <button
+                onClick={handleLogout}
+                className="flex items-center space-x-3 w-full p-3 rounded-lg text-red-500 hover:bg-red-50 transition-all duration-200"
+              >
+                <FaSignOutAlt className="text-xl" />
+                <span>Sign Out</span>
+              </button>
+            </div>
+          </nav>
         </div>
       </div>
-    </>
+
+      {/* Main Content Area */}
+      <div className="flex-1 ml-64 p-8">
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="max-w-4xl mx-auto"
+        >
+          {/* Header Section */}
+          <div className="mb-8">
+            <h1 className="text-2xl font-semibold text-gray-800">
+              {activeSection === 'owner-profile' && 'Owner Profile'}
+              {activeSection === 'profile' && 'Restaurant Profile'}
+              {activeSection === 'floorplan' && 'Floor Plan'}
+              {activeSection === 'reservation' && 'Reservations'}
+              {activeSection === 'subscription' && 'Subscription Plans'}
+              {activeSection === 'messages' && 'Messages'}
+            </h1>
+            <p className="text-gray-500 mt-1">
+              Manage your restaurant settings and information
+            </p>
+          </div>
+
+          {/* Content Sections */}
+          {activeSection === 'profile' && (
+            <div className="space-y-6">
+              {!restaurant && !isCreatingNew ? (
+                <div className="bg-white rounded-xl shadow-md border border-gray-100 p-6">
+                  <h2 className="text-xl font-semibold text-gray-800 mb-4">
+                    Create Your Restaurant Profile
+                  </h2>
+                  <button
+                    onClick={() => setIsCreatingNew(true)}
+                    className="px-4 py-2 rounded-lg bg-[#FF4F18] text-white hover:bg-[#FF4F18]/90 
+                             transition-all duration-200 flex items-center gap-2"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
+                    </svg>
+                    Create Restaurant Profile
+                  </button>
+                </div>
+              ) : (
+                <div className="bg-white p-6 rounded-xl shadow-sm border border-[#F2F4F7]">
+                  {isCreatingNew ? (
+                    <div>
+                      <div className="flex justify-between items-center mb-4">
+                        <h2 className="text-xl font-semibold text-[#141517]">
+                          Create Restaurant Profile
+                        </h2>
+                        <button 
+                          onClick={() => setIsCreatingNew(false)}
+                          className="text-[#64748B] hover:text-[#141517]"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                      <RestaurantProfileForm 
+                        mode="create"
+                        initialData={null}
+                        onSubmitSuccess={(newRestaurant) => {
+                          console.log('Create success:', newRestaurant);
+                          setRestaurant(newRestaurant);
+                          setIsCreatingNew(false);
+                        }}
+                        onCancel={() => setIsCreatingNew(false)}
+                      />
+                    </div>
+                  ) : (
+                    <RestaurantInformation 
+                      restaurant={restaurant}
+                      onEditClick={(updatedRestaurant) => {
+                        console.log('Edit click:', updatedRestaurant);
+                        setRestaurant(updatedRestaurant);
+                      }}
+                      onUpdateSuccess={(updatedRestaurant) => {
+                        console.log('Update success:', updatedRestaurant);
+                        setRestaurant(updatedRestaurant);
+                      }}
+                    />
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+          {activeSection === 'floorplan' && (
+            <div className="bg-white p-6 rounded-xl shadow-sm border border-[#F2F4F7]">
+              {restaurant ? (
+                <RestaurantFloorPlan 
+                  token={token}
+                  restaurantId={restaurant._id}
+                />
+              ) : (
+                <div className="text-center py-8">
+                  <p className="text-[#64748B]">No restaurant selected.</p>
+                </div>
+              )}
+            </div>
+          )}
+          {activeSection === 'reservation' && (
+            <div className="bg-white rounded-xl shadow-sm border border-[#F2F4F7] h-[calc(100vh-120px)]">
+              {restaurant ? (
+                <div className="h-full flex flex-col">
+                  {/* Tab Navigation */}
+                  <div className="border-b border-[#F2F4F7]">
+                    <div className="flex space-x-4 px-6 py-4">
+                      <button
+                        onClick={() => setActiveTab('list')}
+                        className={`px-4 py-2 rounded-lg transition-all duration-200 ${
+                          activeTab === 'list'
+                            ? 'bg-[#FF4F18] text-white'
+                            : 'text-[#64748B] hover:bg-[#F8FAFC]'
+                        }`}
+                      >
+                        List View
+                      </button>
+                      <button
+                        onClick={() => setActiveTab('floorplan')}
+                        className={`px-4 py-2 rounded-lg transition-all duration-200 ${
+                          activeTab === 'floorplan'
+                            ? 'bg-[#FF4F18] text-white'
+                            : 'text-[#64748B] hover:bg-[#F8FAFC]'
+                        }`}
+                      >
+                        Floor Plan View
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Tab Content */}
+                  <div className="flex-1 overflow-hidden">
+                    {activeTab === 'list' ? (
+                      <RestaurantReservation restaurantId={restaurant._id} />
+                    ) : (
+                      <RestaurantBookingManager restaurantId={restaurant._id} />
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <p className="text-[#64748B]">Please create a restaurant profile first</p>
+                </div>
+              )}
+            </div>
+          )}
+          {activeSection === 'subscription' && (
+            <div className="bg-white p-6 rounded-xl shadow-sm border border-[#F2F4F7] mt-4">
+              <SubscriptionPlans />
+            </div>
+          )}
+          {activeSection === 'owner-profile' && (
+            <div className="bg-white p-6 rounded-xl shadow-sm border border-[#F2F4F7]">
+              <OwnerProfile />
+            </div>
+          )}
+          {activeSection === 'messages' && (
+            <div className="bg-white p-6 rounded-xl shadow-sm border border-[#F2F4F7]">
+              <RestaurantOwnerChat restaurantId={restaurantId} />
+            </div>
+          )}
+        </motion.div>
+      </div>
+    </div>
   )
 }

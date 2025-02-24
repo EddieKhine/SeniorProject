@@ -137,7 +137,7 @@ export default function Navbar() {
                 <div className="relative">
                   <button
                     onClick={toggleDropdown}
-                    className={`flex items-center space-x-3 px-4 py-2 rounded-lg transition-all duration-300
+                    className={`flex items-center space-x-3 px-4 py-2 rounded-2xl transition-all duration-300
                       ${isScrolled 
                         ? 'hover:bg-black/5 text-[#141517]' 
                         : 'hover:bg-white/10 text-white'
@@ -149,7 +149,7 @@ export default function Navbar() {
                         @{user.firstName.toLowerCase()}
                       </p>
                     </div>
-                    <div className="w-9 h-9 rounded-lg overflow-hidden ring-2 ring-[#FF4F18]/20 hover:ring-[#FF4F18] transition-all duration-300">
+                    <div className="w-10 h-10 rounded-xl overflow-hidden ring-2 ring-[#FF4F18] shadow-lg transition-all duration-300 hover:scale-105">
                       {user.profileImage ? (
                         <img
                           src={user.profileImage}
@@ -157,43 +157,64 @@ export default function Navbar() {
                           className="w-full h-full object-cover"
                         />
                       ) : (
-                        <div className="w-full h-full bg-[#FF4F18] flex items-center justify-center">
-                          <FontAwesomeIcon icon={faUser} className="text-white text-lg" />
+                        <div className="w-full h-full bg-gradient-to-br from-[#FF4F18] to-[#FF8F6B] flex items-center justify-center">
+                          <span className="text-white font-medium text-lg">
+                            {user.firstName.charAt(0)}{user.lastName.charAt(0)}
+                          </span>
                         </div>
                       )}
                     </div>
                   </button>
 
-                  {/* Enhanced Dropdown Menu */}
+                  {/* Enhanced Luxury Dropdown Menu */}
                   {isDropdownOpen && (
-                    <div className="absolute right-0 mt-2 w-64 bg-white/80 backdrop-blur-lg rounded-xl overflow-hidden shadow-xl border border-white/20">
-                      {/* User Quick Stats */}
-                      <div className="px-4 py-3 border-b border-white/20">
-                        <div className="flex items-center space-x-3">
+                    <div className="absolute right-0 mt-3 w-80 bg-white/90 backdrop-blur-xl rounded-2xl overflow-hidden shadow-2xl border border-white/20 transform transition-all duration-300">
+                      {/* User Profile Section */}
+                      <div className="px-6 py-4 bg-gradient-to-r from-[#FF4F18]/10 to-transparent">
+                        <div className="flex items-center space-x-4">
                           <div className="flex-shrink-0">
-                            <div className="w-12 h-12 rounded-xl bg-[#FF4F18] flex items-center justify-center">
-                              <FontAwesomeIcon icon={faUser} className="text-white text-xl" />
+                            <div className="w-16 h-16 rounded-xl overflow-hidden ring-2 ring-[#FF4F18] shadow-lg">
+                              {user.profileImage ? (
+                                <img
+                                  src={user.profileImage}
+                                  alt="Profile"
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : (
+                                <div className="w-full h-full bg-gradient-to-br from-[#FF4F18] to-[#FF8F6B] flex items-center justify-center">
+                                  <span className="text-white font-medium text-xl">
+                                    {user.firstName.charAt(0)}{user.lastName.charAt(0)}
+                                  </span>
+                                </div>
+                              )}
                             </div>
                           </div>
                           <div>
-                            <p className="text-[#141517] font-medium">{user.firstName} {user.lastName}</p>
+                            <p className="text-[#141517] font-semibold text-lg">{user.firstName} {user.lastName}</p>
                             <p className="text-sm text-[#141517]/60">{user.email}</p>
                           </div>
                         </div>
                       </div>
 
                       {/* Menu Items */}
-                      <div className="py-2">
-                        <Link href="/customer/profile">
-                          <button className="w-full px-4 py-2 text-left text-[#141517]/70 hover:bg-[#F2F4F7] transition-colors duration-200">
-                            Profile Settings
-                          </button>
+                      <div className="p-2">
+                        <Link href="/customer/profile" className="block">
+                          <div className="flex items-center space-x-3 px-4 py-3 rounded-xl text-[#141517]/80 hover:bg-[#FF4F18]/5 transition-all duration-200">
+                            <FontAwesomeIcon icon={faUserEdit} className="w-5 h-5 text-[#FF4F18]" />
+                            <span className="font-medium">Profile Settings</span>
+                          </div>
                         </Link>
+                        
+                        {/* Divider */}
+                        <div className="my-2 border-t border-[#141517]/10"></div>
+                        
+                        {/* Sign Out Button */}
                         <button
                           onClick={handleLogout}
-                          className="w-full px-4 py-2 text-left text-red-500 hover:bg-red-50 transition-colors duration-200"
+                          className="w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-red-500 hover:bg-red-50 transition-all duration-200"
                         >
-                          Sign Out
+                          <FontAwesomeIcon icon={faSignOutAlt} className="w-5 h-5" />
+                          <span className="font-medium">Sign Out</span>
                         </button>
                       </div>
                     </div>

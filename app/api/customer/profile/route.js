@@ -8,7 +8,7 @@ import User from "@/models/user";
 // 🚀 GET Request: Fetch User Data
 export async function GET(req) {
   try {
-    const headersList = headers();
+    const headersList = await headers();
     const token = headersList.get('authorization')?.split(' ')[1];
     
     if (!token) {
@@ -18,35 +18,22 @@ export async function GET(req) {
       });
     }
 
-    // Verify token using jwt directly
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    if (!decoded) {
-      return new Response(JSON.stringify({ message: "Invalid token" }), {
-        status: 401,
-        headers: { "Content-Type": "application/json" },
-      });
-    }
-
     await dbConnect();
-    
-    const user = await User.findOne(
-      { email: decoded.email },
-      { password: 0 }
-    );
 
-    if (!user) {
-      return new Response(JSON.stringify({ message: "User not found" }), {
-        status: 404,
-        headers: { "Content-Type": "application/json" },
-      });
-    }
+    const user = await User.findOne({ email: decoded.email }).select('-password');
+    console.log('GET - Current user state:', {
+      id: user?._id,
+      email: user?.email,
+      profileImage: user?.profileImage
+    });
 
-    return new Response(JSON.stringify(user), {
+    return new Response(JSON.stringify({ user }), {
       status: 200,
       headers: { "Content-Type": "application/json" },
     });
   } catch (error) {
-    console.error("Error fetching user profile:", error);
+    console.error("Error fetching profile:", error);
     return new Response(JSON.stringify({ message: "Internal Server Error" }), {
       status: 500,
       headers: { "Content-Type": "application/json" },
@@ -57,10 +44,11 @@ export async function GET(req) {
 // 🚀 PUT Request: Update User Information
 export async function PUT(req) {
   try {
-    const headersList = headers();
+    const headersList = await headers();
     const token = headersList.get('authorization')?.split(' ')[1];
     
     if (!token) {
+      console.log('No token provided in profile update');
       return new Response(JSON.stringify({ message: "Unauthorized" }), {
         status: 401,
         headers: { "Content-Type": "application/json" },
@@ -68,49 +56,67 @@ export async function PUT(req) {
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    if (!decoded) {
-      return new Response(JSON.stringify({ message: "Invalid token" }), {
-        status: 401,
-        headers: { "Content-Type": "application/json" },
-      });
-    }
-
     const body = await req.json();
     const { email, firstName, lastName, contactNumber, newPassword, profileImage } = body;
 
     await dbConnect();
 
-    const user = await User.findOne({ email: decoded.email });
-    if (!user || user.email !== email) {
-      return new Response(JSON.stringify({ message: "Unauthorized access" }), {
-        status: 403,
-        headers: { "Content-Type": "application/json" },
-      });
-    }
-
-    let updateFields = { firstName, lastName, contactNumber };
+    // Get the MongoDB collection directly
+    const collection = mongoose.connection.collection('users');
     
-    if (profileImage) {
-      updateFields.profileImage = profileImage;
-    }
+    // Prepare update document
+    const updateDoc = {
+      firstName,
+      lastName,
+      contactNumber,
+      profileImage
+    };
 
     if (newPassword) {
-      const hashedPassword = await bcrypt.hash(newPassword, 10);
-      updateFields.password = hashedPassword;
+      updateDoc.password = await bcrypt.hash(newPassword, 10);
     }
 
-    await User.updateOne(
+    console.log('Attempting direct MongoDB update with:', updateDoc);
+
+    // Perform direct MongoDB update
+    const result = await collection.updateOne(
       { email: decoded.email },
-      { $set: updateFields }
+      { $set: updateDoc }
     );
 
-    return new Response(JSON.stringify({ message: "Profile updated successfully!" }), {
+    console.log('MongoDB update result:', result);
+
+    // Fetch updated document
+    const updatedUser = await collection.findOne(
+      { email: decoded.email },
+      { projection: { password: 0 } }
+    );
+
+    console.log('Updated user from DB:', updatedUser);
+
+    const userResponse = {
+      firstName: updatedUser.firstName,
+      lastName: updatedUser.lastName,
+      email: updatedUser.email,
+      contactNumber: updatedUser.contactNumber,
+      role: updatedUser.role,
+      profileImage: updatedUser.profileImage
+    };
+
+    return new Response(JSON.stringify({
+      message: "Profile updated successfully!",
+      user: userResponse
+    }), {
       status: 200,
       headers: { "Content-Type": "application/json" },
     });
+
   } catch (error) {
     console.error("Error updating profile:", error);
-    return new Response(JSON.stringify({ message: "Internal Server Error" }), {
+    return new Response(JSON.stringify({ 
+      message: "Internal Server Error",
+      error: error.message 
+    }), {
       status: 500,
       headers: { "Content-Type": "application/json" },
     });

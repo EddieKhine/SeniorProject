@@ -27,11 +27,41 @@ const userSchema = new mongoose.Schema({
     enum: ["customer", "restaurant owner"],
     default: "customer"
   },
+  profileImage: { 
+    type: String,
+    required: false,
+    default: null
+  },
   createdAt: {
     type: Date,
     default: Date.now
   }
-}, { timestamps: true });
+}, { 
+  timestamps: true,
+  strict: true // Ensure strict mode is enabled
+});
+
+// Debug middleware
+userSchema.pre('save', function(next) {
+  console.log('Pre-save hook:', {
+    id: this._id,
+    email: this.email,
+    profileImage: this.profileImage
+  });
+  next();
+});
+
+userSchema.pre('updateOne', function() {
+  console.log('Update operation:', this.getUpdate());
+});
+
+// Ensure profileImage is properly handled in JSON
+userSchema.set('toJSON', {
+  transform: function(doc, ret) {
+    ret.profileImage = ret.profileImage || null;
+    return ret;
+  }
+});
 
 // Ensure model is only compiled once
 const User = mongoose.models.User || mongoose.model('User', userSchema);
