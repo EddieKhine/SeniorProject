@@ -27,6 +27,7 @@ export default function PublicFloorPlan({ floorplanData, floorplanId, restaurant
   const [availableTimeSlots, setAvailableTimeSlots] = useState([]);
   const [restaurant, setRestaurant] = useState(null);
   const [availableTables, setAvailableTables] = useState(new Set());
+  const [isLoading, setIsLoading] = useState(true);
 
   const dateRef = useRef(selectedDate);
   const timeRef = useRef(selectedTime);
@@ -79,9 +80,8 @@ export default function PublicFloorPlan({ floorplanData, floorplanId, restaurant
       }
     };
 
-    const initScene = async () => {
-      cleanup();
-
+    const initializeScene = async () => {
+      setIsLoading(true);
       try {
         // Initialize Three.js scene
         const renderer = new THREE.WebGLRenderer({ 
@@ -168,12 +168,12 @@ export default function PublicFloorPlan({ floorplanData, floorplanId, restaurant
             if (parentWall) {
               let opening;
               if (objData.type === 'door') {
-                opening = doorManagerRef.current.createDoor(
+                opening = await doorManagerRef.current.createDoor(
                   parentWall, 
                   new THREE.Vector3().fromArray(objData.position)
                 );
               } else {
-                opening = windowManagerRef.current.createWindow(
+                opening = await windowManagerRef.current.createWindow(
                   parentWall, 
                   new THREE.Vector3().fromArray(objData.position)
                 );
@@ -196,7 +196,8 @@ export default function PublicFloorPlan({ floorplanData, floorplanId, restaurant
             !['wall', 'door', 'window'].includes(obj.type)
           );
 
-          for (const objData of furnitureObjects) {
+          // Load furniture models concurrently
+          await Promise.all(furnitureObjects.map(async (objData) => {
             let model;
             
             if (objData.userData.isChair) {
@@ -229,41 +230,19 @@ export default function PublicFloorPlan({ floorplanData, floorplanId, restaurant
                 objData.rotation.z
               );
               model.scale.fromArray(objData.scale);
-              
-              // Preserve the table ID and other userData
-              model.userData = {
-                ...objData.userData,
-                objectId: objData.objectId // Make sure objectId is preserved
-              };
-              
-              // Set initial color
-              if (model.children && model.children[0]) {
-                const tableMesh = model.children[0];
-                if (Array.isArray(tableMesh.material)) {
-                  tableMesh.material.forEach(mat => mat.color.setHex(0xffffff));
-                } else {
-                  tableMesh.material.color.setHex(0xffffff);
-                }
-              }
-              
+              model.userData = { ...objData.userData };
               scene.add(model);
             }
-          }
+          }));
         }
 
-        // Animation loop
+        // Animation Loop
         const animate = () => {
           if (!sceneRef.current) return;
-          
-          animationFrameId = requestAnimationFrame(animate);
+          requestAnimationFrame(animate);
           controls.update();
           renderer.render(scene, camera);
         };
-
-        // Store animation frame ID
-        let animationFrameId;
-
-        // Start animation
         animate();
 
         // Handle window resize
@@ -275,252 +254,54 @@ export default function PublicFloorPlan({ floorplanData, floorplanId, restaurant
         };
         window.addEventListener('resize', handleResize);
 
-        // Add click event listener to the renderer
-        const raycaster = new THREE.Raycaster();
-        const mouse = new THREE.Vector2();
-
-        const handleClick = (event) => {
-          console.log('Click detected');
-          console.log('Current state values:', {
-            date: dateRef.current,
-            time: timeRef.current
-          });
-          
-          const rect = containerRef.current.getBoundingClientRect();
-          const x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-          const y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
-
-          raycaster.setFromCamera(new THREE.Vector2(x, y), camera);
-          const intersects = raycaster.intersectObjects(sceneRef.current.children, true);
-          
-          // Debug current state
-          console.log('State when clicking:', {
-            selectedDate: dateRef.current,
-            selectedTime: timeRef.current
-          });
-
-          const tableObject = intersects.find(item => 
-            item.object?.userData?.isTable || 
-            item.object?.parent?.userData?.isTable
-          );
-
-          if (!tableObject) return;
-
-          const table = tableObject.object.userData?.isTable 
-            ? tableObject.object 
-            : tableObject.object.parent;
-
-          console.log('Table clicked:', table.userData);
-
-          // Use the state values directly
-          if (!dateRef.current || !timeRef.current) {
-            toast.error("Please select a date and time first before choosing a table");
-            return;
-          }
-
-          const tableId = table.userData.objectId || table.userData.friendlyId;
-
-          // Check if table is red (unavailable)
-          const tableMesh = table.children[0];
-          const isRed = tableMesh && (
-            (Array.isArray(tableMesh.material) && tableMesh.material[0].color.getHex() === 0xff0000) ||
-            (!Array.isArray(tableMesh.material) && tableMesh.material.color.getHex() === 0xff0000)
-          );
-
-          if (isRed) {
-            // Create and show tooltip
-            const tooltip = document.createElement('div');
-            tooltip.className = 'booking-tooltip';
-            tooltip.innerHTML = `
-              <div class="booking-tooltip-content">
-                <div class="tooltip-header">
-                  <h4 class="text-lg font-bold text-red-600">Table Not Available</h4>
-                  <button class="close-tooltip">×</button>
-                </div>
-                <div class="tooltip-body">
-                  <p>This table is already booked for:</p>
-                  <p class="font-semibold">${new Date(dateRef.current).toLocaleDateString()}</p>
-                  <p class="font-semibold">${timeRef.current}</p>
-                </div>
-              </div>
-            `;
-
-            // Position the tooltip near the mouse click
-            tooltip.style.position = 'fixed';
-            tooltip.style.left = event.clientX + 'px';
-            tooltip.style.top = event.clientY + 'px';
-            
-            // Add styles for the tooltip
-            const style = document.createElement('style');
-            style.textContent = `
-              .booking-tooltip {
-                position: fixed;
-                z-index: 1000;
-                background: white;
-                border-radius: 8px;
-                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-                padding: 16px;
-                max-width: 300px;
-                animation: fadeIn 0.2s ease-in-out;
-              }
-              .tooltip-header {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                margin-bottom: 12px;
-              }
-              .close-tooltip {
-                background: none;
-                border: none;
-                font-size: 24px;
-                cursor: pointer;
-                color: #666;
-                padding: 0 8px;
-              }
-              .close-tooltip:hover {
-                color: #000;
-              }
-              .tooltip-body p {
-                margin: 8px 0;
-                color: #333;
-              }
-              @keyframes fadeIn {
-                from { opacity: 0; transform: translateY(-10px); }
-                to { opacity: 1; transform: translateY(0); }
-              }
-            `;
-            document.head.appendChild(style);
-
-            // Add to document
-            document.body.appendChild(tooltip);
-
-            // Add close button functionality
-            const closeBtn = tooltip.querySelector('.close-tooltip');
-            closeBtn.addEventListener('click', () => {
-              document.body.removeChild(tooltip);
-            });
-
-            // Auto-remove after 3 seconds
-            setTimeout(() => {
-              if (document.body.contains(tooltip)) {
-                document.body.removeChild(tooltip);
-              }
-            }, 3000);
-
-            return;
-          }
-
-          // Create booking dialog
-          const guestCountDialog = document.createElement('div');
-          guestCountDialog.className = 'booking-dialog';
-          guestCountDialog.innerHTML = `
-            <div class="booking-dialog-content">
-              <h3 class="text-xl font-bold mb-4 text-[#141517]">Complete Booking</h3>
-              <div class="booking-details mb-4">
-                <p class="text-[#141517]">Date: ${new Date(dateRef.current).toLocaleDateString()}</p>
-                <p class="text-[#141517]">Time: ${timeRef.current}</p>
-                <p class="text-[#141517]">Table ID: ${tableId}</p>
-              </div>
-              <div class="form-group">
-                <label for="guest-count" class="text-[#141517] font-medium block mb-2">Number of Guests</label>
-                <input 
-                  type="number" 
-                  id="guest-count" 
-                  min="1" 
-                  max="${table.userData.maxCapacity || 4}" 
-                  required
-                  class="w-full p-2 border rounded focus:ring-2 focus:ring-[#FF4F18] focus:border-transparent text-[#141517] font-medium text-lg"
-                >
-              </div>
-              <div class="dialog-buttons mt-6 flex justify-end gap-3">
-                <button type="button" id="cancel-booking" class="px-4 py-2 bg-gray-200 text-[#141517] rounded hover:bg-gray-300 transition-all font-medium">Cancel</button>
-                <button type="button" id="confirm-booking" class="px-4 py-2 bg-[#FF4F18] text-white rounded hover:bg-[#FF4F18]/90 transition-all font-medium">Confirm Booking</button>
-              </div>
-            </div>
-          `;
-
-          document.body.appendChild(guestCountDialog);
-
-          // Add event listeners
-          const confirmButton = guestCountDialog.querySelector('#confirm-booking');
-          const cancelButton = guestCountDialog.querySelector('#cancel-booking');
-          const guestCountInput = guestCountDialog.querySelector('#guest-count');
-
-          cancelButton.addEventListener('click', () => {
-            document.body.removeChild(guestCountDialog);
-          });
-
-          confirmButton.addEventListener('click', async () => {
-            const guestCount = parseInt(guestCountInput.value);
-            if (!guestCount) {
-              alert('Please enter number of guests');
-              return;
-            }
-
-            try {
-              document.body.removeChild(guestCountDialog); // Remove the dialog first
-              await handleBookingSubmission(table, tableId, {
-                date: dateRef.current,
-                time: timeRef.current,
-                guestCount
-              });
-            } catch (error) {
-              console.error('Booking error:', error);
-              toast.error(error.message || 'Failed to book table');
-            }
-          });
-        };
-
-        if (containerRef.current) {
-          containerRef.current.addEventListener('click', handleClick);
-        }
-
-        // Cleanup
         return () => {
           window.removeEventListener('resize', handleResize);
           cleanup();
-          if (containerRef.current?.contains(renderer.domElement)) {
-            containerRef.current.removeChild(renderer.domElement);
-          }
-          if (containerRef.current) {
-            containerRef.current.removeEventListener('click', handleClick);
-          }
-          if (animationFrameId) {
-            cancelAnimationFrame(animationFrameId);
-          }
         };
       } catch (error) {
         console.error('Error initializing scene:', error);
+      } finally {
+        setIsLoading(false);
       }
     };
 
-    initScene();
+    initializeScene();
   }, [floorplanData]);
 
   useEffect(() => {
-    // Fetch restaurant details and set default time slots
     const fetchRestaurantDetails = async () => {
+      if (!restaurantId) return;
+      
+      setIsLoading(true);
       try {
-        const response = await fetch(`/api/restaurants/${restaurantId}`);
-        if (!response.ok) throw new Error('Failed to fetch restaurant details');
-        const data = await response.json();
-        setRestaurant(data);
+        const [restaurantResponse] = await Promise.all([
+          fetch(`/api/restaurants/${restaurantId}`)
+        ]);
 
-        // Get today's day of week
+        if (!restaurantResponse.ok) {
+          throw new Error('Failed to fetch restaurant details');
+        }
+
+        const restaurantData = await restaurantResponse.json();
+        setRestaurant(restaurantData);
+
+        // Get today's day of week and set time slots
         const today = new Date();
         const dayOfWeek = today.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
         
-        if (data.openingHours && data.openingHours[dayOfWeek]) {
-          const dayHours = data.openingHours[dayOfWeek];
-          if (!dayHours.isClosed) {
-            const timeSlots = generateTimeSlots(dayHours.open, dayHours.close);
-            setAvailableTimeSlots(timeSlots);
-          }
+        if (restaurantData.openingHours?.[dayOfWeek] && !restaurantData.openingHours[dayOfWeek].isClosed) {
+          const { open, close } = restaurantData.openingHours[dayOfWeek];
+          const timeSlots = generateTimeSlots(open, close);
+          setAvailableTimeSlots(timeSlots);
         }
       } catch (error) {
         console.error('Error fetching restaurant details:', error);
+        toast.error('Failed to load restaurant details');
+      } finally {
+        setIsLoading(false);
       }
     };
+
     fetchRestaurantDetails();
   }, [restaurantId]);
 
@@ -1162,7 +943,13 @@ export default function PublicFloorPlan({ floorplanData, floorplanId, restaurant
       </div>
 
       {/* Floor Plan Container */}
-      <div className="floorplan-container" ref={containerRef} />
+      <div className="floorplan-container relative" ref={containerRef}>
+        {isLoading && (
+          <div className="loading-overlay">
+            <img src="/loading/loading.gif" alt="Loading..." className="w-16 h-16" />
+          </div>
+        )}
+      </div>
     </div>
   );
 } 
