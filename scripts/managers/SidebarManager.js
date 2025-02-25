@@ -24,7 +24,7 @@ export class SidebarManager {
                 items: [
                     {
                         name: "Chair",
-                        thumbnail: "./assets/thumbnails/chair.jpg",
+                        thumbnail: "/assets/thumbnails/chair.jpg",
                         icon: "bi-chair",
                         action: async () => {
                             const chairModel = await this.ui.createChair();
@@ -40,7 +40,7 @@ export class SidebarManager {
                     },
                     {
                         name: "4 seater Table",
-                        thumbnail: "./assets/thumbnails/table.jpg",
+                        thumbnail: "/assets/thumbnails/table.jpg",
                         icon: "bi-table",
                         action: async () => {
                             const tableModel = await this.ui.createTable();
@@ -57,7 +57,7 @@ export class SidebarManager {
                     },
                     {
                         name: "Sofa",
-                        thumbnail: "./assets/thumbnails/sofa.jpg",
+                        thumbnail: "/assets/thumbnails/sofa.jpg",
                         icon: "bi-sofa",
                         action: async () => {
                             const sofaModel = await this.ui.createSofa();
@@ -73,7 +73,7 @@ export class SidebarManager {
                     },
                     {
                         name: "4 seater Round Table",
-                        thumbnail: "./assets/thumbnails/roundTable.jpg",
+                        thumbnail: "/assets/thumbnails/roundtable.jpg",
                         icon: "bi-lightbulb",
                         action: async () => {
                             const roundTableModel = await this.ui.createRoundTable();
@@ -91,7 +91,7 @@ export class SidebarManager {
                     },
                     {
                         name: "2 Seater Table",
-                        thumbnail: "./assets/thumbnails/table.jpg",
+                        thumbnail: "/assets/thumbnails/table.jpg",
                         icon: "bi-table",
                         action: async () => {
                             const tableModel = await this.ui.create2SeaterTable();
@@ -109,7 +109,7 @@ export class SidebarManager {
                     },
                     {
                         name: "8 Seater Table",
-                        thumbnail: "./assets/thumbnails/roundTable.jpg",
+                        thumbnail: "/assets/thumbnails/8seater.jpg",
                         icon: "bi-table",
                         action: async () => {
                             const tableModel = await this.ui.create8SeaterTable();
@@ -133,7 +133,7 @@ export class SidebarManager {
                 items: [
                     {
                         name: "Plant 1",
-                        thumbnail: "./assets/thumbnails/plant.jpg",
+                        thumbnail: "/assets/thumbnails/plant1.jpg",
                         icon: "bi-flower1",
                         action: async () => {
                             const plantModel = await this.ui.createPlant01();
@@ -150,7 +150,7 @@ export class SidebarManager {
                     },
                     {
                         name: "Plant 2",
-                        thumbnail: "./assets/thumbnails/plant.jpg",
+                        thumbnail: "/assets/thumbnails/plant2.jpg",
                         icon: "bi-flower2",
                         action: async () => {
                             const plantModel = await this.ui.createPlant02();
@@ -173,7 +173,7 @@ export class SidebarManager {
                 items: [
                     {
                         name: "Wall",
-                        thumbnail: "./assets/thumbnails/wall.jpg",
+                        thumbnail: "/assets/thumbnails/wall.jpg",
                         icon: "bi-bricks",
                         action: () => {
                             this.ui.wallManager.toggleAddWallMode();
@@ -184,7 +184,7 @@ export class SidebarManager {
                     },
                     {
                         name: "Door",
-                        thumbnail: "./assets/thumbnails/door.jpg", 
+                        thumbnail: "/assets/thumbnails/door.jpg", 
                         icon: "bi-door-open",
                         action: () => {
                             this.ui.toggleDoorMode(true);
@@ -194,7 +194,7 @@ export class SidebarManager {
                     },
                     {
                         name: "Window",
-                        thumbnail: "./assets/thumbnails/window.jpg",
+                        thumbnail: "/assets/thumbnails/window.jpg",
                         icon: "bi-window",
                         action: () => {
                             this.ui.toggleWindowMode(true);
