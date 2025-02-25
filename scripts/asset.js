@@ -81,6 +81,7 @@ export async function sofa(scene) {
             });
             group.children.forEach(child => {
                 if (child.isMesh) {
+                    
                     child.material = material;
                     child.castShadow = true;
                     child.receiveShadow = true;
@@ -212,18 +213,37 @@ export async function plant01(scene){
     try {
         const group = await loader.loadAsync('/models/decorations/indoorPlants/vase01.obj');
         if (group.children.length > 0) {
-            const material = new THREE.MeshPhongMaterial({
-                color: 0xffffff,
-                shininess: 30
-            });
+            // Create different materials for different parts
+            const materials = {
+                vase_01_corona_001: new THREE.MeshPhongMaterial({
+                    color: 0x964B00,  // Forest green for first part
+                    shininess: 30
+                }),
+                vase_01_corona_002: new THREE.MeshPhongMaterial({
+                    color: 0x654321,  // vase  
+                    shininess: 30
+                }),
+                vase_01_corona_003: new THREE.MeshPhongMaterial({
+                    color: 0xCD7F32,  //plant vase base 
+                    shininess: 30
+                }),
+                vase_01_corona_004: new THREE.MeshPhongMaterial({
+                    
+                    color: 0x90EE90,  // leaf
+                    shininess: 30
+                })
+            };
+
             group.children.forEach(child => {
                 if (child.isMesh) {
-                    child.material = material;
+                    // Assign material based on mesh name
+                    child.material = materials[child.name] || materials.vase_01_corona_004;
                     child.castShadow = true;
                     child.receiveShadow = true;
                     child.scale.set(0.01, 0.01, 0.01);
                 }
             });
+            
             group.position.set(0, 0.01, 0);
             group.userData = {
                 isMovable: true,

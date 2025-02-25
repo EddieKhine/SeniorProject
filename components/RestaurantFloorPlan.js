@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 import { useRouter } from 'next/navigation';
 import { createScene, createFloor } from '@/scripts/floor';
-import { chair, table, roundTable, sofa, create2SeaterTable, create8SeaterTable } from '@/scripts/asset';
+import { chair, table, roundTable, sofa, create2SeaterTable, create8SeaterTable , plant01, plant02} from '@/scripts/asset';
 import { DoorManager} from '@/scripts/managers/DoorManager';
 import { WindowManager } from '@/scripts/managers/WindowManager';
 
