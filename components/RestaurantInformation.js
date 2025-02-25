@@ -6,6 +6,7 @@ import { MdRestaurantMenu, MdAnalytics } from 'react-icons/md';
 import { GoogleMap, Marker } from '@react-google-maps/api';
 import RestaurantProfileForm from './RestaurantProfileForm';
 import MenuImageUpload from './MenuImageUpload';
+import ImageUpload from './ImageUpload';
 
 const formatOpeningHours = (hours) => {
   if (!hours || typeof hours !== 'object') return [];
@@ -260,6 +261,103 @@ export default function RestaurantInformation({ restaurant, onEditClick, onUpdat
         {menuImages.length === 0 && !isEditing && (
           <p className="text-gray-500 italic">No menu images uploaded yet.</p>
         )}
+      </div>
+
+      {/* Gallery Section */}
+      <div className="bg-white rounded-xl shadow-lg p-6">
+        <h3 className="text-xl font-semibold mb-4 flex items-center gap-2 text-black">
+          <RiImageAddLine className="text-[#FF4F18]" />
+          Gallery
+        </h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {restaurant.images?.gallery?.map((url, index) => (
+            <div key={index} className="relative group">
+              <div className="aspect-[16/9] relative rounded-lg overflow-hidden">
+                <Image
+                  src={url}
+                  alt={`Gallery image ${index + 1}`}
+                  fill
+                  className="object-cover"
+                />
+              </div>
+              {isEditing && (
+                <button
+                  onClick={async () => {
+                    const updatedGallery = restaurant.images.gallery.filter((_, i) => i !== index);
+                    try {
+                      const response = await fetch(`/api/restaurants/${restaurant._id}`, {
+                        method: 'PUT',
+                        headers: {
+                          'Content-Type': 'application/json',
+                          'Authorization': `Bearer ${localStorage.getItem('restaurantOwnerToken')}`
+                        },
+                        body: JSON.stringify({
+                          images: {
+                            ...restaurant.images,
+                            gallery: updatedGallery
+                          }
+                        })
+                      });
+                      
+                      if (response.ok) {
+                        const updatedRestaurant = await response.json();
+                        onUpdateSuccess(updatedRestaurant);
+                      }
+                    } catch (error) {
+                      console.error('Error updating gallery images:', error);
+                    }
+                  }}
+                  className="absolute top-2 right-2 p-2 bg-white/90 rounded-full text-red-500 
+                    opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:bg-white"
+                >
+                  <RiDeleteBinLine className="text-xl" />
+                </button>
+              )}
+            </div>
+          ))}
+          
+          {isEditing && restaurant.images?.gallery?.length < 10 && (
+            <div className="aspect-[16/9] border-2 border-dashed border-gray-300 rounded-lg 
+              hover:border-[#FF4F18] transition-colors">
+              <ImageUpload
+                onImageUpload={async (url) => {
+                  const newGallery = [...(restaurant.images?.gallery || []), url];
+                  try {
+                    const response = await fetch(`/api/restaurants/${restaurant._id}`, {
+                      method: 'PUT',
+                      headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('restaurantOwnerToken')}`
+                      },
+                      body: JSON.stringify({
+                        images: {
+                          ...restaurant.images,
+                          gallery: newGallery
+                        }
+                      })
+                    });
+                    
+                    if (response.ok) {
+                      const updatedRestaurant = await response.json();
+                      onUpdateSuccess(updatedRestaurant);
+                    }
+                  } catch (error) {
+                    console.error('Error updating gallery images:', error);
+                  }
+                }}
+                type="restaurant"
+                multiple={true}
+                className="w-full h-full flex flex-col items-center justify-center"
+              >
+                <RiImageAddLine className="text-3xl text-gray-400 mb-2" />
+                <span className="text-sm text-gray-500">Add Gallery Images</span>
+                <span className="text-xs text-gray-400">
+                  ({restaurant.images?.gallery?.length || 0}/10)
+                </span>
+              </ImageUpload>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

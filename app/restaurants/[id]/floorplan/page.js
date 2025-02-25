@@ -3,13 +3,14 @@
 import { useState, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
 import RestaurantFloorPlan from '@/components/RestaurantFloorPlan';
-import { FaMapMarkerAlt, FaClock, FaPhone, FaStar, FaHome, FaShare, FaBookmark, FaUtensils, FaComments } from 'react-icons/fa';
+import { FaMapMarkerAlt, FaClock, FaPhone, FaStar, FaHome, FaShare, FaBookmark, FaUtensils, FaComments, FaChevronLeft, FaChevronRight } from 'react-icons/fa';
 import Image from 'next/image';
 import PublicFloorPlan from '@/components/PublicFloorPlan';
 import { GoogleMap, Marker } from '@react-google-maps/api';
 import ReviewSection from '@/components/ReviewSection';
 import CustomerChat from '@/components/CustomerChat';
 import { MdRestaurantMenu } from 'react-icons/md';
+import { RiImageAddLine } from 'react-icons/ri';
 
 export default function RestaurantFloorplanPage({ params }) {
   const restaurantId = use(params).id;
@@ -17,6 +18,8 @@ export default function RestaurantFloorplanPage({ params }) {
   const [loading, setLoading] = useState(true);
   const [isSaved, setIsSaved] = useState(false);
   const [showChat, setShowChat] = useState(false);
+  const [currentGalleryIndex, setCurrentGalleryIndex] = useState(0);
+  const [currentMenuIndex, setCurrentMenuIndex] = useState(0);
   const router = useRouter();
 
   useEffect(() => {
@@ -112,6 +115,21 @@ export default function RestaurantFloorplanPage({ params }) {
       .join('\n');
   };
 
+  // Add this function to handle menu navigation
+  const handleMenuNav = (direction) => {
+    if (!restaurant?.images?.menu?.length) return;
+    
+    if (direction === 'next') {
+      setCurrentMenuIndex((prev) => 
+        prev === restaurant.images.menu.length - 1 ? 0 : prev + 1
+      );
+    } else {
+      setCurrentMenuIndex((prev) => 
+        prev === 0 ? restaurant.images.menu.length - 1 : prev - 1
+      );
+    }
+  };
+
   // Add a separate function to render menu section with debugging
   const renderMenuSection = () => {
     console.log('DEBUG - Rendering menu section');
@@ -175,6 +193,21 @@ export default function RestaurantFloorplanPage({ params }) {
         )}
       </div>
     );
+  };
+
+  // Add this function to handle gallery navigation
+  const handleGalleryNav = (direction) => {
+    if (!restaurant?.images?.gallery?.length) return;
+    
+    if (direction === 'next') {
+      setCurrentGalleryIndex((prev) => 
+        prev === restaurant.images.gallery.length - 1 ? 0 : prev + 1
+      );
+    } else {
+      setCurrentGalleryIndex((prev) => 
+        prev === 0 ? restaurant.images.gallery.length - 1 : prev - 1
+      );
+    }
   };
 
   if (loading) {
@@ -266,41 +299,153 @@ export default function RestaurantFloorplanPage({ params }) {
               </div>
               {restaurant.images?.menu && restaurant.images.menu.length > 0 ? (
                 <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="relative aspect-[3/4] rounded-lg overflow-hidden">
+                    <Image
+                      src={restaurant.images.menu[currentMenuIndex]}
+                      alt={`Menu page ${currentMenuIndex + 1}`}
+                      fill
+                      className="object-cover"
+                      sizes="(max-width: 400px) 100vw"
+                    />
+                    {/* Navigation Buttons */}
+                    <div className="absolute inset-0 flex items-center justify-between p-2">
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault();
+                          handleMenuNav('prev');
+                        }}
+                        className="p-2 rounded-full bg-black/30 text-white hover:bg-black/50 
+                          transition-all duration-200 transform hover:scale-110"
+                      >
+                        <FaChevronLeft className="text-xl" />
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault();
+                          handleMenuNav('next');
+                        }}
+                        className="p-2 rounded-full bg-black/30 text-white hover:bg-black/50 
+                          transition-all duration-200 transform hover:scale-110"
+                      >
+                        <FaChevronRight className="text-xl" />
+                      </button>
+                    </div>
+                    {/* Image Counter */}
+                    <div className="absolute bottom-2 right-2 bg-black/50 text-white px-2 
+                      py-1 rounded-full text-sm">
+                      {currentMenuIndex + 1} / {restaurant.images.menu.length}
+                    </div>
+                  </div>
+                  {/* Thumbnail Navigation */}
+                  <div className="flex gap-2 overflow-x-auto pb-2">
                     {restaurant.images.menu.map((url, index) => (
-                      <div key={index} className="relative group aspect-[3/4]">
-                        <div className="w-full h-full relative rounded-lg overflow-hidden">
-                          <Image
-                            src={url}
-                            alt={`Menu page ${index + 1}`}
-                            fill
-                            className="object-cover"
-                            sizes="(max-width: 400px) 50vw, 33vw"
-                          />
-                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all duration-200 flex items-center justify-center">
-                            <div className="transform scale-0 group-hover:scale-100 transition-transform duration-200">
-                              <button 
-                                onClick={() => window.open(url, '_blank')}
-                                className="bg-white/90 text-[#FF4F18] px-3 py-1 text-sm rounded-lg hover:bg-white transition-all duration-200"
-                              >
-                                View
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
+                      <button
+                        key={index}
+                        onClick={() => setCurrentMenuIndex(index)}
+                        className={`relative w-16 h-24 flex-shrink-0 rounded-lg overflow-hidden 
+                          ${currentMenuIndex === index ? 'ring-2 ring-[#FF4F18]' : ''}`}
+                      >
+                        <Image
+                          src={url}
+                          alt={`Menu thumbnail ${index + 1}`}
+                          fill
+                          className="object-cover"
+                          sizes="64px"
+                        />
+                      </button>
                     ))}
                   </div>
                   <button 
-                    onClick={() => document.getElementById('menuSection').scrollIntoView({ behavior: 'smooth' })}
+                    onClick={() => window.open(restaurant.images.menu[currentMenuIndex], '_blank')}
                     className="w-full text-sm text-[#FF4F18] hover:text-[#FF4F18]/80 transition-colors"
                   >
-                    View all menu images
+                    View full size
                   </button>
                 </div>
               ) : (
                 <p className="text-gray-500 text-sm pl-8">
                   Menu images not available
+                </p>
+              )}
+            </div>
+
+            {/* Gallery Images Card */}
+            <div className="bg-white rounded-xl p-4 shadow-sm hover:shadow-md transition-all">
+              <div className="flex items-center gap-3 text-[#141517] mb-4">
+                <RiImageAddLine className="text-[#FF4F18]" />
+                <span className="font-medium">Gallery</span>
+              </div>
+              {restaurant.images?.gallery && restaurant.images.gallery.length > 0 ? (
+                <div className="space-y-4">
+                  <div className="relative aspect-[16/9] rounded-lg overflow-hidden">
+                    <Image
+                      src={restaurant.images.gallery[currentGalleryIndex]}
+                      alt={`Gallery image ${currentGalleryIndex + 1}`}
+                      fill
+                      className="object-cover"
+                      sizes="(max-width: 400px) 100vw"
+                    />
+                    {/* Navigation Buttons */}
+                    <div className="absolute inset-0 flex items-center justify-between p-2">
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault();
+                          handleGalleryNav('prev');
+                        }}
+                        className="p-2 rounded-full bg-black/30 text-white hover:bg-black/50 
+                          transition-all duration-200 transform hover:scale-110"
+                      >
+                        <FaChevronLeft className="text-xl" />
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault();
+                          handleGalleryNav('next');
+                        }}
+                        className="p-2 rounded-full bg-black/30 text-white hover:bg-black/50 
+                          transition-all duration-200 transform hover:scale-110"
+                      >
+                        <FaChevronRight className="text-xl" />
+                      </button>
+                    </div>
+                    {/* Image Counter */}
+                    <div className="absolute bottom-2 right-2 bg-black/50 text-white px-2 
+                      py-1 rounded-full text-sm">
+                      {currentGalleryIndex + 1} / {restaurant.images.gallery.length}
+                    </div>
+                  </div>
+                  {/* Thumbnail Navigation */}
+                  <div className="flex gap-2 overflow-x-auto pb-2">
+                    {restaurant.images.gallery.map((url, index) => (
+                      <button
+                        key={index}
+                        onClick={() => setCurrentGalleryIndex(index)}
+                        className={`relative w-16 h-16 flex-shrink-0 rounded-lg overflow-hidden 
+                          ${currentGalleryIndex === index ? 'ring-2 ring-[#FF4F18]' : ''}`}
+                      >
+                        <Image
+                          src={url}
+                          alt={`Gallery thumbnail ${index + 1}`}
+                          fill
+                          className="object-cover"
+                          sizes="64px"
+                        />
+                      </button>
+                    ))}
+                  </div>
+                  <button 
+                    onClick={() => {
+                      // Add logic to open a full-screen gallery view
+                      window.open(restaurant.images.gallery[currentGalleryIndex], '_blank');
+                    }}
+                    className="w-full text-sm text-[#FF4F18] hover:text-[#FF4F18]/80 transition-colors"
+                  >
+                    View full size
+                  </button>
+                </div>
+              ) : (
+                <p className="text-gray-500 text-sm pl-8">
+                  No gallery images available
                 </p>
               )}
             </div>

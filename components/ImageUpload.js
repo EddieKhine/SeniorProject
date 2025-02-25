@@ -3,83 +3,113 @@
 import { useState } from 'react';
 import Image from 'next/image';
 import { FaCloudUploadAlt } from 'react-icons/fa';
+import { RiLoader4Line } from 'react-icons/ri';
 
-export default function ImageUpload({ onImageUpload, currentImage, type = 'misc' }) {
+export default function ImageUpload({ 
+  onImageUpload, 
+  currentImage, 
+  type = 'misc',
+  className = '',
+  children,
+  multiple = false
+}) {
   const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState('');
   const [preview, setPreview] = useState(currentImage || null);
 
-  const handleFileChange = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    // File size validation (e.g., 5MB limit)
+  const validateFile = (file) => {
+    // Size validation (5MB)
     if (file.size > 5 * 1024 * 1024) {
-      alert('File size must be less than 5MB');
-      return;
+      throw new Error('File size must be less than 5MB');
     }
 
-    // Show preview
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setPreview(reader.result);
-    };
-    reader.readAsDataURL(file);
+    // Type validation
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      throw new Error('Only JPG, PNG, and WebP images are allowed');
+    }
+  };
 
-    // Upload to S3
+  const handleFileChange = async (e) => {
+    const files = Array.from(e.target.files);
+    if (files.length === 0) return;
+
+    setError('');
+    setUploading(true);
+
     try {
-      setUploading(true);
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('type', type);
+      // Validate each file
+      files.forEach(validateFile);
 
-      const response = await fetch('/api/upload', {
-        method: 'POST',
-        body: formData,
-      });
+      // If not multiple, only process the first file
+      const filesToProcess = multiple ? files : [files[0]];
 
-      if (!response.ok) {
-        throw new Error('Upload failed');
+      for (const file of filesToProcess) {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('type', type);
+
+        const response = await fetch('/api/upload', {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to upload image');
+        }
+
+        const { url } = await response.json();
+        onImageUpload(url);
       }
-
-      const data = await response.json();
-      onImageUpload(data.url);
     } catch (error) {
+      setError(error.message);
       console.error('Upload error:', error);
-      alert('Error uploading image. Please try again.');
     } finally {
       setUploading(false);
+      e.target.value = '';
     }
   };
 
   return (
-    <div className="w-full">
-      <div className="relative border-2 border-dashed border-gray-300 rounded-lg p-4 hover:border-gray-400 transition-colors">
-        <input
-          type="file"
-          onChange={handleFileChange}
-          accept="image/*"
-          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-          disabled={uploading}
-        />
-        
-        {preview ? (
-          <div className="relative w-full h-48">
-            <Image
-              src={preview}
-              alt="Preview"
-              fill
-              className="object-cover rounded-lg"
-            />
-          </div>
-        ) : (
-          <div className="text-center p-8">
-            <FaCloudUploadAlt className="mx-auto h-12 w-12 text-gray-400" />
-            <p className="mt-2 text-sm text-gray-500">
-              {uploading ? 'Uploading...' : 'Click or drag image to upload'}
-            </p>
-          </div>
-        )}
-      </div>
+    <div className={`relative ${className}`}>
+      {currentImage || preview ? (
+        <div className="relative w-full h-full">
+          <Image
+            src={currentImage || preview}
+            alt="Upload preview"
+            fill
+            className="object-cover rounded-lg"
+          />
+        </div>
+      ) : (
+        <label className="w-full h-full flex flex-col items-center justify-center cursor-pointer">
+          <input
+            type="file"
+            onChange={handleFileChange}
+            accept="image/jpeg,image/png,image/webp"
+            className="hidden"
+            multiple={multiple}
+            disabled={uploading}
+          />
+          {children || (
+            <>
+              {uploading ? (
+                <RiLoader4Line className="text-3xl text-gray-400 animate-spin" />
+              ) : (
+                <FaCloudUploadAlt className="text-3xl text-gray-400" />
+              )}
+              <span className="text-sm text-gray-500 mt-2">
+                {uploading ? 'Uploading...' : 'Click to upload'}
+              </span>
+            </>
+          )}
+        </label>
+      )}
+      {error && (
+        <div className="absolute bottom-0 left-0 right-0 bg-red-500 text-white text-sm p-2 rounded-b-lg">
+          {error}
+        </div>
+      )}
     </div>
   );
-} 
+}
