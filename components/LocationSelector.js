@@ -8,6 +8,7 @@ export default function LocationSelector({ onLocationSelect, initialLocation }) 
   const [inputValue, setInputValue] = useState('');
   const [map, setMap] = useState(null);
   const [mapLoaded, setMapLoaded] = useState(false);
+  const [mapError, setMapError] = useState(false);
 
   useEffect(() => {
     if (window.google && !mapLoaded) {
@@ -71,6 +72,15 @@ export default function LocationSelector({ onLocationSelect, initialLocation }) 
     setMapLoaded(true);
   };
 
+  const handleMapLoad = (map) => {
+    if (!map) {
+      setMapError(true);
+      console.error('Error loading Google Maps');
+      return;
+    }
+    // ... rest of your map load logic
+  };
+
   return (
     <div className="space-y-4">
       <input
@@ -81,10 +91,16 @@ export default function LocationSelector({ onLocationSelect, initialLocation }) 
         onChange={(e) => setInputValue(e.target.value)}
         className="w-full px-4 py-2 rounded-lg border border-[#E2E8F0] focus:border-[#FF4F18] focus:ring-1 focus:ring-[#FF4F18] outline-none transition-all duration-200"
       />
-      <div 
-        id="map" 
-        className="w-full h-[300px] rounded-lg"
-      />
+      {mapError ? (
+        <div className="text-red-500 p-4">
+          Error loading map. Please try again later.
+        </div>
+      ) : (
+        <div 
+          id="map" 
+          className="w-full h-[300px] rounded-lg"
+        />
+      )}
     </div>
   );
 } 
