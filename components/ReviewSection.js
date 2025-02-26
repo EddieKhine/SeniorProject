@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { FaStar, FaImage, FaTimes, FaTrash, FaRegSmile, FaRegMeh, FaRegFrown } from 'react-icons/fa';
 import Image from 'next/image';
 import ImageUpload from '@/components/ImageUpload';
@@ -16,26 +16,7 @@ export default function ReviewSection({ restaurantId, onLoginClick }) {
   const [userReview, setUserReview] = useState(null);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
 
-  useEffect(() => {
-    fetchReviews();
-    const token = localStorage.getItem('customerToken');
-    const user = localStorage.getItem('customerUser');
-    setIsLoggedIn(!!token);
-    if (user) {
-      setCurrentUser(JSON.parse(user));
-    }
-  }, [restaurantId]);
-
-  useEffect(() => {
-    if (reviews.length > 0 && isLoggedIn) {
-      const token = localStorage.getItem('customerToken');
-      const userId = JSON.parse(atob(token.split('.')[1])).userId;
-      const existingReview = reviews.find(review => review.userId?._id === userId);
-      setUserReview(existingReview);
-    }
-  }, [reviews, isLoggedIn]);
-
-  const fetchReviews = async () => {
+  const fetchReviews = useCallback(async () => {
     setIsLoading(true);
     try {
       const response = await fetch(`/api/restaurants/${restaurantId}/reviews`);
@@ -52,7 +33,26 @@ export default function ReviewSection({ restaurantId, onLoginClick }) {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [restaurantId]);
+
+  useEffect(() => {
+    fetchReviews();
+    const token = localStorage.getItem('customerToken');
+    const user = localStorage.getItem('customerUser');
+    setIsLoggedIn(!!token);
+    if (user) {
+      setCurrentUser(JSON.parse(user));
+    }
+  }, [fetchReviews, restaurantId]);
+
+  useEffect(() => {
+    if (reviews.length > 0 && isLoggedIn) {
+      const token = localStorage.getItem('customerToken');
+      const userId = JSON.parse(atob(token.split('.')[1])).userId;
+      const existingReview = reviews.find(review => review.userId?._id === userId);
+      setUserReview(existingReview);
+    }
+  }, [reviews, isLoggedIn]);
 
   const handleImageUpload = async (e) => {
     const files = Array.from(e.target.files);

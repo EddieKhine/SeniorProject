@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { io } from 'socket.io-client';
 import { FaPaperPlane, FaUser, FaSearch, FaPhone, FaEllipsisV, FaPaperclip } from 'react-icons/fa';
 import jwt from 'jsonwebtoken';
@@ -98,7 +98,7 @@ export default function RestaurantOwnerChat() {
     }
   }, [socket, activeConversation]);
 
-  const fetchConversations = async () => {
+  const fetchConversations = useCallback(async () => {
     try {
       if (!restaurantId) {
         console.log('No restaurant ID available yet');
@@ -132,7 +132,7 @@ export default function RestaurantOwnerChat() {
     } catch (error) {
       console.error('Error fetching conversations:', error);
     }
-  };
+  }, [restaurantId]);
 
   const fetchMessages = async (conversationId) => {
     try {
@@ -235,6 +235,10 @@ export default function RestaurantOwnerChat() {
         return matchesSearch && matchesFilter;
       });
   };
+
+  useEffect(() => {
+    fetchConversations();
+  }, [fetchConversations]);
 
   return (
     <div className="h-full bg-white rounded-2xl shadow-lg overflow-hidden">

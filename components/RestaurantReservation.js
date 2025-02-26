@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { format, parseISO, isToday, isPast } from 'date-fns';
 import { motion } from 'framer-motion';
 import { RiCalendarLine, RiTimeLine, RiUserLine, RiPhoneLine, RiMailLine } from 'react-icons/ri';
@@ -44,7 +44,7 @@ export default function RestaurantReservation({ restaurantId }) {
     }
   }, [selectedDate, filterStatus, timeRange, restaurantId, token]);
 
-  const fetchBookings = async () => {
+  const fetchBookings = useCallback(async () => {
     if (!token || !restaurantId) return;
 
     try {
@@ -99,7 +99,7 @@ export default function RestaurantReservation({ restaurantId }) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedDate, filterStatus, timeRange, restaurantId, token]);
 
   const handleBookingAction = async (bookingId, action) => {
     if (!token) {

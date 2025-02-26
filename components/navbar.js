@@ -151,9 +151,11 @@ export default function Navbar() {
                     </div>
                     <div className="w-10 h-10 rounded-xl overflow-hidden ring-2 ring-[#FF4F18] shadow-lg transition-all duration-300 hover:scale-105">
                       {user.profileImage ? (
-                        <img
-                          src={user.profileImage}
-                          alt="Profile"
+                        <Image 
+                          src={user.profileImage} 
+                          alt="Profile" 
+                          width={40} 
+                          height={40} 
                           className="w-full h-full object-cover"
                         />
                       ) : (
@@ -175,9 +177,11 @@ export default function Navbar() {
                           <div className="flex-shrink-0">
                             <div className="w-16 h-16 rounded-xl overflow-hidden ring-2 ring-[#FF4F18] shadow-lg">
                               {user.profileImage ? (
-                                <img
-                                  src={user.profileImage}
-                                  alt="Profile"
+                                <Image 
+                                  src={user.profileImage} 
+                                  alt="Profile" 
+                                  width={40} 
+                                  height={40} 
                                   className="w-full h-full object-cover"
                                 />
                               ) : (
