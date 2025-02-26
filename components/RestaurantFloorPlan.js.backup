@@ -6,7 +6,7 @@ import { createScene, createFloor } from '@/scripts/floor';
 import { chair, table, roundTable, sofa, create2SeaterTable, create8SeaterTable , plant01, plant02} from '@/scripts/asset';
 import { DoorManager} from '@/scripts/managers/DoorManager';
 import { WindowManager } from '@/scripts/managers/WindowManager';
-import '@/css/loading.css';
+
 
 export default function RestaurantFloorPlan({ token, restaurantId, isCustomerView = false }) {
   const containerRef = useRef(null);
@@ -16,7 +16,6 @@ export default function RestaurantFloorPlan({ token, restaurantId, isCustomerVie
   const controlsRef = useRef(null);
   const [isInitialized, setIsInitialized] = useState(false);
   const [floorplanId, setFloorplanId] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
   const doorManagerRef = useRef(null);
   const windowManagerRef = useRef(null);
@@ -158,10 +157,6 @@ export default function RestaurantFloorPlan({ token, restaurantId, isCustomerVie
         controls.minDistance = 3;
         controls.maxDistance = 50;
         controls.maxPolarAngle = Math.PI / 2;
-
-        // Enable auto-rotation
-        controls.autoRotate = true;
-        controls.autoRotateSpeed = 3;
 
         // Mouse controls
         controls.mouseButtons = {
@@ -342,13 +337,11 @@ export default function RestaurantFloorPlan({ token, restaurantId, isCustomerVie
             }
           } catch (error) {
             console.error('Error loading floorplan:', error);
-          } finally {
-            setIsLoading(false);
           }
         };
 
         if (floorplanId) {
-          await loadFloorplanData();
+          loadFloorplanData();
         }
 
         // Animation Loop
@@ -403,14 +396,10 @@ export default function RestaurantFloorPlan({ token, restaurantId, isCustomerVie
           </button>
         </div>
       </div>
-      <div className="relative w-full h-[80vh] rounded-lg bg-gradient-to-b from-gray-50 to-gray-100 shadow-lg">
-        {isLoading && (
-          <div className="loading-overlay">
-            <img src="/loading/loading.gif" alt="Loading..." className="w-16 h-16" />
-          </div>
-        )}
-        <div ref={containerRef} className="absolute inset-0" />
-      </div>
+      <div 
+        ref={containerRef} 
+        className="w-full h-[80vh] rounded-lg bg-gradient-to-b from-gray-50 to-gray-100 shadow-lg"
+      />
     </div>
   );
 } 
