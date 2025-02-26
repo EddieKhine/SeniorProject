@@ -409,7 +409,7 @@ export default function RestaurantFloorPlan({ token, restaurantId, isCustomerVie
             <img src="/loading/loading.gif" alt="Loading..." className="w-16 h-16" />
           </div>
         )}
-        <div ref={containerRef} className="absolute inset-0" />
+      <div ref={containerRef} className="absolute inset-0" />
       </div>
     </div>
   );

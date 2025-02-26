@@ -715,7 +715,7 @@ export default function PublicFloorPlan({ floorplanData, floorplanId, restaurant
       throw new Error('Payment cancelled');
     }
  
-    // Proceed with booking API call
+    // Proceed with booking API call if payment was successful
     const response = await fetch(`/api/scenes/${floorplanId}/book`, {
         method: 'POST',
         headers: {
@@ -731,25 +731,18 @@ export default function PublicFloorPlan({ floorplanData, floorplanId, restaurant
     }
  
     const result = await response.json();
- 
-    // Immediately update table color to red after successful booking
-    if (table && table.children) {
-        table.traverse((child) => {
-            if (child.isMesh) {
-                if (Array.isArray(child.material)) {
-                    child.material.forEach(mat => {
-                        mat.color.setHex(0xff4f18);
-                        mat.needsUpdate = true;
-                    });
-                } else if (child.material) {
-                    child.material.color.setHex(0xff4f18);
-                    child.material.needsUpdate = true;
-                }
-            }
-        });
+   
+    // Only update the visual appearance without modifying userData
+    if (table && table.children && table.children[0]) {
+        const tableMesh = table.children[0];
+        if (Array.isArray(tableMesh.material)) {
+            tableMesh.material.forEach(mat => mat.color.setHex(0xff0000));
+        } else {
+            tableMesh.material.color.setHex(0xff0000);
+        }
     }
  
-    // Update available tables set
+    // Update available tables after successful booking
     setAvailableTables(prev => {
         const newSet = new Set(prev);
         newSet.delete(tableId);
