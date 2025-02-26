@@ -132,7 +132,7 @@ export default function RestaurantOwnerOnboarding() {
                 </h1>
                 <p className="text-xl text-gray-600 leading-relaxed max-w-2xl">
                   Transform your restaurant management with our innovative platform. 
-                  Let's create a digital presence that matches your restaurant's excellence.
+                  Let&apos;s create a digital presence that matches your restaurant&apos;s excellence.
                 </p>
               </div>
               <div className="grid grid-cols-3 gap-6 mt-12">
@@ -197,7 +197,7 @@ export default function RestaurantOwnerOnboarding() {
           {step === 3 && (
             <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-8">
               <h2 className="text-3xl font-bold text-gray-900 mb-6">Restaurant Floor Plan</h2>
-              <p className="text-gray-600 mb-6">Design your restaurant's layout using our interactive 3D floor plan editor.</p>
+              <p className="text-gray-600 mb-6">Design your restaurant&apos;s layout using our interactive 3D floor plan editor.</p>
               <div className="flex space-x-4">
                 <button
                   onClick={async () => {
