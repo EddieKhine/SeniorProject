@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from 'next/navigation';
 import Head from "next/head";
 import * as THREE from 'three';
@@ -12,7 +12,7 @@ import { FaBoxOpen, FaTrash, FaArrowsAltH, FaSave } from "react-icons/fa";
 import styles from "@/css/ui.css";
 import { chair, table, sofa, roundTable, create2SeaterTable } from '@/scripts/asset';
 
-export default function FloorplanEditor() {
+function FloorplanContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const containerRef = useRef(null);
@@ -353,5 +353,17 @@ export default function FloorplanEditor() {
         </div>
       </div>
     </>
+  );
+}
+
+export default function FloorplanEditor() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#FF4F18]"></div>
+      </div>
+    }>
+      <FloorplanContent />
+    </Suspense>
   );
 }

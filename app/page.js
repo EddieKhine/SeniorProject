@@ -26,6 +26,7 @@ import "@fortawesome/fontawesome-svg-core/styles.css";
 import Toast from "../components/Toast";
 import { motion } from "framer-motion";
 import Image from "next/image";
+import { fetchWithRetry } from '@/utils/fetchWithRetry';
 config.autoAddCss = false;
 
 export default function HomePage() {
@@ -45,7 +46,7 @@ export default function HomePage() {
   useEffect(() => {
     const fetchRestaurants = async () => {
       try {
-        const response = await fetch("/api/restaurants/all");
+        const response = await fetchWithRetry("/api/restaurants/all");
         if (!response.ok) {
           throw new Error(`Network response was not ok: ${response.status}`);
         }
@@ -96,7 +97,7 @@ export default function HomePage() {
       if (!token) return;
 
       try {
-        const response = await fetch('/api/user/favorites', {
+        const response = await fetchWithRetry('/api/user/favorites', {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -152,7 +153,7 @@ export default function HomePage() {
     }
 
     try {
-      const response = await fetch('/api/user/favorites', {
+      const response = await fetchWithRetry('/api/user/favorites', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

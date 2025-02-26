@@ -3,7 +3,7 @@
   "rules": {
     "react/no-unescaped-entities": ["error", {
       "forbid": [">", "}"],
-      "allow": ["'", """, """]
+      "allow": ["'", "'", "'"]
     }],
     "@next/next/no-img-element": "warn",
     "react-hooks/exhaustive-deps": "warn"
