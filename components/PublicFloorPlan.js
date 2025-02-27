@@ -13,6 +13,7 @@ import { toast } from 'react-hot-toast';
 import { createRoot } from 'react-dom/client';
 import PaymentDialog from '@/components/PaymentDialog';
 import gsap from 'gsap';
+import { motion, AnimatePresence } from "framer-motion";
 
 export default function PublicFloorPlan({ floorplanData, floorplanId, restaurantId }) {
   const containerRef = useRef(null);
@@ -31,6 +32,10 @@ export default function PublicFloorPlan({ floorplanData, floorplanId, restaurant
   const [availableTimeSlots, setAvailableTimeSlots] = useState([]);
   const [restaurant, setRestaurant] = useState(null);
   const [availableTables, setAvailableTables] = useState(new Set());
+  const [showInstructions, setShowInstructions] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const loadingOverlayRef = useRef(null);
+  const [sceneLoaded, setSceneLoaded] = useState(false);
 
   const dateRef = useRef(selectedDate);
   const timeRef = useRef(selectedTime);
@@ -105,17 +110,17 @@ export default function PublicFloorPlan({ floorplanData, floorplanId, restaurant
       console.log('Starting scene initialization');
       cleanup();
 
-      // Add loading overlay
+      // Create loading overlay
       const loadingOverlay = document.createElement('div');
-      loadingOverlay.className = 'loading-overlay fade-in';
+      loadingOverlay.className = 'loading-overlay';
       loadingOverlay.innerHTML = `
         <div class="loading-container">
           <div class="loading-spinner"></div>
           <div class="loading-text">Loading Scene...</div>
-          <div class="loading-progress">0%</div>
         </div>
       `;
       containerRef.current.appendChild(loadingOverlay);
+      loadingOverlayRef.current = loadingOverlay;
 
       // Update loading text function
       const updateLoadingProgress = (text, progress) => {
@@ -745,17 +750,35 @@ export default function PublicFloorPlan({ floorplanData, floorplanId, restaurant
             containerRef.current.addEventListener('click', handleClick);
           }
 
-          // Remove loading overlay with fade-out
-          gsap.to(loadingOverlay, {
-            opacity: 0,
-            duration: 0.5,
-            onComplete: () => {
-              if (loadingOverlay.parentNode) {
-                loadingOverlay.parentNode.removeChild(loadingOverlay);
-              }
+          // Handle loading completion
+          const handleLoadingComplete = () => {
+            if (loadingOverlayRef.current && loadingOverlayRef.current.parentNode) {
+              gsap.to(loadingOverlayRef.current, {
+                opacity: 0,
+                duration: 0.5,
+                onComplete: () => {
+                  if (loadingOverlayRef.current?.parentNode) {
+                    loadingOverlayRef.current.parentNode.removeChild(loadingOverlayRef.current);
+                  }
+                  setIsLoading(false);
+                  setSceneLoaded(true);
+                  // Show instructions after loading
+                  setShowInstructions(true);
+                  // Hide instructions after 8 seconds
+                  setTimeout(() => {
+                    setShowInstructions(false);
+                  }, 8000);
+                }
+              });
             }
-          });
+          };
 
+          // Call handleLoadingComplete after scene is ready
+          handleLoadingComplete();
+
+          // After everything is loaded successfully
+          setSceneLoaded(true);
+          
           return () => {
             window.removeEventListener('resize', handleResize);
             renderer.domElement.removeEventListener('webglcontextlost', handleContextLost);
@@ -771,15 +794,7 @@ export default function PublicFloorPlan({ floorplanData, floorplanId, restaurant
         }
       } catch (error) {
         console.error('Error initializing scene:', error);
-        if (loadingOverlay.parentNode) {
-          loadingOverlay.innerHTML = `
-            <div class="loading-error">
-              <div class="error-icon">❌</div>
-              <div class="error-text">Failed to load scene</div>
-            </div>
-          `;
-        }
-        cleanup();
+        setSceneLoaded(false);
       }
     };
 
@@ -1588,11 +1603,62 @@ export default function PublicFloorPlan({ floorplanData, floorplanId, restaurant
 
       {/* Floor Plan Container with Loading State */}
       <div className="floorplan-container" ref={containerRef}>
-        {!floorplanData && (
-          <div className="loading-overlay">
-            <div className="loading-spinner"></div>
-          </div>
-        )}
+        {/* Scene Container */}
+        <div className="scene-container w-full h-full">
+          {!sceneLoaded && (
+            <div className="absolute inset-0 flex items-center justify-center bg-black/50 z-50">
+              <div className="loading-spinner"></div>
+            </div>
+          )}
+        </div>
+
+        {/* Instructions Overlay */}
+        <AnimatePresence>
+          {sceneLoaded && showInstructions && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ delay: 0.5 }}
+              className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 
+                bg-black/80 text-white px-6 py-4 rounded-xl shadow-xl z-50 text-center"
+            >
+              {/* Close button */}
+              <button
+                onClick={() => setShowInstructions(false)}
+                className="absolute top-2 right-2 text-white/60 hover:text-white p-1.5 rounded-full hover:bg-white/10 transition-colors"
+              >
+                <svg 
+                  xmlns="http://www.w3.org/2000/svg" 
+                  className="h-5 w-5" 
+                  viewBox="0 0 20 20" 
+                  fill="currentColor"
+                >
+                  <path 
+                    fillRule="evenodd" 
+                    d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" 
+                    clipRule="evenodd" 
+                  />
+                </svg>
+              </button>
+
+              <motion.div
+                animate={{ scale: [1, 1.1, 1] }}
+                transition={{ duration: 2, repeat: Infinity }}
+                className="text-[#FF4F18] text-4xl mb-3"
+              >
+                👆
+              </motion.div>
+              <h3 className="text-xl font-semibold mb-2">How to Reserve</h3>
+              <p className="text-gray-200">
+                Click on any <span className="text-[#FF4F18] font-semibold">table</span> to make a reservation
+              </p>
+              <p className="text-sm text-gray-400 mt-2">
+                (Red tables are already booked)
+              </p>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </div>
   );
