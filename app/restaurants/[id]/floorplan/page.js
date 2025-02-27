@@ -235,77 +235,36 @@ export default function RestaurantFloorplanPage({ params }) {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Modern Navigation */}
-      <nav className="bg-white border-b border-gray-100 sticky top-0 z-50 backdrop-blur-lg bg-white/80">
-        <div className="max-w-full mx-auto px-6 py-4 flex justify-between items-center">
-          <button 
-            onClick={() => router.push('/')}
-            className="flex items-center gap-2 text-gray-700 hover:text-[#FF4F18] transition-colors"
-          >
-            <FaHome className="text-xl" />
-            <span className="font-medium">Home</span>
-          </button>
-          <div className="flex items-center gap-6">
-            <div className="flex items-center gap-4 text-gray-600">
-              <div className="flex items-center gap-2">
-                <FaStar className="text-[#FF4F18]" />
-                <span>{restaurant.rating || '4.5'}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <FaMapMarkerAlt className="text-[#FF4F18]" />
-                <span>{restaurant.location?.address || 'Location not available'}</span>
-              </div>
-            </div>
-            <div className="flex gap-3">
-              <button
-                onClick={handleShare}
-                className="flex items-center gap-2 px-4 py-2 text-gray-600 hover:text-[#FF4F18] transition-colors"
-              >
-                <FaShare />
-                <span>Share</span>
-              </button>
-              <button
-                onClick={handleSave}
-                className="flex items-center gap-2 px-4 py-2 bg-[#FF4F18] text-white rounded-lg hover:bg-[#FF4F18]/90 transition-all shadow-md hover:shadow-lg"
-              >
-                <FaBookmark />
-                <span>{isSaved ? 'Saved' : 'Save'}</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      </nav>
-
       {/* Main Content with Glass Effect */}
-      <div className="flex h-[calc(100vh-73px)]">
+      <div className="flex flex-col lg:flex-row h-auto lg:h-[calc(100vh-73px)]">
         {/* Left Panel - Restaurant Info */}
-        <div className="w-[400px] bg-white/80 backdrop-blur-sm p-6 border-r border-gray-100 overflow-y-auto shadow-lg">
-          <h1 className="text-2xl font-bold text-[#141517] mb-6">{restaurant.restaurantName}</h1>
+        <div className="w-full lg:w-[400px] bg-white/80 backdrop-blur-sm p-4 lg:p-6 border-b lg:border-r border-gray-100 overflow-y-auto shadow-lg">
+          <h1 className="text-xl lg:text-2xl font-bold text-[#141517] mb-4 lg:mb-6">{restaurant.restaurantName}</h1>
           
           {/* Quick Actions */}
-          <div className="mb-6 space-y-3">
-            <button className="w-full bg-[#FF4F18] text-white rounded-lg py-3 hover:bg-[#FF4F18]/90 transition-all shadow-md hover:shadow-lg">
+          <div className="mb-4 lg:mb-6 space-y-3">
+            <button className="w-full bg-[#FF4F18] text-white rounded-lg py-2.5 lg:py-3 hover:bg-[#FF4F18]/90 transition-all shadow-md hover:shadow-lg text-sm lg:text-base">
               Make a Reservation
             </button>
           </div>
 
           {/* Restaurant Details with Cards */}
-          <div className="space-y-6">
+          <div className="space-y-4 lg:space-y-6">
             {/* Menu Images Card */}
-            <div className="bg-white rounded-xl p-4 shadow-sm hover:shadow-md transition-all">
-              <div className="flex items-center gap-3 text-[#141517] mb-4">
+            <div className="bg-white rounded-xl p-3 lg:p-4 shadow-sm hover:shadow-md transition-all">
+              <div className="flex items-center gap-2 lg:gap-3 text-[#141517] mb-3 lg:mb-4">
                 <MdRestaurantMenu className="text-[#FF4F18]" />
-                <span className="font-medium">Menu</span>
+                <span className="font-medium text-sm lg:text-base">Menu</span>
               </div>
               {restaurant.images?.menu && restaurant.images.menu.length > 0 ? (
-                <div className="space-y-4">
+                <div className="space-y-3 lg:space-y-4">
                   <div className="relative aspect-[3/4] rounded-lg overflow-hidden">
                     <Image
                       src={restaurant.images.menu[currentMenuIndex]}
                       alt={`Menu page ${currentMenuIndex + 1}`}
                       fill
                       className="object-cover"
-                      sizes="(max-width: 400px) 100vw"
+                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 400px"
                     />
                     {/* Navigation Buttons */}
                     <div className="absolute inset-0 flex items-center justify-between p-2">
@@ -314,35 +273,35 @@ export default function RestaurantFloorplanPage({ params }) {
                           e.preventDefault();
                           handleMenuNav('prev');
                         }}
-                        className="p-2 rounded-full bg-black/30 text-white hover:bg-black/50 
+                        className="p-1.5 lg:p-2 rounded-full bg-black/30 text-white hover:bg-black/50 
                           transition-all duration-200 transform hover:scale-110"
                       >
-                        <FaChevronLeft className="text-xl" />
+                        <FaChevronLeft className="text-base lg:text-xl" />
                       </button>
                       <button
                         onClick={(e) => {
                           e.preventDefault();
                           handleMenuNav('next');
                         }}
-                        className="p-2 rounded-full bg-black/30 text-white hover:bg-black/50 
+                        className="p-1.5 lg:p-2 rounded-full bg-black/30 text-white hover:bg-black/50 
                           transition-all duration-200 transform hover:scale-110"
                       >
-                        <FaChevronRight className="text-xl" />
+                        <FaChevronRight className="text-base lg:text-xl" />
                       </button>
                     </div>
                     {/* Image Counter */}
                     <div className="absolute bottom-2 right-2 bg-black/50 text-white px-2 
-                      py-1 rounded-full text-sm">
+                      py-1 rounded-full text-xs sm:text-sm">
                       {currentMenuIndex + 1} / {restaurant.images.menu.length}
                     </div>
                   </div>
                   {/* Thumbnail Navigation */}
-                  <div className="flex gap-2 overflow-x-auto pb-2">
+                  <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
                     {restaurant.images.menu.map((url, index) => (
                       <button
                         key={index}
                         onClick={() => setCurrentMenuIndex(index)}
-                        className={`relative w-16 h-24 flex-shrink-0 rounded-lg overflow-hidden 
+                        className={`relative w-14 h-20 sm:w-16 sm:h-24 flex-shrink-0 rounded-lg overflow-hidden 
                           ${currentMenuIndex === index ? 'ring-2 ring-[#FF4F18]' : ''}`}
                       >
                         <Image
@@ -357,33 +316,33 @@ export default function RestaurantFloorplanPage({ params }) {
                   </div>
                   <button 
                     onClick={() => window.open(restaurant.images.menu[currentMenuIndex], '_blank')}
-                    className="w-full text-sm text-[#FF4F18] hover:text-[#FF4F18]/80 transition-colors"
+                    className="w-full text-xs sm:text-sm text-[#FF4F18] hover:text-[#FF4F18]/80 transition-colors"
                   >
                     View full size
                   </button>
                 </div>
               ) : (
-                <p className="text-gray-500 text-sm pl-8">
+                <p className="text-gray-500 text-sm pl-6 lg:pl-8">
                   Menu images not available
                 </p>
               )}
             </div>
 
             {/* Gallery Images Card */}
-            <div className="bg-white rounded-xl p-4 shadow-sm hover:shadow-md transition-all">
-              <div className="flex items-center gap-3 text-[#141517] mb-4">
+            <div className="bg-white rounded-xl p-3 lg:p-4 shadow-sm hover:shadow-md transition-all">
+              <div className="flex items-center gap-2 lg:gap-3 text-[#141517] mb-3 lg:mb-4">
                 <RiImageAddLine className="text-[#FF4F18]" />
-                <span className="font-medium">Gallery</span>
+                <span className="font-medium text-sm lg:text-base">Gallery</span>
               </div>
               {restaurant.images?.gallery && restaurant.images.gallery.length > 0 ? (
-                <div className="space-y-4">
+                <div className="space-y-3 lg:space-y-4">
                   <div className="relative aspect-[16/9] rounded-lg overflow-hidden">
                     <Image
                       src={restaurant.images.gallery[currentGalleryIndex]}
                       alt={`Gallery image ${currentGalleryIndex + 1}`}
                       fill
                       className="object-cover"
-                      sizes="(max-width: 400px) 100vw"
+                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 400px"
                     />
                     {/* Navigation Buttons */}
                     <div className="absolute inset-0 flex items-center justify-between p-2">
@@ -392,35 +351,35 @@ export default function RestaurantFloorplanPage({ params }) {
                           e.preventDefault();
                           handleGalleryNav('prev');
                         }}
-                        className="p-2 rounded-full bg-black/30 text-white hover:bg-black/50 
+                        className="p-1.5 lg:p-2 rounded-full bg-black/30 text-white hover:bg-black/50 
                           transition-all duration-200 transform hover:scale-110"
                       >
-                        <FaChevronLeft className="text-xl" />
+                        <FaChevronLeft className="text-base lg:text-xl" />
                       </button>
                       <button
                         onClick={(e) => {
                           e.preventDefault();
                           handleGalleryNav('next');
                         }}
-                        className="p-2 rounded-full bg-black/30 text-white hover:bg-black/50 
+                        className="p-1.5 lg:p-2 rounded-full bg-black/30 text-white hover:bg-black/50 
                           transition-all duration-200 transform hover:scale-110"
                       >
-                        <FaChevronRight className="text-xl" />
+                        <FaChevronRight className="text-base lg:text-xl" />
                       </button>
                     </div>
                     {/* Image Counter */}
                     <div className="absolute bottom-2 right-2 bg-black/50 text-white px-2 
-                      py-1 rounded-full text-sm">
+                      py-1 rounded-full text-xs sm:text-sm">
                       {currentGalleryIndex + 1} / {restaurant.images.gallery.length}
                     </div>
                   </div>
                   {/* Thumbnail Navigation */}
-                  <div className="flex gap-2 overflow-x-auto pb-2">
+                  <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
                     {restaurant.images.gallery.map((url, index) => (
                       <button
                         key={index}
                         onClick={() => setCurrentGalleryIndex(index)}
-                        className={`relative w-16 h-16 flex-shrink-0 rounded-lg overflow-hidden 
+                        className={`relative w-14 h-14 sm:w-16 sm:h-16 flex-shrink-0 rounded-lg overflow-hidden 
                           ${currentGalleryIndex === index ? 'ring-2 ring-[#FF4F18]' : ''}`}
                       >
                         <Image
@@ -434,66 +393,63 @@ export default function RestaurantFloorplanPage({ params }) {
                     ))}
                   </div>
                   <button 
-                    onClick={() => {
-                      // Add logic to open a full-screen gallery view
-                      window.open(restaurant.images.gallery[currentGalleryIndex], '_blank');
-                    }}
-                    className="w-full text-sm text-[#FF4F18] hover:text-[#FF4F18]/80 transition-colors"
+                    onClick={() => window.open(restaurant.images.gallery[currentGalleryIndex], '_blank')}
+                    className="w-full text-xs sm:text-sm text-[#FF4F18] hover:text-[#FF4F18]/80 transition-colors"
                   >
                     View full size
                   </button>
                 </div>
               ) : (
-                <p className="text-gray-500 text-sm pl-8">
+                <p className="text-gray-500 text-sm pl-6 lg:pl-8">
                   No gallery images available
                 </p>
               )}
             </div>
 
             {/* Description Card */}
-            <div className="bg-white rounded-xl p-4 shadow-sm hover:shadow-md transition-all">
-              <div className="flex items-center gap-3 text-[#141517] mb-2">
+            <div className="bg-white rounded-xl p-3 lg:p-4 shadow-sm hover:shadow-md transition-all">
+              <div className="flex items-center gap-2 lg:gap-3 text-[#141517] mb-2">
                 <FaUtensils className="text-[#FF4F18]" />
-                <span className="font-medium">About</span>
+                <span className="font-medium text-sm lg:text-base">About</span>
               </div>
-              <p className="text-gray-600 pl-8">
+              <p className="text-gray-600 text-sm lg:text-base pl-6 lg:pl-8">
                 {restaurant.description || 'No description available'}
               </p>
             </div>
 
             {/* Hours Card */}
-            <div className="bg-white rounded-xl p-4 shadow-sm hover:shadow-md transition-all">
-              <div className="flex items-center gap-3 text-[#141517] mb-2">
+            <div className="bg-white rounded-xl p-3 lg:p-4 shadow-sm hover:shadow-md transition-all">
+              <div className="flex items-center gap-2 lg:gap-3 text-[#141517] mb-2">
                 <FaClock className="text-[#FF4F18]" />
-                <span className="font-medium">Opening Hours</span>
+                <span className="font-medium text-sm lg:text-base">Opening Hours</span>
               </div>
-              <p className="text-gray-600 pl-8 whitespace-pre-line">
+              <p className="text-gray-600 text-sm lg:text-base pl-6 lg:pl-8 whitespace-pre-line">
                 {formatOpeningHours(restaurant.openingHours)}
               </p>
             </div>
 
             {/* Contact Card */}
-            <div className="bg-white rounded-xl p-4 shadow-sm hover:shadow-md transition-all">
-              <div className="flex items-center gap-3 text-[#141517] mb-2">
+            <div className="bg-white rounded-xl p-3 lg:p-4 shadow-sm hover:shadow-md transition-all">
+              <div className="flex items-center gap-2 lg:gap-3 text-[#141517] mb-2">
                 <FaPhone className="text-[#FF4F18]" />
-                <span className="font-medium">Contact</span>
+                <span className="font-medium text-sm lg:text-base">Contact</span>
               </div>
-              <p className="text-gray-600 pl-8">
+              <p className="text-gray-600 text-sm lg:text-base pl-6 lg:pl-8">
                 {restaurant.phone || 'Contact not available'}
               </p>
             </div>
 
             {/* Map Card */}
             {restaurant.location?.coordinates && (
-              <div className="bg-white rounded-xl p-4 shadow-sm hover:shadow-md transition-all">
-                <div className="flex items-center gap-3 text-[#141517] mb-2">
+              <div className="bg-white rounded-xl p-3 lg:p-4 shadow-sm hover:shadow-md transition-all">
+                <div className="flex items-center gap-2 lg:gap-3 text-[#141517] mb-2">
                   <FaMapMarkerAlt className="text-[#FF4F18]" />
-                  <span className="font-medium">Location</span>
+                  <span className="font-medium text-sm lg:text-base">Location</span>
                 </div>
-                <p className="text-gray-600 pl-8 mb-3">
+                <p className="text-gray-600 text-sm lg:text-base pl-6 lg:pl-8 mb-3">
                   {restaurant.location.address}
                 </p>
-                <div className="h-[200px] rounded-lg overflow-hidden">
+                <div className="h-[150px] lg:h-[200px] rounded-lg overflow-hidden">
                   <GoogleMap
                     mapContainerStyle={{ width: '100%', height: '100%' }}
                     center={restaurant.location.coordinates}
@@ -508,11 +464,11 @@ export default function RestaurantFloorplanPage({ params }) {
         </div>
 
         {/* Main Panel - Floor Plan and Menu */}
-        <div className="flex-1 p-6 bg-gray-50 overflow-y-auto">
+        <div className="flex-1 p-4 lg:p-6 bg-gray-50 overflow-y-auto">
           {/* Floorplan Section */}
-          <div className="bg-white rounded-xl shadow-lg overflow-hidden mb-8">
-            <h2 className="text-xl font-bold p-4 text-[#FF4F18] border-b">Floor Plan</h2>
-            <div className="p-6">
+          <div className="bg-white rounded-xl shadow-lg overflow-hidden mb-6 lg:mb-8">
+            <h2 className="text-lg lg:text-xl font-bold p-3 lg:p-4 text-[#FF4F18] border-b">Floor Plan</h2>
+            <div className="p-4 lg:p-6">
               {restaurant.floorplanData ? (
                 <PublicFloorPlan 
                   floorplanData={restaurant.floorplanData}
@@ -520,29 +476,77 @@ export default function RestaurantFloorplanPage({ params }) {
                   restaurantId={restaurant._id}
                 />
               ) : (
-                <div className="h-full flex flex-col items-center justify-center">
-                  <FaUtensils className="text-4xl text-[#FF4F18] mb-4" />
-                  <p className="text-gray-500">Floor plan is not available</p>
+                <div className="h-full flex flex-col items-center justify-center py-8 lg:py-12">
+                  <FaUtensils className="text-3xl lg:text-4xl text-[#FF4F18] mb-3 lg:mb-4" />
+                  <p className="text-gray-500 text-sm lg:text-base">Floor plan is not available</p>
                 </div>
               )}
             </div>
           </div>
 
           {/* Reviews Section */}
-          <div className="bg-white rounded-xl shadow-lg p-6">
+          <div className="bg-white rounded-xl shadow-lg p-4 lg:p-6">
             <ReviewSection restaurantId={restaurantId} />
           </div>
         </div>
       </div>
 
+      {/* Chat Button */}
       <div className="fixed bottom-4 right-4 z-50">
         <button
           onClick={() => setShowChat(!showChat)}
-          className="bg-[#FF4F18] text-white p-4 rounded-full shadow-lg hover:bg-[#FF4F18]/90 transition-all duration-200"
+          className="bg-[#FF4F18] text-white p-3 lg:p-4 rounded-full shadow-lg hover:bg-[#FF4F18]/90 transition-all duration-200"
         >
-          <FaComments className="text-2xl" />
+          <FaComments className="text-xl lg:text-2xl" />
         </button>
       </div>
+
+      {/* Navigation */}
+      <nav className="bg-white border-b border-gray-100 sticky top-0 z-50 backdrop-blur-lg bg-white/80">
+        <div className="max-w-full mx-auto px-4 lg:px-6 py-3 lg:py-4">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 lg:gap-0">
+            <button 
+              onClick={() => router.push('/')}
+              className="flex items-center gap-2 text-gray-700 hover:text-[#FF4F18] transition-colors"
+            >
+              <FaHome className="text-lg lg:text-xl" />
+              <span className="font-medium text-sm lg:text-base">Home</span>
+            </button>
+            
+            <div className="flex flex-col lg:flex-row items-start lg:items-center gap-3 lg:gap-6">
+              <div className="flex flex-wrap items-center gap-3 lg:gap-4 text-gray-600 text-sm lg:text-base">
+                <div className="flex items-center gap-2">
+                  <FaStar className="text-[#FF4F18]" />
+                  <span>{restaurant.rating || '4.5'}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <FaMapMarkerAlt className="text-[#FF4F18]" />
+                  <span className="truncate max-w-[200px] lg:max-w-none">
+                    {restaurant.location?.address || 'Location not available'}
+                  </span>
+                </div>
+              </div>
+              
+              <div className="flex gap-3">
+                <button
+                  onClick={handleShare}
+                  className="flex items-center gap-2 px-3 lg:px-4 py-2 text-gray-600 hover:text-[#FF4F18] transition-colors text-sm lg:text-base"
+                >
+                  <FaShare />
+                  <span>Share</span>
+                </button>
+                <button
+                  onClick={handleSave}
+                  className="flex items-center gap-2 px-3 lg:px-4 py-2 bg-[#FF4F18] text-white rounded-lg hover:bg-[#FF4F18]/90 transition-all shadow-md hover:shadow-lg text-sm lg:text-base"
+                >
+                  <FaBookmark />
+                  <span>{isSaved ? 'Saved' : 'Save'}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </nav>
 
       {showChat && restaurant && (
         <CustomerChat

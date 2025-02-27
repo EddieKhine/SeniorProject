@@ -141,42 +141,42 @@ export default function CustomerChat({
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: 20 }}
-        className="fixed bottom-20 right-6 w-96 h-[600px] bg-white rounded-2xl shadow-2xl flex flex-col z-[1000] overflow-hidden"
+        className="fixed bottom-16 sm:bottom-20 right-2 sm:right-6 w-[calc(100%-1rem)] sm:w-[400px] max-w-[400px] h-[500px] sm:h-[600px] bg-white rounded-2xl shadow-2xl flex flex-col z-[1000] overflow-hidden"
       >
         {/* Header */}
-        <div className="p-4 bg-[#FF4F18] text-white flex justify-between items-center">
+        <div className="p-3 sm:p-4 bg-[#FF4F18] text-white flex justify-between items-center">
           <div>
-            <h3 className="text-lg font-semibold">{restaurantName}</h3>
-            <p className="text-sm text-white/80">Chat Support</p>
+            <h3 className="text-base sm:text-lg font-semibold">{restaurantName}</h3>
+            <p className="text-xs sm:text-sm text-white/80">Chat Support</p>
           </div>
           <button 
             onClick={() => setShowChat(false)}
-            className="p-2 hover:bg-white/10 rounded-full transition-colors"
+            className="p-1.5 sm:p-2 hover:bg-white/10 rounded-full transition-colors"
           >
-            <FaTimes className="text-xl" />
+            <FaTimes className="text-lg sm:text-xl" />
           </button>
         </div>
 
         {/* Messages */}
-        <div className="flex-1 overflow-y-auto p-4 bg-gray-50">
+        <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-3 sm:space-y-4">
           {messages.map((msg, index) => (
             <div
               key={index}
-              className={`mb-4 ${
+              className={`mb-2 sm:mb-4 ${
                 msg.senderType === 'customer' ? 'text-right' : 'text-left'
               }`}
             >
               <div
-                className={`inline-block p-3 rounded-2xl max-w-[80%] ${
+                className={`inline-block p-2.5 sm:p-3 rounded-2xl max-w-[80%] ${
                   msg.senderType === 'customer'
                     ? 'bg-[#FF4F18] text-white'
                     : 'bg-white shadow-md'
                 }`}
               >
-                <p className={msg.senderType === 'customer' ? 'text-white' : 'text-gray-800'}>
+                <p className={`text-sm sm:text-base ${msg.senderType === 'customer' ? 'text-white' : 'text-gray-800'}`}>
                   {msg.content || msg.message}
                 </p>
-                <span className={`text-xs ${
+                <span className={`text-[10px] sm:text-xs ${
                   msg.senderType === 'customer' ? 'text-white/70' : 'text-gray-500'
                 }`}>
                   {msg.createdAt ? new Date(msg.createdAt).toLocaleTimeString() : 'Just now'}
@@ -188,21 +188,21 @@ export default function CustomerChat({
         </div>
 
         {/* Input Area */}
-        <div className="p-4 bg-white text-black border-t">
+        <div className="p-3 sm:p-4 border-t border-gray-100">
           <div className="flex space-x-2">
             <input
               type="text"
               value={newMessage}
               onChange={(e) => setNewMessage(e.target.value)}
               onKeyPress={handleKeyPress}
-              className="flex-1 p-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#FF4F18]/20 focus:border-[#FF4F18]"
+              className="flex-1 p-2.5 sm:p-3 text-sm sm:text-base border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#FF4F18]/20 focus:border-[#FF4F18]"
               placeholder="Type your message..."
             />
             <button
               onClick={sendMessage}
-              className="p-3 bg-[#FF4F18] text-white rounded-xl hover:bg-[#FF4F18]/90 transition-colors"
+              className="p-2.5 sm:p-3 bg-[#FF4F18] text-white rounded-xl hover:bg-[#FF4F18]/90 transition-colors"
             >
-              <FaPaperPlane />
+              <FaPaperPlane className="text-sm sm:text-base" />
             </button>
           </div>
         </div>
