@@ -50,10 +50,10 @@ export default function RestaurantInformation({ restaurant, onEditClick, onUpdat
   console.log('RestaurantInformation render:', { isEditing, restaurant });
 
   if (isEditing) {
-    return (
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
+  return (
+    <motion.div 
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         className="bg-white rounded-2xl shadow-xl p-8"
       >
@@ -138,7 +138,7 @@ export default function RestaurantInformation({ restaurant, onEditClick, onUpdat
               </div>
             ))}
           </div>
-        </div>
+          </div>
 
         {/* Location */}
         {restaurant.location && (
@@ -357,7 +357,7 @@ export default function RestaurantInformation({ restaurant, onEditClick, onUpdat
               </ImageUpload>
             </div>
           )}
-        </div>
+          </div>
       </div>
     </div>
   );

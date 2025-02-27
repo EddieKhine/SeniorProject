@@ -19,7 +19,8 @@ import {
   faBurger,
   faPizzaSlice,
   faWineGlass,
-  faChevronDown
+  faChevronDown,
+  faArrowUp
 } from "@fortawesome/free-solid-svg-icons";
 import { config } from "@fortawesome/fontawesome-svg-core";
 import "@fortawesome/fontawesome-svg-core/styles.css";
@@ -41,6 +42,9 @@ export default function HomePage() {
   const [cuisineTypes, setCuisineTypes] = useState([]);
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const [recentSearches, setRecentSearches] = useState([]);
+  const [showBackToTop, setShowBackToTop] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -82,6 +86,7 @@ export default function HomePage() {
     // Handle scroll position for parallax effects
     const handleScroll = () => {
       setScrollPosition(window.scrollY);
+      setShowBackToTop(window.scrollY > 500);
     };
     window.addEventListener('scroll', handleScroll);
 
@@ -209,27 +214,48 @@ export default function HomePage() {
     return icons[cuisine] || icons.default;
   };
 
+  const handleSearch = (e) => {
+    e.preventDefault();
+    if (searchTerm.trim()) {
+      // Save to recent searches
+      setRecentSearches(prev => {
+        const updated = [searchTerm, ...prev.filter(s => s !== searchTerm)].slice(0, 5);
+        localStorage.setItem('recentSearches', JSON.stringify(updated));
+        return updated;
+      });
+      // Perform search (you already have the filter logic)
+    }
+  };
+
+  useEffect(() => {
+    const saved = localStorage.getItem('recentSearches');
+    if (saved) {
+      setRecentSearches(JSON.parse(saved));
+    }
+  }, []);
+
   return (
     <>
       {/* Loading Screen */}
       {isLoading && (
         <div className="fixed inset-0 bg-white z-50 flex flex-col items-center justify-center">
           <div className="relative">
-            {/* Plate animation */}
-            <div className="w-32 h-32 rounded-full border-4 border-gray-200 relative">
-              {/* Fork and knife animation */}
-              <div className="absolute inset-0 animate-spin">
-                <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
-                  <div className="flex items-center gap-4">
-                    <div className="w-1 h-16 bg-orange-500 rounded-full transform -rotate-45"></div>
-                    <div className="w-1 h-16 bg-orange-500 rounded-full transform rotate-45"></div>
-                  </div>
-                </div>
-              </div>
-            </div>
+            {/* Replace the current loading animation with a more polished one */}
+            <motion.div 
+              animate={{ rotate: 360 }}
+              transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
+              className="w-32 h-32 rounded-full border-t-4 border-[#FF4F18] border-r-4 border-r-transparent"
+            />
           </div>
           <div className="mt-8 text-lg font-medium text-gray-600">
-            <span className="inline-block animate-pulse">Preparing your table...</span>
+            <span className="inline-block">Discovering culinary experiences</span>
+            <motion.span
+              animate={{ opacity: [0, 1, 0] }}
+              transition={{ duration: 1.5, repeat: Infinity }}
+              className="ml-1"
+            >
+              ...
+            </motion.span>
           </div>
         </div>
       )}
@@ -268,35 +294,35 @@ export default function HomePage() {
           </div>
 
           {/* Hero Content with Enhanced Typography and Closer Spacing */}
-          <div className="relative z-20 h-full container mx-auto px-6 flex flex-col justify-end pb-36">
+          <div className="relative z-20 h-full container mx-auto px-4 sm:px-6 flex flex-col justify-end pb-20 sm:pb-36">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8 }}
-              className="max-w-3xl space-y-6"
+              className="max-w-3xl space-y-4 sm:space-y-6"
             >
               <div className="space-y-2">
-                <h1 className="text-5xl md:text-6xl font-bold">
+                <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold">
                   <span className="text-[#FF4F18] block mb-2">CHOOSE, CLICK,</span>
                   <span className="text-[#FF4F18]"> and RESERVE</span>
-                  <span className="text-white text-3xl md:text-4xl block mt-4 font-normal">
+                  <span className="text-white text-2xl sm:text-3xl md:text-4xl block mt-4 font-normal">
                     your seat on an 
                   </span>
-                  <span className="text-white text-3xl md:text-5xl block mt-4 font-normal">
+                  <span className="text-white text-2xl sm:text-3xl md:text-5xl block mt-4 font-normal">
                     Interactive 3D Floorplan
                   </span>
                 </h1>
               </div>
 
-              {/* Enhanced Search Bar with White Theme */}
+              {/* Enhanced Search Bar with responsive design */}
               <motion.div 
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.3 }}
-                className="bg-white p-2 rounded-2xl shadow-2xl "
+                className="bg-white p-2 rounded-2xl shadow-2xl"
               >
-                <div className="flex items-center gap-4">
-                  <div className="flex-1 relative">
+                <div className="flex flex-col sm:flex-row items-center gap-4">
+                  <div className="flex-1 relative w-full">
                     <FontAwesomeIcon
                       icon={faSearch}
                       className="absolute left-4 top-1/2 transform -translate-y-1/2 text-[#141517]/40"
@@ -314,7 +340,7 @@ export default function HomePage() {
                   <motion.button
                     whileHover={{ scale: 1.02, backgroundColor: '#FF6B18' }}
                     whileTap={{ scale: 0.98 }}
-                    className="py-4 px-8 bg-[#FF4F18] text-white font-semibold rounded-xl 
+                    className="w-full sm:w-auto py-4 px-8 bg-[#FF4F18] text-white font-semibold rounded-xl 
                              shadow-lg shadow-[#FF4F18]/20 transition-all duration-300 
                              whitespace-nowrap hover:shadow-xl"
                   >
@@ -486,6 +512,31 @@ export default function HomePage() {
             </motion.div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {filteredRestaurants.length === 0 && !isLoading && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="col-span-full py-16 flex flex-col items-center justify-center text-center"
+                >
+                  <div className="w-24 h-24 mb-6 text-gray-300">
+                    <FontAwesomeIcon icon={faUtensils} className="text-5xl" />
+                  </div>
+                  <h3 className="text-xl font-medium text-gray-700 mb-2">No restaurants found</h3>
+                  <p className="text-gray-500 max-w-md mb-6">
+                    We couldn't find any restaurants matching your search criteria. Try adjusting your filters or search term.
+                  </p>
+                  <button
+                    onClick={() => {
+                      setSearchTerm("");
+                      setSelectedCategory("");
+                      setSelectedLocation("");
+                    }}
+                    className="px-6 py-2 bg-[#FF4F18] text-white rounded-lg hover:bg-[#FF6B18] transition-colors"
+                  >
+                    Clear All Filters
+                  </button>
+                </motion.div>
+              )}
               {limitedRestaurants.map((restaurant, index) => (
                 <motion.div
                   key={restaurant._id}
@@ -530,6 +581,7 @@ export default function HomePage() {
                         e.stopPropagation();
                         handleFavorite(restaurant);
                       }}
+                      aria-label={isFavorite(restaurant._id) ? "Remove from favorites" : "Add to favorites"}
                       className="absolute top-4 right-4 z-20 p-3 bg-white/90 backdrop-blur-sm rounded-full shadow-lg"
                     >
                       <FontAwesomeIcon
@@ -579,6 +631,19 @@ export default function HomePage() {
       </main>
 
       <Toast show={showToast} message={toastMessage} />
+
+      {showBackToTop && (
+        <motion.button
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: 20 }}
+          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+          className="fixed bottom-8 right-8 p-4 bg-[#FF4F18] text-white rounded-full shadow-lg z-40
+                    hover:bg-[#FF6B18] transition-colors"
+        >
+          <FontAwesomeIcon icon={faArrowUp} />
+        </motion.button>
+      )}
     </>
   );
 }

@@ -2,15 +2,17 @@
 
 import { useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faEnvelope, faLock, faUtensils } from "@fortawesome/free-solid-svg-icons";
+import { faEnvelope, faLock, faUtensils, faArrowRight } from "@fortawesome/free-solid-svg-icons";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
+import Image from "next/image";
 
 export default function RestaurantOwnerLoginModal({ isOpen, onClose, onLoginSuccess }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
   const router = useRouter();
 
   const handleLogin = async (e) => {
@@ -59,131 +61,222 @@ export default function RestaurantOwnerLoginModal({ isOpen, onClose, onLoginSucc
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+        className="fixed inset-0 bg-black/70 backdrop-blur-md flex items-center justify-center z-50 p-4"
         onClick={onClose}
       >
         <motion.div
-          initial={{ scale: 0.95, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          exit={{ scale: 0.95, opacity: 0 }}
+          initial={{ scale: 0.95, opacity: 0, y: 20 }}
+          animate={{ scale: 1, opacity: 1, y: 0 }}
+          exit={{ scale: 0.95, opacity: 0, y: 20 }}
+          transition={{ type: "spring", damping: 25, stiffness: 300 }}
           onClick={(e) => e.stopPropagation()}
-          className="bg-white rounded-3xl shadow-xl w-full max-w-md overflow-hidden"
+          className="bg-white rounded-3xl shadow-2xl w-full max-w-5xl overflow-hidden flex flex-col md:flex-row"
         >
-          {/* Header */}
-          <div className="bg-gradient-to-r from-[#FF4F18] to-[#FF8F6B] p-8 text-center relative">
-            <button
-              onClick={onClose}
-              className="absolute right-4 top-4 text-white/80 hover:text-white transition-colors duration-200"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-6 w-6"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
+          {/* Left Side - Content Image */}
+          <div className="w-full md:w-1/2 relative overflow-hidden hidden md:block">
+            <div className="absolute inset-0 bg-gradient-to-tr from-[#141517]/80 to-transparent z-10" />
+            <Image
+              src="/images/body-images/alexander-fae-TivEEYzzhik-unsplash (1).jpg"
+              alt="Restaurant ambiance"
+              fill
+              className="object-cover"
+            />
+            <div className="absolute inset-0 z-20 p-12 flex flex-col justify-end">
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              </svg>
-            </button>
-            <motion.div
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ type: "spring", stiffness: 200, damping: 15 }}
-              className="w-16 h-16 bg-white/10 rounded-2xl flex items-center justify-center mx-auto mb-4"
-            >
-              <FontAwesomeIcon 
-                icon={faUtensils} 
-                className="text-white text-2xl"
-              />
-            </motion.div>
-            <h2 className="text-2xl font-bold text-white mb-2">
-              Welcome Back
-            </h2>
-            <p className="text-white/90 text-sm">
-              Login to manage your restaurant
-            </p>
+                <h3 className="text-white text-3xl font-bold mb-4">Elevate Your Restaurant Experience</h3>
+                <p className="text-white/90 mb-6">Access powerful tools to manage your restaurant and delight your customers.</p>
+                <div className="flex space-x-2">
+                  {[1, 2, 3].map((dot) => (
+                    <motion.div 
+                      key={dot}
+                      className="w-3 h-3 rounded-full bg-white/30"
+                      animate={{ 
+                        backgroundColor: dot === 1 ? 'rgba(255, 79, 24, 0.8)' : 'rgba(255, 255, 255, 0.3)'
+                      }}
+                      transition={{ duration: 0.5, repeat: Infinity, repeatType: "reverse" }}
+                    />
+                  ))}
+                </div>
+              </motion.div>
+            </div>
           </div>
 
-          <form onSubmit={handleLogin} className="p-8 space-y-6 bg-gray-50">
-            <div className="space-y-4">
-              <div className="relative group">
-                <FontAwesomeIcon 
-                  icon={faEnvelope} 
-                  className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 group-focus-within:text-[#FF4F18] transition-colors" 
-                />
-                <input 
-                  type="email" 
-                  value={email} 
-                  onChange={(e) => setEmail(e.target.value)} 
-                  placeholder="Email" 
-                  required 
-                  className="w-full pl-12 pr-4 py-3 bg-white border border-gray-200 rounded-xl text-gray-700 placeholder-gray-400 focus:ring-2 focus:ring-[#FF4F18]/20 focus:border-[#FF4F18] transition-all outline-none" 
-                />
-              </div>
-
-              <div className="relative group">
-                <FontAwesomeIcon 
-                  icon={faLock} 
-                  className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 group-focus-within:text-[#FF4F18] transition-colors" 
-                />
-                <input 
-                  type="password" 
-                  value={password} 
-                  onChange={(e) => setPassword(e.target.value)} 
-                  placeholder="Password" 
-                  required 
-                  className="w-full pl-12 pr-4 py-3 bg-white border border-gray-200 rounded-xl text-gray-700 placeholder-gray-400 focus:ring-2 focus:ring-[#FF4F18]/20 focus:border-[#FF4F18] transition-all outline-none" 
-                />
-              </div>
+          {/* Right Side - Login Form */}
+          <div className="w-full md:w-1/2 p-8 md:p-12">
+            <div className="flex justify-between items-center mb-8">
+              <motion.div
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                className="flex items-center"
+              >
+                <div className="w-10 h-10 bg-gradient-to-r from-[#FF4F18] to-[#FF8F6B] rounded-xl flex items-center justify-center mr-3">
+                  <FontAwesomeIcon icon={faUtensils} className="text-white" />
+                </div>
+                <h2 className="text-2xl font-bold text-gray-900">Restaurant Portal</h2>
+              </motion.div>
+              <motion.button
+                initial={{ opacity: 0, rotate: -90 }}
+                animate={{ opacity: 1, rotate: 0 }}
+                onClick={onClose}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+                whileHover={{ rotate: 90 }}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </motion.button>
             </div>
 
-            {error && (
-              <motion.p 
-                initial={{ opacity: 0 }} 
-                animate={{ opacity: 1 }} 
-                className="text-center p-4 rounded-xl bg-red-50 text-red-500 border border-red-100"
-              >
-                {error}
-              </motion.p>
-            )}
-
-            <motion.button 
-              type="submit" 
-              disabled={loading}
-              className="w-full py-3 bg-[#FF4F18] text-white font-semibold rounded-xl hover:bg-[#FF4F18]/90 transition-all transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 shadow-lg shadow-[#FF4F18]/20"
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              className="mb-8"
             >
-              {loading ? (
-                <span className="flex items-center justify-center">
-                  <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  Logging in...
-                </span>
-              ) : "Login"}
-            </motion.button>
+              <h3 className="text-3xl font-bold text-gray-900 mb-2">Welcome Back</h3>
+              <p className="text-gray-500">Sign in to manage your restaurant</p>
+            </motion.div>
 
-            <p className="text-center text-gray-600 text-sm">
-              Don&apos;t have an account?{" "}
-              <button
-                type="button"
-                onClick={() => {
-                  onClose();
-                  router.push('/restaurant-owner/register');
-                }}
-                className="text-[#FF4F18] hover:text-[#FF4F18]/80 font-semibold transition-colors"
+            <form onSubmit={handleLogin} className="space-y-6">
+              <motion.div 
+                className="space-y-4"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
               >
-                Register here
-              </button>
-            </p>
-          </form>
+                <div className="relative group">
+                  <FontAwesomeIcon 
+                    icon={faEnvelope} 
+                    className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 group-focus-within:text-[#FF4F18] transition-colors" 
+                  />
+                  <input 
+                    type="email" 
+                    value={email} 
+                    onChange={(e) => setEmail(e.target.value)} 
+                    placeholder="Email" 
+                    required 
+                    className="w-full pl-12 pr-4 py-4 bg-gray-50 border border-gray-200 rounded-xl text-gray-700 placeholder-gray-400 focus:ring-2 focus:ring-[#FF4F18]/20 focus:border-[#FF4F18] transition-all outline-none" 
+                  />
+                </div>
+
+                <div className="relative group">
+                  <FontAwesomeIcon 
+                    icon={faLock} 
+                    className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 group-focus-within:text-[#FF4F18] transition-colors" 
+                  />
+                  <input 
+                    type="password" 
+                    value={password} 
+                    onChange={(e) => setPassword(e.target.value)} 
+                    placeholder="Password" 
+                    required 
+                    className="w-full pl-12 pr-4 py-4 bg-gray-50 border border-gray-200 rounded-xl text-gray-700 placeholder-gray-400 focus:ring-2 focus:ring-[#FF4F18]/20 focus:border-[#FF4F18] transition-all outline-none" 
+                  />
+                </div>
+              </motion.div>
+
+              <motion.div 
+                className="flex items-center justify-between"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.3 }}
+              >
+                <div className="flex items-center">
+                  <input
+                    id="remember-me"
+                    name="remember-me"
+                    type="checkbox"
+                    checked={rememberMe}
+                    onChange={() => setRememberMe(!rememberMe)}
+                    className="h-4 w-4 text-[#FF4F18] focus:ring-[#FF4F18] border-gray-300 rounded"
+                  />
+                  <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-600">
+                    Remember me
+                  </label>
+                </div>
+                <div className="text-sm">
+                  <a href="#" className="font-medium text-[#FF4F18] hover:text-[#FF4F18]/80">
+                    Forgot password?
+                  </a>
+                </div>
+              </motion.div>
+
+              {error && (
+                <motion.div 
+                  initial={{ opacity: 0, y: 10 }} 
+                  animate={{ opacity: 1, y: 0 }} 
+                  className="p-4 rounded-xl bg-red-50 border border-red-100 flex items-center"
+                >
+                  <div className="flex-shrink-0 w-10 h-10 rounded-full bg-red-100 flex items-center justify-center mr-3">
+                    <svg className="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                  </div>
+                  <p className="text-red-500 text-sm font-medium">{error}</p>
+                </motion.div>
+              )}
+
+              <motion.button 
+                type="submit" 
+                disabled={loading}
+                className="w-full py-4 bg-gradient-to-r from-[#FF4F18] to-[#FF8F6B] text-white font-semibold rounded-xl hover:shadow-lg hover:shadow-[#FF4F18]/20 transition-all transform disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:shadow-none flex items-center justify-center"
+                whileHover={{ scale: 1.02, boxShadow: "0 10px 25px -5px rgba(255, 79, 24, 0.3)" }}
+                whileTap={{ scale: 0.98 }}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.4 }}
+              >
+                {loading ? (
+                  <span className="flex items-center justify-center">
+                    <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Logging in...
+                  </span>
+                ) : (
+                  <span className="flex items-center">
+                    Sign In
+                    <FontAwesomeIcon icon={faArrowRight} className="ml-2 group-hover:translate-x-1 transition-transform" />
+                  </span>
+                )}
+              </motion.button>
+
+              <motion.div 
+                className="relative flex items-center py-2"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.5 }}
+              >
+                <div className="flex-grow border-t border-gray-200"></div>
+                <span className="flex-shrink mx-4 text-gray-400 text-sm">or</span>
+                <div className="flex-grow border-t border-gray-200"></div>
+              </motion.div>
+
+              <motion.p 
+                className="text-center text-gray-600 text-sm"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.6 }}
+              >
+                Don&apos;t have an account?{" "}
+                <button
+                  type="button"
+                  onClick={() => {
+                    onClose();
+                    router.push('/restaurant-owner/register');
+                  }}
+                  className="text-[#FF4F18] hover:text-[#FF4F18]/80 font-semibold transition-colors"
+                >
+                  Register here
+                </button>
+              </motion.p>
+            </form>
+          </div>
         </motion.div>
       </motion.div>
     </AnimatePresence>
