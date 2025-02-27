@@ -29,6 +29,7 @@
     "date-fns-tz": "^3.2.0",
     "express": "^4.21.2",
     "framer-motion": "^12.3.1",
+    "gsap": "^3.12.7",
     "jsonwebtoken": "^9.0.2",
     "lucide-react": "^0.474.0",
     "mongoose": "^8.8.1",

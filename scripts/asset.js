@@ -210,8 +210,11 @@ export async function create8SeaterTable(scene){
 
 export async function plant01(scene){
     const loader = new OBJLoader();
+    console.log("Starting to load plant01 model...");
     try {
+        console.log("Loading from path:", '/models/decorations/indoorPlants/vase01.obj');
         const group = await loader.loadAsync('/models/decorations/indoorPlants/vase01.obj');
+        console.log("Plant01 model loaded, children count:", group.children.length);
         if (group.children.length > 0) {
             // Create different materials for different parts
             const materials = {
@@ -228,12 +231,12 @@ export async function plant01(scene){
                     shininess: 30
                 }),
                 vase_01_corona_004: new THREE.MeshPhongMaterial({
-                    
                     color: 0x90EE90,  // leaf
                     shininess: 30
                 })
             };
 
+            console.log("Applying materials to plant01 meshes...");
             group.children.forEach(child => {
                 if (child.isMesh) {
                     // Assign material based on mesh name
@@ -241,6 +244,7 @@ export async function plant01(scene){
                     child.castShadow = true;
                     child.receiveShadow = true;
                     child.scale.set(0.01, 0.01, 0.01);
+                    console.log("Applied material to mesh:", child.name);
                 }
             });
             
@@ -251,9 +255,11 @@ export async function plant01(scene){
                 isPlant01: true,
                 isRotatable: true,
             };
-            scene.add(group);
+            console.log("Plant01 model processed successfully");
+            return group;
         }   
-        return group;
+        console.warn("Plant01 model loaded but has no children");
+        return null;
     } catch (error) {
         console.error("Error loading plant01:", error);
         return null;
@@ -261,21 +267,48 @@ export async function plant01(scene){
 }
 export async function plant02(scene){
     const loader = new OBJLoader();
+    console.log("Starting to load plant02 model...");
     try {
+        console.log("Loading from path:", '/models/decorations/indoorPlants/vase02.obj');
         const group = await loader.loadAsync('/models/decorations/indoorPlants/vase02.obj');
+        console.log("Plant02 model loaded, children count:", group.children.length);
+        
         if (group.children.length > 0) {
-            const material = new THREE.MeshPhongMaterial({
-                color: 0xffffff,
+            // Create separate materials for leaves and pot
+            const leavesMaterial = new THREE.MeshPhongMaterial({
+                color: 0x2D5A27,  // Dark green for leaves
                 shininess: 30
             });
+            
+            const potMaterial = new THREE.MeshPhongMaterial({
+                color: 0xC04000,  // Terracotta color for pot
+                shininess: 30
+            });
+            const stemsMaterial = new THREE.MeshPhongMaterial({
+                color: 0xC4A484,  //  for stems
+                shininess: 30
+            });
+
+            console.log("Applying materials to plant02 meshes...");
             group.children.forEach(child => {
                 if (child.isMesh) {
-                    child.material = material;
+                    // Apply different materials based on mesh name
+                    if (child.name === "Leaves") {
+                        child.material = leavesMaterial;
+                    } else if (child.name === "Pot") {
+                        child.material = potMaterial;
+                    }else if(child.name === "Stems"){
+                        child.material = stemsMaterial;
+                    }
+
+                    
                     child.castShadow = true;
                     child.receiveShadow = true;
                     child.scale.set(0.001, 0.001, 0.001);
+                    console.log("Applied material to mesh:", child.name);
                 }
             });
+            
             group.position.set(0, 0.01, 0);
             group.userData = {
                 isMovable: true,
@@ -283,9 +316,11 @@ export async function plant02(scene){
                 isPlant02: true,
                 isRotatable: true,
             };
-            scene.add(group);
+            console.log("Plant02 model processed successfully");
+            return group;
         }
-        return group;
+        console.warn("Plant02 model loaded but has no children");
+        return null;
     } catch (error) {
         console.error("Error loading plant02:", error);
         return null;
