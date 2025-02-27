@@ -256,6 +256,7 @@ export async function plant01(scene){
                 isRotatable: true,
             };
             console.log("Plant01 model processed successfully");
+            scene.add(group);
             return group;
         }   
         console.warn("Plant01 model loaded but has no children");
@@ -317,6 +318,7 @@ export async function plant02(scene){
                 isRotatable: true,
             };
             console.log("Plant02 model processed successfully");
+            scene.add(group);
             return group;
         }
         console.warn("Plant02 model loaded but has no children");
