@@ -5,11 +5,13 @@ import { motion } from "framer-motion";
 import { FaUtensils, FaCheckCircle, FaSignInAlt, FaDoorOpen, FaTimes, FaArrowRight } from "react-icons/fa";
 import RestaurantOwnerLoginModal from "@/components/RestaurantOwnerLoginModal";
 import RestaurantOwnerNavbar from '@/components/RestaurantOwnerNavbar';
+import DemoVideoModal from "@/components/DemoVideoModal";
 
 export default function RestaurantOwnerHome() {
   const router = useRouter();
   const [showDemo, setShowDemo] = useState(false); // Toggle Demo Section
   const [showLoginModal, setShowLoginModal] = useState(false);
+  const [showDemoModal, setShowDemoModal] = useState(false);
   const benefits = [  
     "Easy Drag & Drop 3D Layout Builder",
     "Customers Can Select & Reserve Their Seats",
@@ -119,7 +121,7 @@ export default function RestaurantOwnerHome() {
                 <motion.button
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
-                  onClick={() => setShowDemo(true)}
+                  onClick={() => setShowDemoModal(true)}
                   className="flex items-center justify-center gap-3 bg-white/5 backdrop-blur-sm text-white 
                            px-8 py-4 rounded-xl font-medium hover:bg-white/10 transition-all duration-300 
                            border border-white/10 hover:border-white/20"
@@ -292,6 +294,10 @@ export default function RestaurantOwnerHome() {
         isOpen={showLoginModal}
         onClose={() => setShowLoginModal(false)}
         onLoginSuccess={handleLoginSuccess}
+      />
+      <DemoVideoModal 
+        isOpen={showDemoModal} 
+        onClose={() => setShowDemoModal(false)} 
       />
     </div>
   );

@@ -235,6 +235,59 @@ export default function RestaurantFloorplanPage({ params }) {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Modern Navigation */}
+      <nav className="bg-white border-b border-gray-100 sticky top-0 z-50 backdrop-blur-lg bg-white/80">
+        <div className="max-w-full mx-auto px-4 sm:px-6 py-3 sm:py-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0">
+            {/* Home Button */}
+            <button 
+              onClick={() => router.push('/')}
+              className="flex items-center gap-2 text-gray-700 hover:text-[#FF4F18] transition-colors"
+            >
+              <FaHome className="text-lg sm:text-xl" />
+              <span className="font-medium text-sm sm:text-base">Home</span>
+            </button>
+            
+            {/* Restaurant Info & Actions */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-6">
+              {/* Rating & Location */}
+              <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-gray-600 text-sm sm:text-base">
+                <div className="flex items-center gap-2">
+                  <FaStar className="text-[#FF4F18]" />
+                  <span>{restaurant.rating ? restaurant.rating.toFixed(1) : '0.0'}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <FaMapMarkerAlt className="text-[#FF4F18]" />
+                  <span className="truncate max-w-[200px] lg:max-w-none">
+                    {restaurant.location?.address || 'Location not available'}
+                  </span>
+                </div>
+              </div>
+              
+              {/* Action Buttons */}
+              <div className="flex gap-3">
+                <button
+                  onClick={handleShare}
+                  className="flex items-center gap-2 px-3 sm:px-4 py-2 text-gray-600 hover:text-[#FF4F18] 
+                           transition-colors text-sm sm:text-base"
+                >
+                  <FaShare />
+                  <span>Share</span>
+                </button>
+                <button
+                  onClick={handleSave}
+                  className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-[#FF4F18] text-white rounded-lg 
+                           hover:bg-[#FF4F18]/90 transition-all shadow-md hover:shadow-lg text-sm sm:text-base"
+                >
+                  <FaBookmark />
+                  <span>{isSaved ? 'Saved' : 'Save'}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </nav>
+
       {/* Main Content with Glass Effect */}
       <div className="flex flex-col lg:flex-row h-auto lg:h-[calc(100vh-73px)]">
         {/* Left Panel - Restaurant Info */}
@@ -500,53 +553,6 @@ export default function RestaurantFloorplanPage({ params }) {
           <FaComments className="text-xl lg:text-2xl" />
         </button>
       </div>
-
-      {/* Navigation */}
-      <nav className="bg-white border-b border-gray-100 sticky top-0 z-50 backdrop-blur-lg bg-white/80">
-        <div className="max-w-full mx-auto px-4 lg:px-6 py-3 lg:py-4">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 lg:gap-0">
-            <button 
-              onClick={() => router.push('/')}
-              className="flex items-center gap-2 text-gray-700 hover:text-[#FF4F18] transition-colors"
-            >
-              <FaHome className="text-lg lg:text-xl" />
-              <span className="font-medium text-sm lg:text-base">Home</span>
-            </button>
-            
-            <div className="flex flex-col lg:flex-row items-start lg:items-center gap-3 lg:gap-6">
-              <div className="flex flex-wrap items-center gap-3 lg:gap-4 text-gray-600 text-sm lg:text-base">
-                <div className="flex items-center gap-2">
-                  <FaStar className="text-[#FF4F18]" />
-                  <span>{restaurant.rating || '4.5'}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <FaMapMarkerAlt className="text-[#FF4F18]" />
-                  <span className="truncate max-w-[200px] lg:max-w-none">
-                    {restaurant.location?.address || 'Location not available'}
-                  </span>
-                </div>
-              </div>
-              
-              <div className="flex gap-3">
-                <button
-                  onClick={handleShare}
-                  className="flex items-center gap-2 px-3 lg:px-4 py-2 text-gray-600 hover:text-[#FF4F18] transition-colors text-sm lg:text-base"
-                >
-                  <FaShare />
-                  <span>Share</span>
-                </button>
-                <button
-                  onClick={handleSave}
-                  className="flex items-center gap-2 px-3 lg:px-4 py-2 bg-[#FF4F18] text-white rounded-lg hover:bg-[#FF4F18]/90 transition-all shadow-md hover:shadow-lg text-sm lg:text-base"
-                >
-                  <FaBookmark />
-                  <span>{isSaved ? 'Saved' : 'Save'}</span>
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </nav>
 
       {showChat && restaurant && (
         <CustomerChat
