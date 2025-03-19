@@ -9,7 +9,7 @@ import { DoorManager } from '@/scripts/managers/DoorManager';
 import { WindowManager } from '@/scripts/managers/WindowManager';
 import '@/css/booking.css';
 import '@/css/loading.css';
-import { toast } from 'react-hot-toast';
+import { toast, Toaster } from 'react-hot-toast';
 import { createRoot } from 'react-dom/client';
 import PaymentDialog from '@/components/PaymentDialog';
 import gsap from 'gsap';
@@ -551,26 +551,37 @@ export default function RestaurantBookingManager({ floorplanData, floorplanId, r
 
             const intersects = raycaster.intersectObjects(sceneRef.current.children, true);
             
+            console.log('Scene clicked, intersections:', intersects.length);
+            
             if (intersects.length > 0) {
               const clickedObject = intersects[0].object;
+              console.log('Clicked object:', clickedObject);
               
-              // Check if the clicked object is a table or part of a table
+              // Traverse upward to find a table parent if it exists
               let tableObject = null;
+              let currentObj = clickedObject;
               
-              if (clickedObject.userData && clickedObject.userData.isTable) {
-                tableObject = clickedObject;
-              } else if (clickedObject.parent && clickedObject.parent.userData && clickedObject.parent.userData.isTable) {
-                tableObject = clickedObject.parent;
+              // Check if the clicked object is a table
+              while (currentObj && !tableObject) {
+                if (currentObj.userData && currentObj.userData.isTable) {
+                  tableObject = currentObj;
+                  break;
+                }
+                currentObj = currentObj.parent;
               }
               
               if (tableObject) {
-                // Use the global handleTableClick function
+                console.log('Table found in hierarchy:', tableObject);
+                // Call the handleTableClick function
                 handleTableClick(tableObject);
+              } else {
+                console.log('No table found in object hierarchy');
               }
             }
           };
 
           if (containerRef.current) {
+            console.log('Adding click event listener to container');
             containerRef.current.addEventListener('click', handleSceneClick);
           }
 
@@ -803,39 +814,58 @@ export default function RestaurantBookingManager({ floorplanData, floorplanId, r
     console.log('Updating table colors with booking data');
     
     sceneRef.current.traverse((object) => {
-        if (object.userData?.isTable) {
-            // Check all possible ID properties
-            const tableId = object.userData.id || object.userData.objectId || object.userData.tableId;
-            
-            // Check if table has any bookings
-            const isBooked = tableBookings[tableId] && tableBookings[tableId].length > 0;
-            
-            console.log('Table check:', {
-                tableId,
-                isBooked,
-                bookings: isBooked ? tableBookings[tableId].length : 0
-            });
+      if (object.userData?.isTable) {
+        // Check all possible ID properties
+        const tableId = object.userData.id || object.userData.objectId || object.userData.tableId;
+        
+        // Check if table has any bookings and they're valid
+        const isBooked = tableId && tableBookings[tableId] && tableBookings[tableId].length > 0;
+        
+        console.log('Table check:', {
+          tableId,
+          isBooked,
+          bookings: isBooked ? tableBookings[tableId].length : 0
+        });
 
-            // For restaurant manager view, use different color scheme
-            let color;
-            if (isBooked) {
-                // Check if table is booked for the selected time
-                if (selectedTime && tableBookings[tableId]) {
-                    const isBookedForSelectedTime = tableBookings[tableId].some(booking => {
-                        // Format the booking time range to match selectedTime format
-                        const bookingTimeRange = `${booking.startTime} - ${booking.endTime}`;
-                        return bookingTimeRange === selectedTime;
-                    });
-                    color = isBookedForSelectedTime ? 0xFF0000 : 0x00FF00; // Red if booked for this time, green if available
-                } else {
-                    color = 0xFF4F18; // Orange if has bookings for the day but no specific time selected
-                }
-            } else {
-                color = 0x808080; // Gray for no bookings
-            }
+        // For restaurant manager view, use different color scheme
+        let color;
+        if (isBooked) {
+          // Check if table is booked for the selected time
+          if (selectedTime && tableBookings[tableId]) {
+            // Parse selected time range
+            const [selectedStartTime, selectedEndTime] = selectedTime.split(' - ');
             
-            colorTable(object, color);
+            // Function to convert time string to minutes since midnight for comparison
+            const timeToMinutes = (timeStr) => {
+              const [time, period] = timeStr.trim().split(' ');
+              let [hours, minutes] = time.split(':').map(Number);
+              if (period === 'PM' && hours !== 12) hours += 12;
+              if (period === 'AM' && hours === 12) hours = 0;
+              return hours * 60 + minutes;
+            };
+            
+            const selectedStart = timeToMinutes(selectedStartTime);
+            const selectedEnd = timeToMinutes(selectedEndTime);
+            
+            // Check if any booking overlaps with the selected time
+            const isBookedForSelectedTime = tableBookings[tableId].some(booking => {
+              const bookingStart = timeToMinutes(booking.startTime);
+              const bookingEnd = timeToMinutes(booking.endTime);
+              
+              // Time periods overlap if one starts before the other ends
+              return bookingStart < selectedEnd && bookingEnd > selectedStart;
+            });
+            
+            color = isBookedForSelectedTime ? 0xFF0000 : 0x00FF00; // Red if booked for this time, green if available
+          } else {
+            color = 0xFF4F18; // Orange if has bookings for the day but no specific time selected
+          }
+        } else {
+          color = 0x808080; // Gray for no bookings
         }
+        
+        colorTable(object, color);
+      }
     });
   };
 
@@ -1058,7 +1088,7 @@ export default function RestaurantBookingManager({ floorplanData, floorplanId, r
 
       // Use the correct API endpoint format with query params
       const response = await fetch(`/api/bookings/restaurant/${restaurantId}?date=${date}`, {
-        method: 'GET', // Changed from POST to GET
+        method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -1070,25 +1100,46 @@ export default function RestaurantBookingManager({ floorplanData, floorplanId, r
       }
 
       const data = await response.json();
-      console.log('Bookings data:', data);
+      console.log('Bookings data received:', data);
       
       // Process and organize bookings by table
       const bookingsByTable = {};
-      let bookedTablesCount = 0;
       
-      if (data.bookings && Array.isArray(data.bookings)) {
+      if (data && data.bookings && Array.isArray(data.bookings)) {
+        console.log('Processing', data.bookings.length, 'bookings');
+        
         data.bookings.forEach(booking => {
           // Skip cancelled bookings
-          if (booking.status === 'cancelled') return;
+          if (booking.status === 'cancelled') {
+            console.log('Skipping cancelled booking:', booking.bookingRef || booking._id);
+            return;
+          }
           
+          // Ensure tableId exists
+          if (!booking.tableId) {
+            console.warn('Booking missing tableId:', booking);
+            return;
+          }
+
+          console.log('Processing booking:', {
+            tableId: booking.tableId,
+            time: `${booking.startTime} - ${booking.endTime}`,
+            status: booking.status
+          });
+          
+          // Initialize array for this table if it doesn't exist
           if (!bookingsByTable[booking.tableId]) {
             bookingsByTable[booking.tableId] = [];
-            bookedTablesCount++;
           }
+          
+          // Add the booking to the table's bookings array
           bookingsByTable[booking.tableId].push(booking);
         });
+      } else {
+        console.warn('No valid bookings data received:', data);
       }
       
+      console.log('Organized bookings by table:', bookingsByTable);
       setTableBookings(bookingsByTable);
       
       // Update booking stats
@@ -1151,22 +1202,46 @@ export default function RestaurantBookingManager({ floorplanData, floorplanId, r
   // Update booking statistics
   const updateBookingStats = (bookingsByTable) => {
     let totalTables = 0;
+    let validBookedTables = 0;
     
-    // Count total tables in the scene
+    // Get all table IDs from the scene
+    const sceneTableIds = new Set();
+    
+    // Count total tables in the scene and collect their IDs
     if (sceneRef.current) {
       sceneRef.current.traverse((object) => {
         if (object.userData && object.userData.isTable) {
           totalTables++;
+          const tableId = object.userData.id || object.userData.objectId || object.userData.tableId;
+          if (tableId) {
+            sceneTableIds.add(tableId);
+          }
         }
       });
     }
     
-    const bookedTables = Object.keys(bookingsByTable).length;
+    // Only count bookings for tables that exist in the scene
+    Object.entries(bookingsByTable).forEach(([tableId, bookings]) => {
+      if (sceneTableIds.has(tableId) && bookings.length > 0) {
+        validBookedTables++;
+      }
+    });
+    
+    // Ensure we don't have negative available tables
+    const availableTables = Math.max(0, totalTables - validBookedTables);
+    
+    console.log('Booking stats:', {
+      totalTables,
+      validBookedTables,
+      availableTables,
+      sceneTableIds: Array.from(sceneTableIds),
+      bookingTableIds: Object.keys(bookingsByTable)
+    });
     
     setBookingStats({
       totalTables,
-      bookedTables,
-      availableTables: totalTables - bookedTables
+      bookedTables: validBookedTables,
+      availableTables: availableTables
     });
   };
   
@@ -1179,9 +1254,17 @@ export default function RestaurantBookingManager({ floorplanData, floorplanId, r
     if (!tableId) return;
     
     const bookings = tableBookings[tableId] || [];
+    console.log('Table clicked:', tableId, 'Bookings:', bookings.length ? bookings : 'No bookings');
     
     if (bookings.length === 0) {
-      toast.info(`Table ${table.userData.name || tableId} has no bookings for ${selectedDate}`);
+      // Use a more noticeable toast for no bookings
+      toast.custom(
+        <div className="bg-white shadow-lg rounded-lg p-4 max-w-md" style={{ zIndex: 9999 }}>
+          <h3 className="font-bold text-lg mb-2 text-gray-700">Table {table.userData.name || tableId}</h3>
+          <p className="text-orange-500">No bookings for this table on {selectedDate}</p>
+        </div>,
+        { duration: 4000, position: 'top-center' }
+      );
       return;
     }
     
@@ -1193,40 +1276,49 @@ export default function RestaurantBookingManager({ floorplanData, floorplanId, r
       day: 'numeric'
     });
     
-    // Show booking details in a toast
-    toast.success(
-      <div className="max-w-md">
-        <h3 className="font-bold text-lg mb-2">Table {table.userData.name || tableId}</h3>
+    // Create a custom toast with higher z-index to ensure it's visible
+    toast.custom(
+      <div className="bg-white shadow-lg rounded-lg p-4 max-w-md mx-auto" style={{ zIndex: 9999 }}>
+        <h3 className="font-bold text-lg mb-2 text-[#FF4F18]">Table {table.userData.name || tableId}</h3>
         <p className="text-sm text-gray-600 mb-3">{formattedDate}</p>
-        <ul className="space-y-3 max-h-60 overflow-y-auto">
-          {bookings.map((booking, idx) => (
-            <li key={idx} className="p-2 bg-gray-50 rounded-md">
-              <div className="flex justify-between items-center">
-                <span className="font-semibold">{booking.startTime} - {booking.endTime}</span>
-                <span className={`text-xs px-2 py-1 rounded ${
-                  booking.status === 'confirmed' ? 'bg-green-100 text-green-800' :
-                  booking.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                  booking.status === 'cancelled' ? 'bg-red-100 text-red-800' :
-                  'bg-blue-100 text-blue-800'
-                }`}>
-                  {booking.status}
-                </span>
-              </div>
-              <div className="mt-1 text-sm">
-                <div>Guests: {booking.guestCount}</div>
-                {booking.customerData && (
-                  <div>Customer: {booking.customerData.name || 'Unknown'}</div>
-                )}
-                {booking.bookingRef && (
-                  <div className="text-xs text-gray-500 mt-1">Ref: {booking.bookingRef}</div>
-                )}
-              </div>
-            </li>
-          ))}
-        </ul>
+        <div className="border-t border-gray-200 pt-2">
+          <ul className="space-y-3 max-h-60 overflow-y-auto">
+            {bookings.map((booking, idx) => (
+              <li key={idx} className="p-2 bg-gray-50 rounded-md">
+                <div className="flex justify-between items-center">
+                  <span className="font-semibold">{booking.startTime} - {booking.endTime}</span>
+                  <span className={`text-xs px-2 py-1 rounded ${
+                    booking.status === 'confirmed' ? 'bg-green-100 text-green-800' :
+                    booking.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                    booking.status === 'cancelled' ? 'bg-red-100 text-red-800' :
+                    'bg-blue-100 text-blue-800'
+                  }`}>
+                    {booking.status}
+                  </span>
+                </div>
+                <div className="mt-1 text-sm">
+                  <div>Guests: {booking.guestCount}</div>
+                  {booking.customerData && (
+                    <div>Customer: {booking.customerData.name || 'Unknown'}</div>
+                  )}
+                  {booking.bookingRef && (
+                    <div className="text-xs text-gray-500 mt-1">Ref: {booking.bookingRef}</div>
+                  )}
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
       </div>,
-      { duration: 7000 }
+      { 
+        duration: 7000, 
+        position: 'top-center', 
+        style: { zIndex: 9999 }
+      }
     );
+    
+    // Also add a console.log to confirm the toast was triggered
+    console.log('Booking toast displayed for table:', tableId);
   };
 
   // Add this in the floorplan data processing section where objects are created
@@ -1272,9 +1364,28 @@ export default function RestaurantBookingManager({ floorplanData, floorplanId, r
         // Table has bookings
         if (selectedTime) {
           // Check if table is booked for selected time
+          // Parse selected time range
+          const [selectedStartTime, selectedEndTime] = selectedTime.split(' - ');
+          
+          // Function to convert time string to minutes since midnight for comparison
+          const timeToMinutes = (timeStr) => {
+            const [time, period] = timeStr.trim().split(' ');
+            let [hours, minutes] = time.split(':').map(Number);
+            if (period === 'PM' && hours !== 12) hours += 12;
+            if (period === 'AM' && hours === 12) hours = 0;
+            return hours * 60 + minutes;
+          };
+          
+          const selectedStart = timeToMinutes(selectedStartTime);
+          const selectedEnd = timeToMinutes(selectedEndTime);
+          
+          // Check if any booking overlaps with the selected time
           const isBooked = tableBookings[tableObj.userData.id].some(booking => {
-            const bookingTimeRange = `${booking.startTime} - ${booking.endTime}`;
-            return bookingTimeRange === selectedTime;
+            const bookingStart = timeToMinutes(booking.startTime);
+            const bookingEnd = timeToMinutes(booking.endTime);
+            
+            // Time periods overlap if one starts before the other ends
+            return bookingStart < selectedEnd && bookingEnd > selectedStart;
           });
           
           if (isBooked) {
@@ -1292,8 +1403,40 @@ export default function RestaurantBookingManager({ floorplanData, floorplanId, r
     });
   };
 
+  // Add a useEffect to test toast notifications on component load
+  useEffect(() => {
+    // Small delay to ensure the component is fully mounted
+    const timer = setTimeout(() => {
+      if (sceneLoaded) {
+        console.log('Testing toast notification system');
+        toast.success('Booking manager loaded successfully', {
+          duration: 3000,
+          position: 'bottom-right',
+        });
+      }
+    }, 1500);
+    
+    return () => clearTimeout(timer);
+  }, [sceneLoaded]);
+
   return (
     <div className="relative w-full h-[600px] flex flex-col">
+      {/* Toaster component for displaying notifications */}
+      <Toaster 
+        position="top-center"
+        toastOptions={{
+          duration: 5000,
+          style: {
+            background: '#ffffff',
+            color: '#333333',
+            zIndex: 9999,
+            boxShadow: '0 8px 16px rgba(0, 0, 0, 0.1)',
+            borderRadius: '8px',
+            padding: '16px',
+          },
+        }}
+      />
+      
       <div className="flex flex-col md:flex-row h-full">
         {/* 3D Floor Plan View - Keep this from the original component */}
         <div 
@@ -1357,7 +1500,7 @@ export default function RestaurantBookingManager({ floorplanData, floorplanId, r
             </div>
           </div>
 
-          {/* Table Color Legend */}
+          {/* Table Status Legend */}
           <div className="mb-4">
             <h3 className="font-semibold text-gray-700 mb-2">Table Status</h3>
             <div className="space-y-2">
@@ -1377,6 +1520,38 @@ export default function RestaurantBookingManager({ floorplanData, floorplanId, r
                 <div className="w-4 h-4 bg-red-500 rounded-full mr-2"></div>
                 <span className="text-sm">Booked at Selected Time</span>
               </div>
+            </div>
+          </div>
+
+          {/* Table Bookings Overview */}
+          <div className="mt-4 mb-4">
+            <h3 className="font-semibold text-gray-700 mb-2">Quick View Bookings</h3>
+            <div className="max-h-60 overflow-y-auto bg-gray-50 p-3 rounded-lg">
+              {Object.entries(tableBookings).length > 0 ? (
+                Object.entries(tableBookings).map(([tableId, bookings]) => (
+                  bookings.length > 0 && (
+                    <div key={tableId} className="mb-2 p-2 bg-white rounded border border-gray-200">
+                      <p className="font-medium">Table {tableId}</p>
+                      <p className="text-xs text-gray-500">{bookings.length} booking(s)</p>
+                      <button 
+                        className="mt-1 px-2 py-1 bg-[#FF4F18] text-white text-xs rounded hover:bg-[#e63900] transition-colors"
+                        onClick={() => {
+                          // Find the table object
+                          const tableObj = findTableById(tableId);
+                          if (tableObj) {
+                            console.log('Manually triggering handleTableClick for table:', tableId);
+                            handleTableClick(tableObj);
+                          }
+                        }}
+                      >
+                        View Details
+                      </button>
+                    </div>
+                  )
+                ))
+              ) : (
+                <p className="text-gray-500 text-sm">No bookings for this date</p>
+              )}
             </div>
           </div>
 

@@ -4,6 +4,15 @@ import Restaurant from "@/models/Restaurants";
 import jwt from "jsonwebtoken";
 import RestaurantOwner from "@/models/restaurant-owner"; // Import restaurant owner model
 
+// Add a verifyToken function if you don't have it imported
+const verifyToken = (token) => {
+  try {
+    return jwt.verify(token, process.env.JWT_SECRET);
+  } catch (error) {
+    console.error('Token verification error:', error);
+    return null;
+  }
+};
 
 // ✅ POST: Create new restaurant profile
 export async function POST(req) {
@@ -22,10 +31,34 @@ export async function POST(req) {
     // Check if owner already has a restaurant
     const existingRestaurant = await Restaurant.findOne({ ownerId });
     if (existingRestaurant) {
+      // If restaurant already exists, check if we need to add a contact number
+      console.log("DEBUG - POST: Restaurant already exists");
+      console.log("Existing contact number:", existingRestaurant.contactNumber || "NOT SET");
+      
+      const restaurantData = await req.json();
+      console.log("Received contact number:", restaurantData.contactNumber || "NOT PROVIDED");
+      
+      // If we need to add a contact number to an existing restaurant
+      if (!existingRestaurant.contactNumber && restaurantData.contactNumber) {
+        console.log("DEBUG - Adding contact number to existing restaurant");
+        existingRestaurant.contactNumber = restaurantData.contactNumber;
+        await existingRestaurant.save();
+        
+        console.log("DEBUG - Contact number added successfully");
+        console.log("Updated restaurant:", existingRestaurant);
+        
+        return NextResponse.json({ 
+          message: "Contact number added successfully", 
+          restaurant: existingRestaurant 
+        }, { status: 200 });
+      }
+      
       return NextResponse.json({ message: "Restaurant profile already exists" }, { status: 400 });
     }
 
     const restaurantData = await req.json();
+    console.log("DEBUG - Creating new restaurant with data:", restaurantData);
+    console.log("Contact number from request:", restaurantData.contactNumber || "NOT PROVIDED");
     
     // Validate required fields
     if (!restaurantData.restaurantName || !restaurantData.cuisineType || 
@@ -40,11 +73,14 @@ export async function POST(req) {
       cuisineType: restaurantData.cuisineType,
       location: restaurantData.location,
       description: restaurantData.description,
+      contactNumber: restaurantData.contactNumber || "", // Default to empty string if not provided
       openingHours: restaurantData.openingHours || {},
       images: restaurantData.images || { main: "", gallery: [] }
     });
 
     await restaurant.save();
+    console.log("DEBUG - New restaurant created with ID:", restaurant._id);
+    console.log("Contact number stored:", restaurant.contactNumber || "NOT SET");
 
     // Update owner with restaurant reference
     await RestaurantOwner.findByIdAndUpdate(ownerId, { restaurantId: restaurant._id });
@@ -76,6 +112,17 @@ export async function GET(req) {
     // Find single restaurant by owner ID
     const restaurant = await Restaurant.findOne({ ownerId });
     
+    // Debug log to check if contact number is stored
+    console.log("DEBUG - GET Restaurant Profile:");
+    console.log("Restaurant found:", !!restaurant);
+    if (restaurant) {
+      console.log("Restaurant ID:", restaurant._id);
+      console.log("Restaurant Name:", restaurant.restaurantName);
+      console.log("Contact Number:", restaurant.contactNumber || "NOT SET");
+      console.log("Has contact number:", !!restaurant.contactNumber);
+      console.log("Full restaurant object:", JSON.stringify(restaurant, null, 2));
+    }
+    
     if (!restaurant) {
       return NextResponse.json({ message: "No restaurant found", restaurant: null }, { status: 200 });
     }
@@ -89,11 +136,11 @@ export async function GET(req) {
 }
 
 // ✅ PUT: Update restaurant profile
-export async function PUT(request) {
+export async function PUT(req) {
   await dbConnect();
 
   try {
-    const authHeader = request.headers.get("authorization");
+    const authHeader = req.headers.get("authorization");
     if (!authHeader) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
@@ -101,41 +148,54 @@ export async function PUT(request) {
     const token = authHeader.split(" ")[1];
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const ownerId = decoded.userId;
-
-    // Log for debugging
-    console.log('Owner ID:', ownerId);
-
-    const restaurantData = await request.json();
-    console.log('Received restaurant data:', restaurantData);
-
-    // Find and update the restaurant
-    const restaurant = await Restaurant.findOneAndUpdate(
-      { ownerId },
-      {
-        restaurantName: restaurantData.restaurantName,
-        cuisineType: restaurantData.cuisineType,
-        location: restaurantData.location,
-        description: restaurantData.description,
-        openingHours: restaurantData.openingHours,
-        images: restaurantData.images
-      },
-      { new: true }
-    );
-
+    
+    // Get restaurant data from request body
+    const data = await req.json();
+    console.log("DEBUG - PUT: Received restaurant update data:", data);
+    console.log("Contact number from request:", data.contactNumber || "NOT PROVIDED");
+    
+    const { restaurantName, cuisineType, location, description, contactNumber, openingHours, images } = data;
+    
+    // Find the restaurant using ownerId
+    const restaurant = await Restaurant.findOne({ ownerId });
     if (!restaurant) {
+      console.log("DEBUG - Restaurant not found for owner ID:", ownerId);
       return NextResponse.json({ message: "Restaurant not found" }, { status: 404 });
     }
-
-    return NextResponse.json({ 
-      message: "Profile updated successfully!", 
-      restaurant 
-    }, { status: 200 });
-
+    
+    // Debug existing state
+    console.log("DEBUG - Current restaurant state before update:");
+    console.log("ID:", restaurant._id);
+    console.log("Name:", restaurant.restaurantName);
+    console.log("Current contact number:", restaurant.contactNumber || "NOT SET");
+    
+    // Prepare update fields
+    const updateFields = {};
+    if (restaurantName) updateFields.restaurantName = restaurantName;
+    if (cuisineType) updateFields.cuisineType = cuisineType;
+    if (location) updateFields.location = location;
+    if (description) updateFields.description = description;
+    if (contactNumber !== undefined) updateFields.contactNumber = contactNumber;
+    if (openingHours) updateFields.openingHours = openingHours;
+    if (images) updateFields.images = images;
+    
+    console.log("DEBUG - Update fields prepared:", updateFields);
+    
+    const updatedRestaurant = await Restaurant.findByIdAndUpdate(
+      restaurant._id,
+      { $set: updateFields },
+      { new: true }
+    );
+    
+    console.log("DEBUG - Restaurant after update:");
+    console.log("ID:", updatedRestaurant._id);
+    console.log("Name:", updatedRestaurant.restaurantName);
+    console.log("Updated contact number:", updatedRestaurant.contactNumber || "NOT SET");
+    console.log("Full updated restaurant:", JSON.stringify(updatedRestaurant, null, 2));
+    
+    return NextResponse.json({ restaurant: updatedRestaurant }, { status: 200 });
   } catch (error) {
-    console.error("Error updating restaurant profile:", error);
-    return NextResponse.json({ 
-      message: "Internal server error", 
-      error: error.message 
-    }, { status: 500 });
+    console.error("Error updating restaurant:", error);
+    return NextResponse.json({ message: error.message }, { status: 500 });
   }
 }

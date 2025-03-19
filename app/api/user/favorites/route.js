@@ -5,28 +5,28 @@ import jwt from "jsonwebtoken";
 
 // GET: Fetch user's favorite restaurants
 export async function GET(req) {
+  await dbConnect();
+
   try {
-    await dbConnect();
-    
-    const token = req.headers.get("authorization")?.split(" ")[1];
-    if (!token) {
+    const authHeader = req.headers.get("authorization");
+    if (!authHeader) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
+    const token = authHeader.split(" ")[1];
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const userId = decoded.userId;
 
-    const favorites = await Favorite.find({ userId })
-      .populate('restaurantId', 'restaurantName cuisineType location description')
-      .sort({ createdAt: -1 });
+    const favorites = await Favorite.find({ userId }).populate('restaurantId');
 
+    // Add null check before accessing _id
     return NextResponse.json({ 
-      favorites: favorites.map(fav => fav.restaurantId._id)
+      favorites: favorites.map(fav => fav.restaurantId?._id || null).filter(Boolean)
     });
 
   } catch (error) {
     console.error("Error fetching favorites:", error);
-    return NextResponse.json({ message: "Internal server error" }, { status: 500 });
+    return NextResponse.json({ message: "Error fetching favorites" }, { status: 500 });
   }
 }
 

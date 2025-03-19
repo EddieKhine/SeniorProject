@@ -30,6 +30,10 @@ const restaurantSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
+  contactNumber: {
+    type: String,
+    default: ""
+  },
   openingHours: {
     monday: { open: String, close: String },
     tuesday: { open: String, close: String },

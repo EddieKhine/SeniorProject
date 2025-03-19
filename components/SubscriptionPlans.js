@@ -53,12 +53,14 @@ export default function SubscriptionPlans() {
             </div>
             <ul className="space-y-4 mb-8 flex-grow">
               {[
-                'Restaurant profile listing on the platform',
-                '1 floor plan for customization',
-                'Real-time table reservation management',
-                'Custom table and chair sizing',
-                'Email notifications for reservations',
-                'Basic customer support'
+                'Interactive 3D floor plan system',
+                'Real-time reservation management',
+                'Customer database with tagging and notes',
+                'Automated email and SMS notifications',
+                'Standard reporting and analytics',
+                'Integration with basic POS systems',
+                'Support for 1 floor plan',
+                'Up to 20 tables'
               ].map((feature, index) => (
                 <li key={index} className="flex items-start text-gray-600 group">
                   <FaCheckCircle className="text-[#FF4F18] mr-3 mt-1 flex-shrink-0 group-hover:scale-110 transition-transform" />
@@ -66,6 +68,9 @@ export default function SubscriptionPlans() {
                 </li>
               ))}
             </ul>
+            <div className="text-sm text-gray-600 italic mb-4">
+              Ideal For: Small restaurants or cafes with a single dining area and limited seating capacity.
+            </div>
             <button 
               className={`w-full py-4 px-6 rounded-xl ${
                 currentPlan === 'basic'
@@ -89,24 +94,21 @@ export default function SubscriptionPlans() {
             <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-green-500 text-white px-6 py-2 rounded-full text-sm font-semibold shadow-lg">
               Most Popular
             </div>
-            <div className="text-[#FF4F18] text-xl font-semibold mb-4">Professional Plan</div>
+            <div className="text-[#FF4F18] text-xl font-semibold mb-4">Business Plan</div>
             <div className="mb-6">
               <div className="flex items-baseline">
                 <span className="text-3xl font-bold text-gray-900">THB 2,800</span>
                 <span className="text-gray-500 ml-2">/month</span>
               </div>
             </div>
-            {/* Professional plan features */}
+            {/* Business plan features */}
             <ul className="space-y-4 mb-8 flex-grow">
               {[
-                'Up to 3 floor plans',
-                'Real-time reservations with visual seat management',
-                'Table grouping feature',
-                'Multi-floor support',
-                'Google Maps integration',
-                'Customer reviews and ratings',
-                'SMS and email notifications',
-                'Priority email support'
+                'All features included in the Basic Plan',
+                'Support for up to 2 floor plans',
+                'Up to 50 tables',
+                'Inclusion of 10 custom 3D models for unique restaurant layouts',
+                'Priority technical support with a 24-hour response time'
               ].map((feature, index) => (
                 <li key={index} className="flex items-start text-gray-600 group">
                   <FaCheckCircle className="text-[#FF4F18] mr-3 mt-1 flex-shrink-0 group-hover:scale-110 transition-transform" />
@@ -114,6 +116,9 @@ export default function SubscriptionPlans() {
                 </li>
               ))}
             </ul>
+            <div className="text-sm text-gray-600 italic mb-4">
+              Ideal For: Medium-sized restaurants with multiple dining areas or sections requiring customized layouts and enhanced support.
+            </div>
             <button 
               className="w-full py-4 px-6 rounded-xl bg-[#FF4F18] text-white font-semibold hover:bg-[#FF4F18]/90 transition-all duration-200 transform hover:scale-[1.02] shadow-lg shadow-[#FF4F18]/20"
             >
@@ -130,7 +135,7 @@ export default function SubscriptionPlans() {
             className="relative bg-white rounded-2xl p-8 flex flex-col h-full transform transition-all duration-200 hover:shadow-xl border-2 border-gray-100"
           >
             <div className="text-[#FF4F18] text-xl font-semibold mb-4 flex items-center gap-2">
-              Business Plan <FaCrown className="text-yellow-500" />
+              Professional Plan <FaCrown className="text-yellow-500" />
             </div>
             <div className="mb-6">
               <div className="flex items-baseline">
@@ -138,18 +143,15 @@ export default function SubscriptionPlans() {
                 <span className="text-gray-500 ml-2">/month</span>
               </div>
             </div>
-            {/* Business plan features */}
+            {/* Professional plan features */}
             <ul className="space-y-4 mb-8 flex-grow">
               {[
-                'Unlimited floor plans',
-                'Advanced real-time seat management',
-                'Dynamic table arrangement',
-                'Third-party integrations',
-                'Custom branding',
-                'Customizable menus',
-                'Automated waitlist management',
-                'Advanced reporting',
-                'Priority support (2h response)'
+                'All features included in the Basic and Business Plans',
+                'Support for 3 or more floor plans',
+                'Unlimited number of tables',
+                'Augmented Reality (AR) support for an immersive customer experience',
+                'Unlimited custom 3D models to accurately represent complex layouts',
+                'Priority technical support with a 2-hour response time'
               ].map((feature, index) => (
                 <li key={index} className="flex items-start text-gray-600 group">
                   <FaCheckCircle className="text-[#FF4F18] mr-3 mt-1 flex-shrink-0 group-hover:scale-110 transition-transform" />
@@ -157,6 +159,9 @@ export default function SubscriptionPlans() {
                 </li>
               ))}
             </ul>
+            <div className="text-sm text-gray-600 italic mb-4">
+              Ideal For: Large restaurants, hotel dining facilities, or establishments with complex seating arrangements seeking advanced features and rapid support.
+            </div>
             <button className="w-full py-4 px-6 rounded-xl bg-[#FF4F18] text-white font-semibold hover:bg-[#FF4F18]/90 transition-all duration-200 transform hover:scale-[1.02] shadow-lg shadow-[#FF4F18]/20">
               Contact Sales
             </button>

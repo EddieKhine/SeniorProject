@@ -34,6 +34,7 @@ export default function RestaurantFloorplanPage({ params }) {
         
         const data = await response.json();
         console.log('DEBUG - Full restaurant data:', data);
+        console.log('DEBUG - Contact number:', data.contactNumber || 'NOT SET');
         console.log('DEBUG - Images object:', data.images);
         console.log('DEBUG - Menu images array:', data.images?.menu);
         console.log('DEBUG - Number of menu images:', data.images?.menu?.length || 0);
@@ -481,15 +482,21 @@ export default function RestaurantFloorplanPage({ params }) {
               </p>
             </div>
 
-            {/* Contact Card */}
+            {/* Contact Card - UPDATED TO USE contactNumber */}
             <div className="bg-white rounded-xl p-3 lg:p-4 shadow-sm hover:shadow-md transition-all">
               <div className="flex items-center gap-2 lg:gap-3 text-[#141517] mb-2">
                 <FaPhone className="text-[#FF4F18]" />
                 <span className="font-medium text-sm lg:text-base">Contact</span>
               </div>
-              <p className="text-gray-600 text-sm lg:text-base pl-6 lg:pl-8">
-                {restaurant.phone || 'Contact not available'}
-              </p>
+              {restaurant.contactNumber ? (
+                <p className="text-gray-600 text-sm lg:text-base pl-6 lg:pl-8">
+                  {restaurant.contactNumber}
+                </p>
+              ) : (
+                <p className="text-gray-500 italic text-sm lg:text-base pl-6 lg:pl-8">
+                  Contact number not available
+                </p>
+              )}
             </div>
 
             {/* Map Card */}

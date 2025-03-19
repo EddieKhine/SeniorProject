@@ -54,13 +54,14 @@ export default function RestaurantProfileForm({
   onSubmitSuccess = () => {},
   onCancel = () => {}
 }) {
-  console.log('RestaurantProfileForm props:', { mode, initialData, onSubmitSuccess, onCancel });
+  console.log('RestaurantProfileForm initialData:', initialData);
 
   const [formData, setFormData] = useState({
     restaurantName: initialData?.restaurantName || "",
     cuisineType: initialData?.cuisineType || "",
     location: initialData?.location || "",
     description: initialData?.description || "",
+    contactNumber: initialData?.contactNumber || "",
     openingHours: initialData?.openingHours || {
       monday: { open: "", close: "", isClosed: false },
       tuesday: { open: "", close: "", isClosed: false },
@@ -76,6 +77,8 @@ export default function RestaurantProfileForm({
       menu: initialData?.images?.menu || []
     }
   });
+
+  console.log('Form data initialized with:', formData);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -160,13 +163,15 @@ export default function RestaurantProfileForm({
     setError("");
     setSuccess(false);
 
+    console.log('Submitting form data:', formData);
+    console.log('Contact number being submitted:', formData.contactNumber);
+
     try {
       const token = localStorage.getItem("restaurantOwnerToken");
       if (!token) {
         throw new Error("No authentication token found");
       }
 
-      console.log('Submitting form data:', formData);
       console.log('Mode:', mode);
 
       const response = await fetch("/api/restaurants", {
@@ -200,6 +205,9 @@ export default function RestaurantProfileForm({
       if (mode === 'create' && window.location.pathname.includes('/setup')) {
         router.push('/floorplan');
       }
+
+      console.log('Response from API:', data);
+      console.log('Contact number in response:', data.restaurant?.contactNumber);
     } catch (err) {
       setError(err.message);
       console.error('Submission error:', err);
@@ -337,6 +345,26 @@ export default function RestaurantProfileForm({
                   focus:ring-[#FF4F18] focus:border-[#FF4F18] placeholder-gray-500"
                 placeholder="Enter restaurant name"
               />
+            </div>
+
+            {/* Contact Number - Debug info added */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-900 mb-2">
+                Contact Number
+              </label>
+              <input
+                type="tel"
+                name="contactNumber"
+                value={formData.contactNumber || ""}
+                onChange={handleInputChange}
+                className="w-full px-4 py-3 text-gray-900 border border-gray-300 rounded-lg 
+                  focus:ring-[#FF4F18] focus:border-[#FF4F18] placeholder-gray-500"
+                placeholder="Enter contact number"
+              />
+              {/* Debug info */}
+              <p className="text-xs text-gray-400 mt-1">
+                Current value: {formData.contactNumber ? `"${formData.contactNumber}"` : "empty"}
+              </p>
             </div>
 
             {/* Cuisine Type */}

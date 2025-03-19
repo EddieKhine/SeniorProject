@@ -1,8 +1,9 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Image from 'next/image';
-import { RiRestaurantLine, RiTimeLine, RiMapPinLine, RiEdit2Line, RiDeleteBinLine, RiImageAddLine } from 'react-icons/ri';
+import { RiRestaurantLine, RiTimeLine, RiMapPinLine, RiEdit2Line, RiDeleteBinLine, RiImageAddLine, RiPhoneLine } from 'react-icons/ri';
 import { MdRestaurantMenu, MdAnalytics } from 'react-icons/md';
+import { FaPhone } from 'react-icons/fa';
 import { GoogleMap, Marker } from '@react-google-maps/api';
 import RestaurantProfileForm from './RestaurantProfileForm';
 import MenuImageUpload from './MenuImageUpload';
@@ -32,6 +33,12 @@ export default function RestaurantInformation({ restaurant, onEditClick, onUpdat
   const [isEditing, setIsEditing] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
 
+  // Debug logging
+  useEffect(() => {
+    console.log('RestaurantInformation component received restaurant:', restaurant);
+    console.log('Contact number in received restaurant:', restaurant?.contactNumber);
+  }, [restaurant]);
+
   // Ensure menu images is always an array
   const menuImages = Array.isArray(restaurant?.images?.menu) 
     ? restaurant.images.menu 
@@ -50,10 +57,11 @@ export default function RestaurantInformation({ restaurant, onEditClick, onUpdat
   console.log('RestaurantInformation render:', { isEditing, restaurant });
 
   if (isEditing) {
-  return (
-    <motion.div 
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
+    console.log('Entering edit mode with data:', restaurant); // Debug log
+    return (
+      <motion.div 
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         className="bg-white rounded-2xl shadow-xl p-8"
       >
@@ -61,7 +69,8 @@ export default function RestaurantInformation({ restaurant, onEditClick, onUpdat
           mode="update"
           initialData={restaurant}
           onSubmitSuccess={(updatedRestaurant) => {
-            console.log('Update success in RestaurantInformation:', updatedRestaurant); // Debug log
+            console.log('Update success in RestaurantInformation:', updatedRestaurant); 
+            console.log('Contact number in updated restaurant:', updatedRestaurant?.contactNumber);
             onUpdateSuccess(updatedRestaurant);
             setIsEditing(false);
           }}
@@ -109,6 +118,13 @@ export default function RestaurantInformation({ restaurant, onEditClick, onUpdat
         </div>
       </div>
 
+      {/* Debug Info - Remove in production */}
+      <div className="bg-gray-100 rounded-xl p-4 text-xs">
+        <p><strong>Debug Info:</strong></p>
+        <p>Contact Number: {restaurant.contactNumber ? `"${restaurant.contactNumber}"` : "not set"}</p>
+        <p>Type: {typeof restaurant.contactNumber}</p>
+      </div>
+
       {/* Restaurant Details */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Description */}
@@ -138,11 +154,26 @@ export default function RestaurantInformation({ restaurant, onEditClick, onUpdat
               </div>
             ))}
           </div>
-          </div>
+        </div>
+
+        {/* Contact Information */}
+        <div className="bg-white rounded-xl shadow-lg p-6">
+          <h3 className="text-xl font-semibold mb-4 flex items-center gap-2 text-black">
+            <FaPhone className="text-[#FF4F18]" />
+            Contact
+          </h3>
+          {restaurant.contactNumber ? (
+            <p className="text-gray-600 flex items-center gap-2">
+              <span className="font-medium">Phone:</span> {restaurant.contactNumber}
+            </p>
+          ) : (
+            <p className="text-gray-500 italic">No contact number provided</p>
+          )}
+        </div>
 
         {/* Location */}
         {restaurant.location && (
-          <div className="bg-white rounded-xl shadow-lg p-6 md:col-span-2">
+          <div className={`bg-white rounded-xl shadow-lg p-6 ${!restaurant.contactNumber ? 'md:col-span-2' : ''}`}>
             <h3 className="text-xl font-semibold mb-4 flex items-center gap-2 text-black">
               <RiMapPinLine className="text-[#FF4F18]" />
               Location
