@@ -48,6 +48,7 @@ export default function RestaurantSetupDashboard() {
   const [token, setToken] = useState(null)
   const [restaurantId, setRestaurantId] = useState(null)
   const [activeTab, setActiveTab] = useState('list')
+  const [isFloorplanLoading, setIsFloorplanLoading] = useState(false)
 
   const fetchRestaurantProfile = async () => {
     try {
@@ -91,6 +92,7 @@ export default function RestaurantSetupDashboard() {
     if (!restaurant?.floorplanId) return;
 
     try {
+      setIsFloorplanLoading(true);
       const response = await fetch(`/api/scenes/${restaurant.floorplanId}`, {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -99,18 +101,22 @@ export default function RestaurantSetupDashboard() {
 
       if (response.ok) {
         const data = await response.json();
-        setFloorplan(data);
+        setFloorplan(data.data);
       }
     } catch (error) {
       console.error("Error fetching floorplan:", error);
+    } finally {
+      setIsFloorplanLoading(false);
     }
   };
 
   useEffect(() => {
-    if (restaurant?.floorplanId && activeSection === 'floorplan') {
-      fetchFloorplan();
+    if (restaurant?.floorplanId) {
+      if (activeSection === 'floorplan' || (activeSection === 'reservation' && activeTab === 'book')) {
+        fetchFloorplan();
+      }
     }
-  }, [restaurant, activeSection, token]);
+  }, [restaurant, activeSection, token, activeTab]);
 
   const handleLogout = () => {
     try {
@@ -120,6 +126,13 @@ export default function RestaurantSetupDashboard() {
       router.push("/restaurant-owner");
     } catch (error) {
       console.error("Error during logout:", error);
+    }
+  };
+
+  const handleTabChange = (tab) => {
+    setActiveTab(tab);
+    if (tab === 'book' && !floorplan && restaurant?.floorplanId) {
+      fetchFloorplan();
     }
   };
 
@@ -347,24 +360,24 @@ export default function RestaurantSetupDashboard() {
                   <div className="border-b border-[#F2F4F7]">
                     <div className="flex space-x-4 px-6 py-4">
                       <button
-                        onClick={() => setActiveTab('list')}
+                        onClick={() => handleTabChange('list')}
                         className={`px-4 py-2 rounded-lg transition-all duration-200 ${
                           activeTab === 'list'
-                            ? 'bg-[#FF4F18] text-white'
-                            : 'text-[#64748B] hover:bg-[#F8FAFC]'
+                            ? 'bg-[#FF4F18] text-white font-medium'
+                            : 'text-gray-600 hover:bg-gray-50 hover:text-[#FF4F18]'
                         }`}
                       >
-                        List View
+                        Reservation List
                       </button>
                       <button
-                        onClick={() => setActiveTab('floorplan')}
+                        onClick={() => handleTabChange('book')}
                         className={`px-4 py-2 rounded-lg transition-all duration-200 ${
-                          activeTab === 'floorplan'
-                            ? 'bg-[#FF4F18] text-white'
-                            : 'text-[#64748B] hover:bg-[#F8FAFC]'
+                          activeTab === 'book'
+                            ? 'bg-[#FF4F18] text-white font-medium'
+                            : 'text-gray-600 hover:bg-gray-50 hover:text-[#FF4F18]'
                         }`}
                       >
-                        Floor Plan View
+                        Booking Manager
                       </button>
                     </div>
                   </div>
@@ -373,8 +386,17 @@ export default function RestaurantSetupDashboard() {
                   <div className="flex-1 overflow-hidden">
                     {activeTab === 'list' ? (
                       <RestaurantReservation restaurantId={restaurant._id} />
+                    ) : isFloorplanLoading ? (
+                      <div className="flex items-center justify-center h-full">
+                        <div className="animate-spin rounded-full h-10 w-10 border-4 border-[#FF4F18] border-t-transparent"></div>
+                        <p className="ml-3 text-gray-600">Loading floorplan...</p>
+                      </div>
                     ) : (
-                      <RestaurantBookingManager restaurantId={restaurant._id} />
+                      <RestaurantBookingManager 
+                        restaurantId={restaurant._id} 
+                        floorplanData={floorplan}
+                        floorplanId={restaurant.floorplanId}
+                      />
                     )}
                   </div>
                 </div>
