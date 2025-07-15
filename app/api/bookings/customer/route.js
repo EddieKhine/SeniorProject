@@ -93,6 +93,14 @@ export async function PUT(request) {
       }, { status: 404 });
     }
 
+    // Check if booking is already cancelled
+    if (booking.status === 'cancelled') {
+      return NextResponse.json({ 
+        message: "Booking is already cancelled",
+        booking 
+      });
+    }
+
     booking.status = 'cancelled';
     booking.addToHistory('cancelled', {
       reason: 'Customer cancelled'

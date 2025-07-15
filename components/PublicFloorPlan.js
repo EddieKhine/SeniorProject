@@ -12,8 +12,11 @@ import '@/css/loading.css';
 import { toast } from 'react-hot-toast';
 import { createRoot } from 'react-dom/client';
 import PaymentDialog from '@/components/PaymentDialog';
+import RestaurantReservation from '@/components/RestaurantReservation';
 import gsap from 'gsap';
 import { motion, AnimatePresence } from "framer-motion";
+import { performanceMonitor, measurePerformance } from '@/utils/performance';
+import { handleSceneError } from '@/utils/errorHandler';
 
 export default function PublicFloorPlan({ floorplanData, floorplanId, restaurantId }) {
   const containerRef = useRef(null);
@@ -36,9 +39,18 @@ export default function PublicFloorPlan({ floorplanData, floorplanId, restaurant
   const [isLoading, setIsLoading] = useState(true);
   const loadingOverlayRef = useRef(null);
   const [sceneLoaded, setSceneLoaded] = useState(false);
+  const [preloadProgress, setPreloadProgress] = useState(0);
 
   const dateRef = useRef(selectedDate);
   const timeRef = useRef(selectedTime);
+
+  // Skip asset preloading and go straight to 3D scene loading for better UX
+  useEffect(() => {
+    // Set preload progress to 100 immediately to skip the basic loading screen
+    setPreloadProgress(100);
+    // Ensure scene loading starts immediately
+    setSceneLoaded(false);
+  }, []);
 
   useEffect(() => {
     dateRef.current = selectedDate;
@@ -53,23 +65,40 @@ export default function PublicFloorPlan({ floorplanData, floorplanId, restaurant
   }, [selectedDate, selectedTime]);
 
   useEffect(() => {
-    console.log('PublicFloorPlan useEffect triggered with:', {
-      containerRef: !!containerRef.current,
-      floorplanData: !!floorplanData,
-      floorplanDataObjects: floorplanData?.objects?.length,
-      containerDimensions: containerRef.current ? {
-        width: containerRef.current.clientWidth,
-        height: containerRef.current.clientHeight
-      } : null
-    });
+    // Only log in development
+    if (process.env.NODE_ENV === 'development') {
+      console.log('PublicFloorPlan useEffect triggered with:', {
+        containerRef: !!containerRef.current,
+        floorplanData: !!floorplanData,
+        floorplanDataObjects: floorplanData?.objects?.length,
+        containerDimensions: containerRef.current ? {
+          width: containerRef.current.clientWidth,
+          height: containerRef.current.clientHeight
+        } : null
+      });
+    }
 
     if (!containerRef.current || !floorplanData) {
-      console.log('Missing required refs or data, skipping initialization');
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Missing required refs or data, skipping initialization', {
+          containerRef: !!containerRef.current,
+          floorplanData: !!floorplanData,
+          floorplanDataObjects: floorplanData?.objects?.length
+        });
+      }
       return;
     }
 
+    // Start the exciting 3D scene loading immediately
+    console.log('Starting optimized 3D scene loading!');
+
     // Cleanup function
     const cleanup = () => {
+      // Stop performance monitoring
+      if (process.env.NODE_ENV === 'development') {
+        performanceMonitor.stop();
+      }
+
       // Cancel any pending animation frame
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
@@ -106,40 +135,73 @@ export default function PublicFloorPlan({ floorplanData, floorplanId, restaurant
       }
     };
 
+    // Add context loss handlers - MOVED BEFORE initScene
+    const handleContextLost = (event) => {
+      event.preventDefault();
+      console.warn('WebGL context lost. Attempting to restore...');
+      cancelAnimationFrame(animationFrameRef.current);
+    };
+
+    const handleContextRestored = () => {
+      console.log('WebGL context restored. Reinitializing scene...');
+      initScene();
+    };
+
     const initScene = async () => {
-      console.log('Starting scene initialization');
-      cleanup();
-
-      // Create loading overlay
-      const loadingOverlay = document.createElement('div');
-      loadingOverlay.className = 'loading-overlay';
-      loadingOverlay.innerHTML = `
-        <div class="loading-container">
-          <div class="loading-spinner"></div>
-          <div class="loading-text">Loading Scene...</div>
-        </div>
-      `;
-      containerRef.current.appendChild(loadingOverlay);
-      loadingOverlayRef.current = loadingOverlay;
-
-      // Update loading text function
-      const updateLoadingProgress = (text, progress) => {
-        const progressElement = loadingOverlay.querySelector('.loading-progress');
-        const textElement = loadingOverlay.querySelector('.loading-text');
-        if (progressElement) progressElement.textContent = `${Math.round(progress)}%`;
-        if (textElement) textElement.textContent = text;
-      };
-
       try {
+        console.log('Starting optimized scene initialization');
+        const startTime = performance.now();
+        
+        cleanup();
+
+        // Start performance monitoring in development
+        if (process.env.NODE_ENV === 'development') {
+          performanceMonitor.start();
+        }
+
+        // Create simplified loading overlay
+        const loadingOverlay = document.createElement('div');
+        loadingOverlay.className = 'loading-overlay';
+        loadingOverlay.innerHTML = `
+          <div class="loading-container">
+            <div class="loading-logo animate-pulse"></div>
+            <div class="loading-text animate-bounce">Loading 3D Experience</div>
+            <div class="loading-subtext">Preparing your restaurant view...</div>
+            
+            <div class="loading-progress-container">
+              <div class="loading-progress-bar" id="progress-bar"></div>
+            </div>
+            
+            <div class="loading-message" id="loading-message">Setting up scene...</div>
+          </div>
+        `;
+        containerRef.current.appendChild(loadingOverlay);
+        loadingOverlayRef.current = loadingOverlay;
+
+        // Update loading progress function
+        const updateLoadingProgress = (text, progress) => {
+          const progressElement = loadingOverlay.querySelector('#progress-bar');
+          const messageElement = loadingOverlay.querySelector('#loading-message');
+          
+          if (progressElement) {
+            progressElement.style.width = `${progress}%`;
+          }
+          if (messageElement) {
+            messageElement.textContent = text;
+          }
+        };
+
         // Initialize Three.js scene
         console.log('Creating WebGL renderer');
+        updateLoadingProgress('Setting up 3D environment...', 10);
+
         const renderer = new THREE.WebGLRenderer({ 
-          antialias: true,
+          antialias: process.env.NODE_ENV === 'production',
           powerPreference: "high-performance",
-          preserveDrawingBuffer: true  // Add this to help prevent context loss
+          alpha: true
         });
         
-        rendererRef.current = renderer;  // Store renderer reference
+        rendererRef.current = renderer;
 
         // Add context loss handling
         renderer.domElement.addEventListener('webglcontextlost', handleContextLost, false);
@@ -148,31 +210,49 @@ export default function PublicFloorPlan({ floorplanData, floorplanId, restaurant
         console.log('Setting up renderer properties');
         const containerWidth = containerRef.current.clientWidth;
         const containerHeight = containerRef.current.clientHeight;
-        console.log('Container dimensions:', { width: containerWidth, height: containerHeight });
         
         renderer.setSize(containerWidth, containerHeight);
-        renderer.shadowMap.enabled = true;
-        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        
+        // Conditional shadow settings based on environment
+        if (process.env.NODE_ENV === 'production') {
+          renderer.shadowMap.enabled = true;
+          renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        } else {
+          renderer.shadowMap.enabled = false;
+        }
+        
         containerRef.current.appendChild(renderer.domElement);
 
         // Scene Initialization
         console.log('Creating scene');
+        updateLoadingProgress('Creating 3D scene...', 20);
+
         const scene = createScene();
         sceneRef.current = scene;
 
         console.log('Setting up lights');
+        updateLoadingProgress('Setting up lighting...', 30);
+
         // Add lighting
         const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
         scene.add(ambientLight);
 
         const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
         directionalLight.position.set(5, 10, 5);
-        directionalLight.castShadow = true;
-        directionalLight.shadow.mapSize.width = 1024;
-        directionalLight.shadow.mapSize.height = 1024;
+        
+        if (process.env.NODE_ENV === 'production') {
+          directionalLight.castShadow = true;
+          directionalLight.shadow.mapSize.width = 1024;
+          directionalLight.shadow.mapSize.height = 1024;
+        } else {
+          directionalLight.castShadow = false;
+        }
+        
         scene.add(directionalLight);
 
         console.log('Setting up camera');
+        updateLoadingProgress('Configuring camera...', 40);
+
         // Camera setup
         const camera = new THREE.PerspectiveCamera(
           75,
@@ -183,51 +263,41 @@ export default function PublicFloorPlan({ floorplanData, floorplanId, restaurant
         camera.position.set(0, 10, 10);
 
         console.log('Setting up controls');
+        updateLoadingProgress('Setting up controls...', 50);
+
         // Controls
         const controls = new OrbitControls(camera, renderer.domElement);
         controls.enableDamping = true;
         controls.dampingFactor = 0.05;
-        controls.maxPolarAngle = Math.PI / 2; // Limit vertical rotation
+        controls.maxPolarAngle = Math.PI / 2;
         controls.minDistance = 5;
         controls.maxDistance = 20;
 
-        // Helper function to delay execution
-        const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
-
-        // 1. Add floor with fade-in animation
+        // Add floor
         console.log('Adding floor');
-        const floor = createFloor(20, 20, 2);
-        floor.material.transparent = true;
-        floor.material.opacity = 0;
-        scene.add(floor);
+        updateLoadingProgress('Creating floor plan...', 60);
 
-        // Faster floor fade-in
-        for (let i = 0; i <= 1; i += 0.2) { // Increased increment
-          floor.material.opacity = i;
-          await delay(20); // Reduced delay
-          renderer.render(scene, camera);
-        }
-        await delay(100); // Reduced pause after floor
+        const floor = createFloor(20, 20, 2);
+        scene.add(floor);
 
         // Initialize managers
         console.log('Initializing managers');
         doorManagerRef.current = new DoorManager(scene, { walls: [] }, renderer);
         windowManagerRef.current = new WindowManager(scene, { walls: [] }, renderer);
 
-        // Process floorplan data
+        // Process floorplan data with parallel loading
         if (floorplanData.objects) {
           console.log('Processing floorplan data with', floorplanData.objects.length, 'objects');
           const wallMap = new Map();
 
-          // 2. Create and add walls with faster fade-in
+          // Create walls (fast, no loading needed)
           console.log("Loading walls...");
+          updateLoadingProgress('Creating walls...', 65);
           const wallObjects = floorplanData.objects.filter(obj => obj.type === 'wall');
           for (const objData of wallObjects) {
             const wallGeometry = new THREE.BoxGeometry(2, 2, 0.2);
             const wallMaterial = new THREE.MeshPhongMaterial({ 
-              color: 0x808080,
-              transparent: true,
-              opacity: 0
+              color: 0x808080
             });
             const wall = new THREE.Mesh(wallGeometry, wallMaterial);
             
@@ -246,35 +316,77 @@ export default function PublicFloorPlan({ floorplanData, floorplanId, restaurant
             
             scene.add(wall);
             wallMap.set(objData.userData.uuid, wall);
-
-            // Faster wall fade-in
-            for (let i = 0; i <= 1; i += 0.2) {
-              wallMaterial.opacity = i;
-              await delay(15);
-              renderer.render(scene, camera);
-            }
-            await delay(30); // Reduced delay between walls
           }
-          await delay(200); // Reduced pause after walls
 
-          // 3. Create and add tables with faster fade-in
-          console.log("Loading tables...");
-          const tableObjects = floorplanData.objects.filter(obj => 
-            obj.userData?.isTable
+          // Load all furniture models in parallel
+          console.log("Loading furniture in parallel...");
+          updateLoadingProgress('Loading furniture...', 70);
+          
+          const tableObjects = floorplanData.objects.filter(obj => obj.userData?.isTable);
+          const chairObjects = floorplanData.objects.filter(obj => obj.userData?.isChair);
+          const plantObjects = floorplanData.objects.filter(obj => 
+            obj.userData?.isPlant || obj.userData?.isPlant01 || obj.userData?.isPlant02
           );
-          for (const objData of tableObjects) {
-            let model;
-            if (objData.userData.isRoundTable) {
-              model = await roundTable(scene);
-            } else if (objData.userData.maxCapacity === 2) {
-              model = await create2SeaterTable(scene);
-            } else if (objData.userData.maxCapacity === 8) {
-              model = await create8SeaterTable(scene);
-            } else {
-              model = await table(scene);
-            }
 
-            if (model) {
+          // Create model loading promises
+          const modelPromises = [];
+          
+          // Tables
+          for (const objData of tableObjects) {
+            let modelPromise;
+            if (objData.userData.isRoundTable) {
+              modelPromise = roundTable(scene);
+            } else if (objData.userData.maxCapacity === 2) {
+              modelPromise = create2SeaterTable(scene);
+            } else if (objData.userData.maxCapacity === 8) {
+              modelPromise = create8SeaterTable(scene);
+            } else {
+              modelPromise = table(scene);
+            }
+            modelPromises.push({ type: 'table', promise: modelPromise, data: objData });
+          }
+
+          // Chairs
+          for (const objData of chairObjects) {
+            modelPromises.push({ 
+              type: 'chair', 
+              promise: chair(scene), 
+              data: objData 
+            });
+          }
+
+          // Plants
+          for (const objData of plantObjects) {
+            let modelPromise;
+            if (objData.userData.isPlant01) {
+              modelPromise = plant01(scene);
+            } else if (objData.userData.isPlant02) {
+              modelPromise = plant02(scene);
+            }
+            if (modelPromise) {
+              modelPromises.push({ 
+                type: 'plant', 
+                promise: modelPromise, 
+                data: objData 
+              });
+            }
+          }
+
+          // Wait for all models to load
+          const modelResults = await Promise.allSettled(
+            modelPromises.map(mp => mp.promise)
+          );
+
+          // Position loaded models
+          updateLoadingProgress('Positioning objects...', 85);
+          let modelIndex = 0;
+          
+          for (const modelPromise of modelPromises) {
+            const result = modelResults[modelIndex];
+            if (result.status === 'fulfilled' && result.value) {
+              const model = result.value;
+              const objData = modelPromise.data;
+              
               model.position.fromArray(objData.position);
               model.rotation.set(
                 objData.rotation.x,
@@ -286,44 +398,13 @@ export default function PublicFloorPlan({ floorplanData, floorplanId, restaurant
                 ...objData.userData,
                 objectId: objData.objectId
               };
-
-              // Make model initially transparent
-              model.traverse((child) => {
-                if (child.material) {
-                  if (Array.isArray(child.material)) {
-                    child.material.forEach(mat => {
-                      mat.transparent = true;
-                      mat.opacity = 0;
-                    });
-                  } else {
-                    child.material.transparent = true;
-                    child.material.opacity = 0;
-                  }
-                }
-              });
-
-              scene.add(model);
-
-              // Faster table fade-in
-              for (let i = 0; i <= 1; i += 0.2) {
-                model.traverse((child) => {
-                  if (child.material) {
-                    if (Array.isArray(child.material)) {
-                      child.material.forEach(mat => mat.opacity = i);
-                    } else {
-                      child.material.opacity = i;
-                    }
-                  }
-                });
-                await delay(15);
-                renderer.render(scene, camera);
-              }
             }
+            modelIndex++;
           }
-          await delay(100); // Reduced pause after tables
 
-          // 4. Create doors and windows with faster fade-in
+          // Create doors and windows
           console.log("Loading doors and windows...");
+          updateLoadingProgress('Adding doors and windows...', 90);
           const openingsObjects = floorplanData.objects.filter(obj => 
             obj.type === 'door' || obj.type === 'window'
           );
@@ -352,179 +433,57 @@ export default function PublicFloorPlan({ floorplanData, floorplanId, restaurant
                 );
                 opening.scale.fromArray(objData.scale);
                 parentWall.userData.openings.push(opening);
-
-                // Make opening initially transparent
-                opening.traverse((child) => {
-                  if (child.material) {
-                    child.material.transparent = true;
-                    child.material.opacity = 0;
-                  }
-                });
-
-                // Faster opening fade-in
-                for (let i = 0; i <= 1; i += 0.2) {
-                  opening.traverse((child) => {
-                    if (child.material) {
-                      child.material.opacity = i;
-                    }
-                  });
-                  await delay(15);
-                  renderer.render(scene, camera);
-                }
               }
             }
           }
-          await delay(100); // Reduced pause after openings
+        }
 
-          // 5. Create and add chairs with faster fade-in
-          console.log("Loading chairs...");
-          const chairObjects = floorplanData.objects.filter(obj => 
-            obj.userData?.isChair
-          );
-          for (const objData of chairObjects) {
-            const model = await chair(scene);
-            if (model) {
-              model.position.fromArray(objData.position);
-              model.rotation.set(
-                objData.rotation.x,
-                objData.rotation.y,
-                objData.rotation.z
-              );
-              model.scale.fromArray(objData.scale);
-              model.userData = objData.userData;
-
-              // Make chair initially transparent
-              model.traverse((child) => {
-                if (child.material) {
-                  if (Array.isArray(child.material)) {
-                    child.material.forEach(mat => {
-                      mat.transparent = true;
-                      mat.opacity = 0;
-                    });
-                  } else {
-                    child.material.transparent = true;
-                    child.material.opacity = 0;
-                  }
+        console.log("Loading complete!");
+        updateLoadingProgress('Experience ready!', 100);
+        
+        // Quick fade out
+        setTimeout(() => {
+          if (loadingOverlay && loadingOverlay.parentNode) {
+            gsap.to(loadingOverlayRef.current, {
+              opacity: 0,
+              duration: 0.3,
+              onComplete: () => {
+                if (loadingOverlayRef.current?.parentNode) {
+                  loadingOverlayRef.current.parentNode.removeChild(loadingOverlayRef.current);
                 }
-              });
-
-              scene.add(model);
-
-              // Faster chair fade-in
-              for (let i = 0; i <= 1; i += 0.2) {
-                model.traverse((child) => {
-                  if (child.material) {
-                    if (Array.isArray(child.material)) {
-                      child.material.forEach(mat => mat.opacity = i);
-                    } else {
-                      child.material.opacity = i;
-                    }
-                  }
-                });
-                await delay(10);
-                renderer.render(scene, camera);
+                setIsLoading(false);
+                setSceneLoaded(true);
+                setShowInstructions(true);
+                setTimeout(() => {
+                  setShowInstructions(false);
+                }, 8000);
               }
-            }
+            });
           }
+        }, 500);
 
-          // Plants with faster fade-in
-          console.log("Loading plants...");
-          const plantObjects = floorplanData.objects.filter(obj => 
-            obj.userData?.isPlant || obj.userData?.isPlant01 || obj.userData?.isPlant02
-          );
+        // Animation loop
+        console.log('Starting animation loop');
+        const animate = () => {
+          animationFrameRef.current = requestAnimationFrame(animate);
+          controls.update();
+          renderer.render(scene, camera);
+        };
+        animate();
+
+        // Handle window resize
+        const handleResize = () => {
+          if (!containerRef.current || !rendererRef.current) return;
+          const newWidth = containerRef.current.clientWidth;
+          const newHeight = containerRef.current.clientHeight;
           
-          console.log("Found plant objects:", plantObjects.length);
-          console.log("Plant objects data:", plantObjects);
-          
-          for (const objData of plantObjects) {
-            console.log("Processing plant:", objData);
-            let model;
-            if (objData.userData.isPlant01) {
-              console.log("Loading plant01 model...");
-              model = await plant01(scene);
-            } else if (objData.userData.isPlant02) {
-              console.log("Loading plant02 model...");
-              model = await plant02(scene);
-            }
+          camera.aspect = newWidth / newHeight;
+          camera.updateProjectionMatrix();
+          rendererRef.current.setSize(newWidth, newHeight);
+        };
+        window.addEventListener('resize', handleResize);
 
-            if (model) {
-              console.log("Plant model loaded successfully");
-              model.position.fromArray(objData.position);
-              model.rotation.set(
-                objData.rotation.x,
-                objData.rotation.y,
-                objData.rotation.z
-              );
-              model.scale.fromArray(objData.scale);
-              model.userData = objData.userData;
-
-              // Make plant initially transparent
-              model.traverse((child) => {
-                if (child.material) {
-                  if (Array.isArray(child.material)) {
-                    child.material.forEach(mat => {
-                      mat.transparent = true;
-                      mat.opacity = 0;
-                    });
-                  } else {
-                    child.material.transparent = true;
-                    child.material.opacity = 0;
-                  }
-                }
-              });
-
-              scene.add(model);
-              console.log("Plant added to scene");
-              
-              // Optimize plant rendering
-              model.matrixAutoUpdate = false;
-              model.updateMatrix();
-
-              // Faster plant fade-in
-              for (let i = 0; i <= 1; i += 0.2) {
-                model.traverse((child) => {
-                  if (child.material) {
-                    if (Array.isArray(child.material)) {
-                      child.material.forEach(mat => mat.opacity = i);
-                    } else {
-                      child.material.opacity = i;
-                    }
-                  }
-                });
-                await delay(10);
-                renderer.render(scene, camera);
-              }
-            } else {
-              console.error("Failed to load plant model");
-            }
-          }
-          await delay(50);
-
-          console.log("Loading complete!");
-
-          // Animation loop
-          console.log('Starting animation loop');
-          const animate = () => {
-            animationFrameRef.current = requestAnimationFrame(animate);
-            controls.update();
-            renderer.render(scene, camera);
-          };
-          animate();
-
-          // Handle window resize
-          const handleResize = () => {
-            if (!containerRef.current || !rendererRef.current) return;
-            const newWidth = containerRef.current.clientWidth;
-            const newHeight = containerRef.current.clientHeight;
-            console.log('Resizing to:', { width: newWidth, height: newHeight });
-            
-            camera.aspect = newWidth / newHeight;
-            camera.updateProjectionMatrix();
-            rendererRef.current.setSize(newWidth, newHeight);
-          };
-          window.addEventListener('resize', handleResize);
-
-          // Add click event listener to the renderer
+        // Add click event listener to the renderer
           const raycaster = new THREE.Raycaster();
           const mouse = new THREE.Vector2();
 
@@ -720,9 +679,13 @@ export default function PublicFloorPlan({ floorplanData, floorplanId, restaurant
                 });
               } catch (error) {
                 console.error('Booking error:', error);
-                toast.error(error.message || 'Failed to book table');
+                toast.error(error.message || 'Failed to create booking');
               }
             });
+
+            // Set default value and focus
+            guestCountInput.value = '1';
+            guestCountInput.focus();
 
             // Add input validation
             guestCountInput.addEventListener('input', (e) => {
@@ -746,43 +709,14 @@ export default function PublicFloorPlan({ floorplanData, floorplanId, restaurant
             });
           };
 
-          if (containerRef.current) {
-            containerRef.current.addEventListener('click', handleClick);
-          }
+          renderer.domElement.addEventListener('click', handleClick);
 
-          // Handle loading completion
-          const handleLoadingComplete = () => {
-            if (loadingOverlayRef.current && loadingOverlayRef.current.parentNode) {
-              gsap.to(loadingOverlayRef.current, {
-                opacity: 0,
-                duration: 0.5,
-                onComplete: () => {
-                  if (loadingOverlayRef.current?.parentNode) {
-                    loadingOverlayRef.current.parentNode.removeChild(loadingOverlayRef.current);
-                  }
-                  setIsLoading(false);
-                  setSceneLoaded(true);
-                  // Show instructions after loading
-                  setShowInstructions(true);
-                  // Hide instructions after 8 seconds
-                  setTimeout(() => {
-                    setShowInstructions(false);
-                  }, 8000);
-                }
-              });
-            }
-          };
-
-          // Call handleLoadingComplete after scene is ready
-          handleLoadingComplete();
-
-          // After everything is loaded successfully
-          setSceneLoaded(true);
-          
+          // All scene setup code, event handlers, and input validation must be before this return!
           return () => {
             window.removeEventListener('resize', handleResize);
             renderer.domElement.removeEventListener('webglcontextlost', handleContextLost);
             renderer.domElement.removeEventListener('webglcontextrestored', handleContextRestored);
+            renderer.domElement.removeEventListener('click', handleClick);
             cleanup();
             if (containerRef.current?.contains(renderer.domElement)) {
               containerRef.current.removeChild(renderer.domElement);
@@ -791,26 +725,25 @@ export default function PublicFloorPlan({ floorplanData, floorplanId, restaurant
               containerRef.current.removeEventListener('click', handleClick);
             }
           };
+        } catch (error) {
+          console.error('Error initializing scene:', error);
+          // Use enhanced error handling
+          const errorResult = handleSceneError(error, 'PublicFloorPlan');
+          console.error('Scene error details:', errorResult);
+          setSceneLoaded(false);
         }
-      } catch (error) {
-        console.error('Error initializing scene:', error);
-        setSceneLoaded(false);
-      }
-    };
-
-    // Add context loss handlers
-    const handleContextLost = (event) => {
-      event.preventDefault();
-      console.warn('WebGL context lost. Attempting to restore...');
-      cancelAnimationFrame(animationFrameRef.current);
-    };
-
-    const handleContextRestored = () => {
-      console.log('WebGL context restored. Reinitializing scene...');
-      initScene();
     };
 
     initScene();
+
+    // Cleanup function
+    return () => {
+      if (rendererRef.current) {
+        rendererRef.current.domElement.removeEventListener('webglcontextlost', handleContextLost);
+        rendererRef.current.domElement.removeEventListener('webglcontextrestored', handleContextRestored);
+      }
+      cleanup();
+    };
   }, [floorplanData]);
 
   useEffect(() => {
@@ -1149,7 +1082,7 @@ export default function PublicFloorPlan({ floorplanData, floorplanId, restaurant
     }
   }, [selectedDate, selectedTime]);
 
-  const updateTableColors = () => {
+  const updateTableColors = useCallback(() => {
     if (!sceneRef.current) return;
     
     console.log('5. Updating colors with available tables:', Array.from(availableTables));
@@ -1186,7 +1119,7 @@ export default function PublicFloorPlan({ floorplanData, floorplanId, restaurant
             });
         }
     });
-  };
+  }, [availableTables]);
 
   // Add this useEffect to trigger color updates
   useEffect(() => {
@@ -1392,6 +1325,9 @@ export default function PublicFloorPlan({ floorplanData, floorplanId, restaurant
     };
   }, []);
 
+  // Skip the basic loading screen entirely - go straight to 3D scene loading
+  // The exciting loading experience will be handled within the 3D scene initialization
+
   return (
     <div className="flex flex-col h-screen">
       <style jsx>{`
@@ -1516,7 +1452,7 @@ export default function PublicFloorPlan({ floorplanData, floorplanId, restaurant
             </button>
             
             <div className="date-container">
-              {[...Array(14)].map((_, index) => {
+              {[...Array(30)].map((_, index) => {
                 // Create date in Bangkok timezone
                 const bangkokDate = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Bangkok' }));
                 bangkokDate.setDate(bangkokDate.getDate() + index);
@@ -1662,4 +1598,4 @@ export default function PublicFloorPlan({ floorplanData, floorplanId, restaurant
       </div>
     </div>
   );
-} 
+};

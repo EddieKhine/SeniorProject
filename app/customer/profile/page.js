@@ -170,8 +170,10 @@ export default function CustomerProfile() {
         bookingDateTime.setHours(parseInt(hours, 10), parseInt(minutes, 10), 0, 0);
         const currentDateTime = new Date();
         
-        // If booking is in the past and not cancelled, mark as completed
-        if (bookingDateTime < currentDateTime && booking.status !== 'cancelled') {
+        // If booking is in the past and not cancelled or already completed, mark as completed
+        if (bookingDateTime < currentDateTime && 
+            booking.status !== 'cancelled' && 
+            booking.status !== 'completed') {
           // Update the booking status in the database
           updateBookingStatus(booking._id, 'completed');
           return { ...booking, status: 'completed' };

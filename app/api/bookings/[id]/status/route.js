@@ -56,9 +56,24 @@ export async function PATCH(request, { params }) {
       );
     }
 
-    // Add to history before updating status
+    // Check if status is actually changing
+    if (booking.status === status) {
+      return NextResponse.json({ 
+        message: 'Booking status is already up to date',
+        booking: {
+          _id: booking._id,
+          status: booking.status,
+          updatedAt: booking.updatedAt
+        }
+      });
+    }
+
+    // Store the previous status for history
+    const previousStatus = booking.status;
+
+    // Add to history only if status is actually changing
     booking.addToHistory('modified', {
-      previousStatus: booking.status,
+      previousStatus: previousStatus,
       newStatus: status,
       updatedAt: new Date()
     });

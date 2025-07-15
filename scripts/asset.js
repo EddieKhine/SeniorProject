@@ -1,211 +1,264 @@
 import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js';
 import * as THREE from 'three';
 
-export async function chair(scene) {
-    const loader = new OBJLoader();
-    try {
-        const group = await loader.loadAsync('/models/chair/chair/3SM.obj');
-        if (group.children.length > 0) {
-            const material = new THREE.MeshPhongMaterial({
-                color: 0xffffff,  // Default gray color
-                shininess: 30
-            });
+// Enhanced model cache with memory management
+class ModelCache {
+    constructor(maxSize = 50) {
+        this.cache = new Map();
+        this.maxSize = maxSize;
+        this.loadingPromises = new Map();
+        this.stats = {
+            hits: 0,
+            misses: 0,
+            loads: 0
+        };
+    }
 
-            group.children.forEach(child => {
-                if (child.isMesh) {
-                    child.material = material;
-                    child.castShadow = true;
-                    child.receiveShadow = true;
-                    child.scale.set(0.01, 0.01, 0.01);
-                }
-            });
-            group.position.set(0, 0.01, 0);
-            group.userData = {
-                isMovable: true,
-                isChair: true,
-                isRotatable: true
-            };
-            scene.add(group);
+    has(key) {
+        return this.cache.has(key);
+    }
+
+    get(key) {
+        if (this.cache.has(key)) {
+            this.stats.hits++;
+            return this.cache.get(key);
         }
-        return group;
-    } catch (error) {
-        console.error("Error loading chair:", error);
+        this.stats.misses++;
         return null;
+    }
+
+    set(key, value) {
+        // Implement LRU eviction if cache is full
+        if (this.cache.size >= this.maxSize) {
+            const firstKey = this.cache.keys().next().value;
+            this.cache.delete(firstKey);
+        }
+        this.cache.set(key, value);
+    }
+
+    clear() {
+        this.cache.clear();
+        this.loadingPromises.clear();
+    }
+
+    getStats() {
+        return {
+            ...this.stats,
+            size: this.cache.size,
+            maxSize: this.maxSize,
+            hitRate: this.stats.hits / (this.stats.hits + this.stats.misses)
+        };
     }
 }
 
-export async function table(scene) {
-    const loader = new OBJLoader();
-    try {
-        const group = await loader.loadAsync('/models/table/ractangleTable/Table.obj');
-        if (group.children.length > 0) {
-            const material = new THREE.MeshPhongMaterial({
-                color: 0xffffff,
-                shininess: 30
-            });
+const modelCache = new ModelCache();
 
-            group.children.forEach(child => {
-                if (child.isMesh) {
-                    child.material = material;
-                    child.castShadow = true;
-                    child.receiveShadow = true;
-                    child.scale.set(0.01, 0.01, 0.01);
-                }
-            });
-            group.position.set(0, 0.01, 0);
-            group.userData = {
-                isMovable: true,
-                isTable: true,
-                isRotatable: true,
-                maxCapacity: 4,
-
-            };
-            scene.add(group);
-        }
-        return group;
-    } catch (error) {
-        console.error("Error loading table:", error);
-        return null;
+// Enhanced helper function to get cached model or load new one
+async function getCachedModel(modelPath, createMaterial, scale = [1, 1, 1]) {
+    // Check if already loading
+    if (modelCache.loadingPromises.has(modelPath)) {
+        console.log(`Model already loading: ${modelPath}`);
+        const cachedGroup = await modelCache.loadingPromises.get(modelPath);
+        return applyScaling(cachedGroup.clone(), scale);
     }
+
+    // Check cache first
+    if (modelCache.has(modelPath)) {
+        console.log(`Using cached model: ${modelPath}`);
+        const cachedGroup = modelCache.get(modelPath);
+        return applyScaling(cachedGroup.clone(), scale);
+    }
+
+    // Start loading
+    const loadingPromise = loadModel(modelPath, createMaterial);
+    modelCache.loadingPromises.set(modelPath, loadingPromise);
+
+    try {
+        const group = await loadingPromise;
+        modelCache.set(modelPath, group);
+        modelCache.loadingPromises.delete(modelPath);
+        modelCache.stats.loads++;
+        
+        return applyScaling(group.clone(), scale);
+    } catch (error) {
+        modelCache.loadingPromises.delete(modelPath);
+        throw error;
+    }
+}
+
+// Separate loading function
+async function loadModel(modelPath, createMaterial) {
+    const loader = new OBJLoader();
+    console.log(`Loading new model: ${modelPath}`);
+    
+    const group = await loader.loadAsync(modelPath);
+    
+    if (group.children.length > 0) {
+        const material = createMaterial();
+        
+        group.children.forEach(child => {
+            if (child.isMesh) {
+                child.material = material;
+                child.castShadow = process.env.NODE_ENV === 'production';
+                child.receiveShadow = process.env.NODE_ENV === 'production';
+                
+                // Optimize geometry
+                if (child.geometry) {
+                    child.geometry.computeBoundingSphere();
+                    child.geometry.computeBoundingBox();
+                }
+            }
+        });
+        
+        return group;
+    }
+    return null;
+}
+
+// Apply scaling to cloned group
+function applyScaling(group, scale) {
+    group.children.forEach(child => {
+        if (child.isMesh) {
+            child.scale.set(...scale);
+        }
+    });
+    return group;
+}
+
+export async function chair(scene) {
+    const group = await getCachedModel('/models/chair/chair/3SM.obj', () => 
+        new THREE.MeshPhongMaterial({
+            color: 0xffffff,
+            shininess: 30
+        }),
+        [0.01, 0.01, 0.01] // Scale for chair
+    );
+    
+    if (group) {
+        group.position.set(0, 0.01, 0);
+        group.userData = {
+            isMovable: true,
+            isChair: true,
+            isRotatable: true
+        };
+        scene.add(group);
+    }
+    return group;
+}
+
+export async function table(scene) {
+    const group = await getCachedModel('/models/table/ractangleTable/Table.obj', () => 
+        new THREE.MeshPhongMaterial({
+            color: 0xffffff,
+            shininess: 30
+        }),
+        [0.01, 0.01, 0.01] // Scale for table
+    );
+    
+    if (group) {
+        group.position.set(0, 0.01, 0);
+        group.userData = {
+            isMovable: true,
+            isTable: true,
+            isRotatable: true,
+            maxCapacity: 4,
+        };
+        scene.add(group);
+    }
+    return group;
 }
 
 // New function for loading a sofa model
 export async function sofa(scene) {
-    const loader = new OBJLoader();
-    try {
-        const group = await loader.loadAsync('/models/chair/couch/couch.obj');
-        if (group.children.length > 0) {
-            const material = new THREE.MeshPhongMaterial({
-                color: 0xffffff,
-                shininess: 30
-            });
-            group.children.forEach(child => {
-                if (child.isMesh) {
-                    
-                    child.material = material;
-                    child.castShadow = true;
-                    child.receiveShadow = true;
-                    child.scale.set(1, 1, 1);
-                }
-            });
-            group.position.set(0, 0.01, 0);
-            group.userData = {
-                isMovable: true,
-                isSofa: true,
-                isRotatable: true,
-                maxCapacity: 2,
-                isTable: false
-            };
-            scene.add(group);
-        }
-        return group;
-    } catch (error) {
-        console.error("Error loading sofa:", error);
-        return null;
+    const group = await getCachedModel('/models/chair/couch/couch.obj', () => 
+        new THREE.MeshPhongMaterial({
+            color: 0xffffff,
+            shininess: 30
+        }),
+        [1, 1, 1] // Scale for sofa
+    );
+    
+    if (group) {
+        group.position.set(0, 0.01, 0);
+        group.userData = {
+            isMovable: true,
+            isSofa: true,
+            isRotatable: true,
+            maxCapacity: 2,
+            isTable: false
+        };
+        scene.add(group);
     }
+    return group;
 }
 
 // New function for loading a lamp model
 export async function roundTable(scene) {
-    const loader = new OBJLoader();
-    try {
-        const group = await loader.loadAsync('/models/table/roundTable/roundTable.obj');
-        if (group.children.length > 0) {
-            const material = new THREE.MeshPhongMaterial({
-                color: 0xffffff,
-                shininess: 30
-            });
-            group.children.forEach(child => {
-                if (child.isMesh) {
-                    child.material = material;
-                    child.castShadow = true;
-                    child.receiveShadow = true;
-                    child.scale.set(0.03, 0.03, 0.03);
-                }
-            });
-            group.position.set(0, 0.01, 0);
-            group.rotation.set(Math.PI /2 , Math.PI  , 0); // This rotates 90° around the X axis.
-            group.userData = {
-                isMovable: true,
-                isTable: true,
-                isRotatable: true,
-                isRoundTable: true,
-                maxCapacity: 4,
-
-            };
-            scene.add(group);
-        }
-        return group;
-    } catch (error) {
-        console.error("Error loading roundTable:", error);
-        return null;
+    const group = await getCachedModel('/models/table/roundTable/roundTable.obj', () => 
+        new THREE.MeshPhongMaterial({
+            color: 0xffffff,
+            shininess: 30
+        }),
+        [0.03, 0.03, 0.03] // Scale for round table
+    );
+    
+    if (group) {
+        group.position.set(0, 0.01, 0);
+        group.rotation.set(Math.PI /2 , Math.PI  , 0); // This rotates 90° around the X axis.
+        group.userData = {
+            isMovable: true,
+            isTable: true,
+            isRotatable: true,
+            isRoundTable: true,
+            maxCapacity: 4,
+        };
+        scene.add(group);
     }
+    return group;
 }
 export async function create2SeaterTable(scene){
-    const loader = new OBJLoader();
-    try {
-        const group = await loader.loadAsync('/models/table/2seater_squareTable/3d-model.obj');
-        if (group.children.length > 0) {
-            const material = new THREE.MeshPhongMaterial({
-                color: 0xffffff,
-                shininess: 30
-            });
-            group.children.forEach(child => {
-                if (child.isMesh) {
-                    child.material = material;
-                    child.castShadow = true;
-                    child.receiveShadow = true;
-                    child.scale.set(0.02, 0.02, 0.02);
-                }
-            });
-            group.position.set(0, 0.01, 0);
-            group.userData = {
-                isMovable: true,
-                isTable: true,
-                isRotatable: true,
-                is2SeaterTable: true,
-                maxCapacity: 2,
-            };
-            scene.add(group);
-        }
-        return group;
-    } catch (error) {
-        console.error("Error loading 2 seater table:", error);
-        return null;
+    const group = await getCachedModel('/models/table/2seater_squareTable/3d-model.obj', () => 
+        new THREE.MeshPhongMaterial({
+            color: 0xffffff,
+            shininess: 30
+        }),
+        [0.02, 0.02, 0.02] // Scale for 2 seater table
+    );
+    
+    if (group) {
+        group.position.set(0, 0.01, 0);
+        group.userData = {
+            isMovable: true,
+            isTable: true,
+            isRotatable: true,
+            is2SeaterTable: true,
+            maxCapacity: 2,
+        };
+        scene.add(group);
     }
+    return group;
 }
 export async function create8SeaterTable(scene){
-    const loader = new OBJLoader();
-    try {
-        const group = await loader.loadAsync('/models/table/6seater_roundtable/6seaterRound.obj');
-        if (group.children.length > 0) {
-            const material = new THREE.MeshPhongMaterial({
-                color: 0xffffff,
-                shininess: 30
-            });
-            group.children.forEach(child => {
-                if (child.isMesh) {
-                    child.material = material;
-                    child.castShadow = true;
-                    child.receiveShadow = true;
-                    child.scale.set(0.03, 0.03, 0.03);
-                }
-            });
-            group.position.set(0, 0.01, 0);
-            group.userData = {
-                isMovable: true,
-                isTable: true,
-                isRotatable: true,
-                is8SeaterTable: true,
-                maxCapacity: 8,
-            };
-            scene.add(group);
-        }
-        return group;
-    } catch (error) {
-        console.error("Error loading 8 seater table:", error);
-        return null;
+    const group = await getCachedModel('/models/table/6seater_roundtable/6seaterRound.obj', () => 
+        new THREE.MeshPhongMaterial({
+            color: 0xffffff,
+            shininess: 30
+        }),
+        [0.03, 0.03, 0.03] // Scale for 8 seater table
+    );
+    
+    if (group) {
+        group.position.set(0, 0.01, 0);
+        group.userData = {
+            isMovable: true,
+            isTable: true,
+            isRotatable: true,
+            is8SeaterTable: true,
+            maxCapacity: 8,
+        };
+        scene.add(group);
     }
+    return group;
 }
 
 export async function plant01(scene){

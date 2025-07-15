@@ -120,6 +120,12 @@ bookingSchema.index({ userId: 1 });
 bookingSchema.index({ bookingRef: 1 }, { unique: true });
 bookingSchema.index({ 'history.timestamp': 1 });
 
+// Compound indexes for better performance
+bookingSchema.index({ restaurantId: 1, date: 1, status: 1 });
+bookingSchema.index({ tableId: 1, date: 1, status: 1 });
+bookingSchema.index({ userId: 1, date: -1 });
+bookingSchema.index({ status: 1, date: 1 });
+
 // Method to check if table is available for a specific time
 bookingSchema.statics.isTableAvailable = async function(tableId, date, startTime, endTime) {
     console.log('Checking availability for:', { tableId, date, startTime, endTime });
@@ -127,6 +133,22 @@ bookingSchema.statics.isTableAvailable = async function(tableId, date, startTime
     const bookingDate = new Date(date);
     bookingDate.setHours(0, 0, 0, 0);
 
+    // Optimized query using compound index
+    const existingBooking = await this.findOne({
+        tableId: tableId,
+        date: bookingDate,
+        status: { $in: ['pending', 'confirmed'] },
+        $or: [
+            { tableId: tableId },
+            { originalTableId: tableId }
+        ]
+    }).select('_id startTime endTime').lean();
+
+    if (!existingBooking) {
+        return true; // No bookings found, table is available
+    }
+
+    // Time overlap check (only if booking exists)
     const timeToMinutes = (timeStr) => {
         const [time, period] = timeStr.split(' ');
         let [hours, minutes] = time.split(':').map(Number);
@@ -137,27 +159,17 @@ bookingSchema.statics.isTableAvailable = async function(tableId, date, startTime
 
     const requestStart = timeToMinutes(startTime);
     const requestEnd = timeToMinutes(endTime);
+    const bookingStart = timeToMinutes(existingBooking.startTime);
+    const bookingEnd = timeToMinutes(existingBooking.endTime);
 
-    // Find any overlapping bookings
-    const existingBooking = await this.findOne({
-        tableId: tableId,
-        date: bookingDate,
-        status: { $in: ['pending', 'confirmed'] },
-        $or: [
-            {
-                $and: [
-                    { startTime: { $lte: endTime } },
-                    { endTime: { $gt: startTime } }
-                ]
-            }
-        ]
-    });
+    // Check for time overlap
+    const hasOverlap = bookingStart < requestEnd && bookingEnd > requestStart;
 
     console.log(`Checking table ${tableId} for date ${bookingDate}:`, 
-        existingBooking ? 'Booked' : 'Available'
+        hasOverlap ? 'Booked' : 'Available'
     );
 
-    return !existingBooking;
+    return !hasOverlap;
 };
 
 // Method to get all bookings for a restaurant on a specific date
@@ -199,10 +211,30 @@ bookingSchema.statics.getUserBookings = async function(userId) {
 
 // Add a method to record history
 bookingSchema.methods.addToHistory = function(action, details = {}) {
-    this.history.push({
-        action,
-        details
+    // Check for duplicate recent entries (within last 5 seconds)
+    const now = new Date();
+    const fiveSecondsAgo = new Date(now.getTime() - 5000);
+    
+    const recentDuplicate = this.history.find(entry => {
+        if (entry.action !== action) return false;
+        if (entry.timestamp < fiveSecondsAgo) return false;
+        
+        // Check if details are the same
+        if (action === 'modified' && details.previousStatus && details.newStatus) {
+            return entry.details.get('previousStatus') === details.previousStatus &&
+                   entry.details.get('newStatus') === details.newStatus;
+        }
+        
+        return false;
     });
+    
+    // Only add if no recent duplicate found
+    if (!recentDuplicate) {
+        this.history.push({
+            action,
+            details
+        });
+    }
 };
 
 const Booking = mongoose.models.Booking || mongoose.model('Booking', bookingSchema);
