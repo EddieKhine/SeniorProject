@@ -61,7 +61,7 @@ export async function POST(request, { params }) {
       });
 
       // Match by objectId directly since it matches the friendlyId
-      return obj.type === 'furniture' && obj.objectId === tableId;
+      return (obj.type === 'furniture' || obj.type === 'table') && obj.objectId === tableId;
     });
 
     if (!table) {

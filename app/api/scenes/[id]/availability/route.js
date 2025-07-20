@@ -26,8 +26,8 @@ export async function POST(request, { params }) {
 
     // Get all tables from floorplan with their IDs
     const tables = floorplan.data.objects.filter(obj => {
-      // Check if it's a furniture type and has userData
-      if (obj.type !== 'furniture' || !obj.userData) return false;
+      // Check if it's a furniture or table type and has userData
+      if ((obj.type !== 'furniture' && obj.type !== 'table') || !obj.userData) return false;
 
       // Convert userData to plain object if it's a Map
       const userData = obj.userData instanceof Map ? 
@@ -130,15 +130,15 @@ export async function POST(request, { params }) {
         const requestEnd = timeToMinutes(endTime);
 
         const hasOverlap = bookingStart < requestEnd && bookingEnd > requestStart;
-        
-        console.log('Time overlap check:', {
-          tableId: booking.tableId,
-          bookingTime: `${booking.startTime} - ${booking.endTime}`,
-          requestTime: `${startTime} - ${endTime}`,
-          bookingMinutes: `${bookingStart} - ${bookingEnd}`,
-          requestMinutes: `${requestStart} - ${requestEnd}`,
-          hasOverlap
-        });
+
+        // Add debug log for each booking and overlap result
+        console.log('[AVAILABILITY DEBUG] Table:', booking.tableId,
+          '| Booking:', booking.startTime, '-', booking.endTime,
+          '| Request:', startTime, '-', endTime,
+          '| BookingMin:', bookingStart, '-', bookingEnd,
+          '| RequestMin:', requestStart, '-', requestEnd,
+          '| Overlap:', hasOverlap
+        );
 
         return hasOverlap;
       }).map(booking => booking.tableId);

@@ -61,10 +61,6 @@ export default function PublicFloorPlan({ floorplanData, floorplanId, restaurant
   }, [selectedTime]);
 
   useEffect(() => {
-    console.log('Selected Date:', selectedDate, 'Selected Time:', selectedTime);
-  }, [selectedDate, selectedTime]);
-
-  useEffect(() => {
     // Only log in development
     if (process.env.NODE_ENV === 'development') {
       console.log('PublicFloorPlan useEffect triggered with:', {
@@ -343,6 +339,9 @@ export default function PublicFloorPlan({ floorplanData, floorplanId, restaurant
             } else {
               modelPromise = table(scene);
             }
+            // Ensure objectId is always set on userData
+            if (!objData.userData) objData.userData = {};
+            objData.userData.objectId = objData.objectId;
             modelPromises.push({ type: 'table', promise: modelPromise, data: objData });
           }
 
@@ -394,7 +393,9 @@ export default function PublicFloorPlan({ floorplanData, floorplanId, restaurant
                 objData.rotation.z
               );
               model.scale.fromArray(objData.scale);
+              // Merge userData instead of overwriting
               model.userData = {
+                ...model.userData,
                 ...objData.userData,
                 objectId: objData.objectId
               };
@@ -1085,21 +1086,10 @@ export default function PublicFloorPlan({ floorplanData, floorplanId, restaurant
   const updateTableColors = useCallback(() => {
     if (!sceneRef.current) return;
     
-    console.log('5. Updating colors with available tables:', Array.from(availableTables));
-    
     sceneRef.current.traverse((object) => {
         if (object.userData?.isTable) {
             const tableId = object.userData.objectId;
             const isAvailable = availableTables.size === 0 || availableTables.has(tableId);
-            
-            console.log('6. Table check:', {
-                tableId,
-                isAvailable,
-                tableIdType: typeof tableId,
-                availableTablesContent: Array.from(availableTables),
-                setSize: availableTables.size
-            });
-
             // Update all meshes in the table object
             object.traverse((child) => {
                 if (child.isMesh) {
