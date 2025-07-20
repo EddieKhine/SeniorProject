@@ -58,12 +58,10 @@ export async function POST(req) {
     const profileImage = user.profileImage 
       ? (user.profileImage.startsWith('http') 
           ? user.profileImage 
-          : `https://${process.env.AWS_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${user.profileImage}`)
+          : user.profileImage)
       : null;
 
     console.log('Processed profile image URL:', profileImage);
-    console.log('AWS bucket name:', process.env.AWS_BUCKET_NAME);
-    console.log('AWS region:', process.env.AWS_REGION);
 
     const userData = {
       firstName: user.firstName,

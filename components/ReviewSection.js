@@ -25,7 +25,6 @@ export default function ReviewSection({ restaurantId, onLoginClick }) {
         throw new Error(errorData.error || 'Failed to fetch reviews');
       }
       const data = await response.json();
-      console.log('Fetched reviews with images:', data.reviews);
       setReviews(data.reviews || []);
     } catch (error) {
       console.error('Error fetching reviews:', error);
@@ -79,7 +78,7 @@ export default function ReviewSection({ restaurantId, onLoginClick }) {
         }
 
         const { url } = await response.json();
-        // Store the full S3 URL
+        // Store the image URL (Firebase or generic)
         setNewReview(prev => ({
           ...prev,
           images: [...prev.images, url]
@@ -149,8 +148,6 @@ export default function ReviewSection({ restaurantId, onLoginClick }) {
         return;
       }
 
-      console.log('Submitting review with images:', newReview.images);
-
       const response = await fetch(`/api/restaurants/${restaurantId}/reviews`, {
         method: 'POST',
         headers: {
@@ -170,7 +167,6 @@ export default function ReviewSection({ restaurantId, onLoginClick }) {
       }
 
       const { review } = await response.json();
-      console.log('Submitted review:', review);
       setReviews(prevReviews => [review, ...prevReviews]);
       setNewReview({ rating: 5, comment: '', images: [] });
       setError('');
@@ -440,12 +436,12 @@ export default function ReviewSection({ restaurantId, onLoginClick }) {
                   className="relative aspect-square rounded-lg overflow-hidden hover:opacity-90 transition-opacity cursor-pointer group"
                 >
                   <Image
-                    src={getFullImageUrl(imageUrl)}
+                    src={imageUrl}
                     alt={`Review image ${index + 1}`}
                     fill
                     className="object-cover"
                     sizes="(max-width: 640px) 50vw, (max-width: 1024px) 25vw, 20vw"
-                    onClick={() => window.open(getFullImageUrl(imageUrl), '_blank')}
+                    onClick={() => window.open(imageUrl, '_blank')}
                   />
                   <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-opacity" />
                 </div>

@@ -1,11 +1,22 @@
-//for image handling
 import { NextResponse } from "next/server";
-import { PutObjectCommand } from "@aws-sdk/client-s3";
-import s3Client from "@/lib/aws-config";
 import { v4 as uuidv4 } from 'uuid';
+import { storage } from '@/lib/firebase-admin';
 
 export async function POST(req) {
   try {
+    // Verify bucket exists
+    const bucket = storage.bucket('foodloft-450813.firebasestorage.app');
+    console.log('Using bucket:', bucket.name);
+    const [exists] = await bucket.exists();
+    console.log('Bucket exists?', exists);
+    if (!exists) {
+      return NextResponse.json(
+        { error: `Bucket ${bucket.name} does not exist or inaccessible.` },
+        { status: 500 }
+      );
+    }
+
+    // Proceed with your existing code
     const data = await req.formData();
     const file = data.get('file');
     const type = data.get('type'); // 'restaurant', 'customer', 'review'
@@ -29,23 +40,20 @@ export async function POST(req) {
 
     // Generate unique filename
     const fileExtension = file.name.split('.').pop();
-    const fileName = `${uuidv4()}.${fileExtension}`;
+    const fileName = `${folder}/${uuidv4()}.${fileExtension}`;
 
-    // Upload to S3 in appropriate folder
-    const command = new PutObjectCommand({
-      Bucket: process.env.AWS_BUCKET_NAME,
-      Key: `${folder}/${fileName}`,
-      Body: buffer,
-      ContentType: file.type,
-      ACL: 'public-read',
+    // Upload to Firebase Storage
+    const fileRef = bucket.file(fileName);
+    await fileRef.save(buffer, {
+      metadata: { contentType: file.type },
     });
 
-    await s3Client.send(command);
-
-    // Generate URL
-    const imageUrl = `https://${process.env.AWS_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${folder}/${fileName}`;
+    // Make file public (optional)
+    await fileRef.makePublic();
+    const imageUrl = `https://storage.googleapis.com/${bucket.name}/${fileName}`;
 
     return NextResponse.json({ url: imageUrl });
+
   } catch (error) {
     console.error('Upload error:', error);
     return NextResponse.json(
@@ -53,4 +61,4 @@ export async function POST(req) {
       { status: 500 }
     );
   }
-} 
+}

@@ -69,8 +69,10 @@ export async function PUT(req) {
       firstName,
       lastName,
       contactNumber,
-      profileImage
     };
+    if (profileImage) {
+      updateDoc.profileImage = profileImage;
+    }
 
     if (newPassword) {
       updateDoc.password = await bcrypt.hash(newPassword, 10);

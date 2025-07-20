@@ -29,10 +29,8 @@ export async function GET(req, { params }) {
         ...review.userId.toObject(),
         profileImage: review.userId.profileImage || '/default-avatar.png'
       },
-      // Ensure review images are full S3 URLs
-      images: review.images.map(img => 
-        img.startsWith('https://') ? img : `https://${process.env.AWS_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${img}`
-      )
+      // When processing review images, do not attempt to construct S3 URLs. Assume all image URLs are full URLs (Firebase Storage or otherwise).
+      images: review.images
     }));
 
     return NextResponse.json({ reviews: processedReviews });
