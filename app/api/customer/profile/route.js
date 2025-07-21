@@ -1,9 +1,11 @@
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
 import { headers } from 'next/headers';
-import jwt from "jsonwebtoken";
 import dbConnect from "@/lib/mongodb";
 import User from "@/models/user";
+import { getAuth } from "@/lib/firebase-admin";
+
+
 
 // 🚀 GET Request: Fetch User Data
 export async function GET(req) {
@@ -18,9 +20,11 @@ export async function GET(req) {
       });
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    // Verify Firebase ID token
+    const decoded = await getAuth().verifyIdToken(token);
     await dbConnect();
 
+    // Use decoded.email or decoded.uid for lookup
     const user = await User.findOne({ email: decoded.email }).select('-password');
     console.log('GET - Current user state:', {
       id: user?._id,
@@ -55,7 +59,8 @@ export async function PUT(req) {
       });
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    // Verify Firebase ID token
+    const decoded = await getAuth().verifyIdToken(token);
     const body = await req.json();
     const { email, firstName, lastName, contactNumber, newPassword, profileImage } = body;
 

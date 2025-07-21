@@ -30,6 +30,8 @@ import { toast } from "react-hot-toast";
 import ImageUpload from '@/components/ImageUpload';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faCamera } from '@fortawesome/free-solid-svg-icons';
+import { auth } from "@/lib/firebase-config";
+import { onAuthStateChanged, signOut } from "firebase/auth";
 
 export default function CustomerProfile() {
   const router = useRouter();
@@ -52,51 +54,56 @@ export default function CustomerProfile() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const loadUserData = () => {
-      const storedUser = localStorage.getItem('customerUser');
-      const storedToken = localStorage.getItem('customerToken');
-      
-      if (!storedUser || !storedToken) {
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (!firebaseUser) {
+        setUser(null);
         setLoading(false);
+        router.push("/"); // or your login page
         return;
       }
 
+      // Sync/fetch MongoDB profile
       try {
-        const userData = JSON.parse(storedUser);
-        setUser(userData);
-        // Initialize form data with user data
-        setFormData({
-          firstName: userData.firstName || "",
-          lastName: userData.lastName || "",
-          email: userData.email || "",
-          contactNumber: userData.contactNumber || "",
-          newPassword: "",
+        const res = await fetch("/api/signup", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: firebaseUser.email,
+            firebaseUid: firebaseUser.uid,
+          }),
         });
+        const data = await res.json();
+        if (res.ok && data.user) {
+          setUser(data.user);
+          setFormData({
+            firstName: data.user.firstName || "",
+            lastName: data.user.lastName || "",
+            email: data.user.email || "",
+            contactNumber: data.user.contactNumber || "",
+            newPassword: "",
+          });
+          localStorage.setItem("customerUser", JSON.stringify(data.user));
+        } else {
+          setUser(null);
+        }
       } catch (error) {
-        console.error('Error parsing user data:', error);
+        setUser(null);
       } finally {
         setLoading(false);
       }
-    };
+    });
 
-    loadUserData();
+    return () => unsubscribe();
   }, []);
 
+  // Fetch saved restaurants with Firebase ID token
   useEffect(() => {
     const fetchSavedRestaurants = async () => {
       if (user && user.email) {
         try {
-          const token = localStorage.getItem("customerToken");
-          if (!token) {
-            console.error("No token found");
-            return;
-          }
-
-          // First, fetch favorite restaurant IDs
+          const token = await auth.currentUser?.getIdToken();
           const response = await fetch('/api/user/favorites', {
-            headers: {
-              'Authorization': `Bearer ${token}`
-            }
+            headers: token ? { 'Authorization': `Bearer ${token}` } : {},
           });
 
           if (!response.ok) {
@@ -104,8 +111,6 @@ export default function CustomerProfile() {
           }
 
           const data = await response.json();
-          
-          // Then fetch full details for each restaurant
           const restaurantDetails = await Promise.all(
             data.favorites.map(async (restaurantId) => {
               try {
@@ -128,8 +133,6 @@ export default function CustomerProfile() {
               }
             })
           );
-
-          // Filter out any null values from failed requests
           const validRestaurants = restaurantDetails.filter(r => r !== null);
           setSavedRestaurants(validRestaurants);
         } catch (error) {
@@ -137,7 +140,6 @@ export default function CustomerProfile() {
         }
       }
     };
-
     if (activeTab === "activities" && activeSubTab === "saved") {
       fetchSavedRestaurants();
     }
@@ -148,7 +150,7 @@ export default function CustomerProfile() {
     
     setBookingsLoading(true);
     try {
-      const token = localStorage.getItem('customerToken');
+      const token = await auth.currentUser?.getIdToken();
       const response = await fetch('/api/bookings/customer', {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -193,7 +195,7 @@ export default function CustomerProfile() {
   // Add new function to update booking status
   const updateBookingStatus = async (bookingId, status) => {
     try {
-      const token = localStorage.getItem('customerToken');
+      const token = await auth.currentUser?.getIdToken();
       const response = await fetch(`/api/bookings/${bookingId}/status`, {
         method: 'PATCH',
         headers: {
@@ -218,8 +220,10 @@ export default function CustomerProfile() {
     }
   }, [activeTab, activeSubTab, user]);
 
-  const handleLogout = () => {
+  // Logout: also sign out from Firebase
+  const handleLogout = async () => {
     localStorage.removeItem("customerUser");
+    await signOut(auth);
     router.push("/");
   };
 
@@ -231,20 +235,18 @@ export default function CustomerProfile() {
     }));
   };
 
+  // Profile update (edit profile)
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
     if (!user || !user.email) {
       toast.error("User email is missing.");
       return;
     }
-
-    const token = localStorage.getItem('customerToken');
+    const token = await auth.currentUser?.getIdToken();
     if (!token) {
       toast.error("Please log in again.");
       return;
     }
-
     const payload = {
       email: user.email,
       firstName: formData.firstName,
@@ -252,7 +254,6 @@ export default function CustomerProfile() {
       contactNumber: formData.contactNumber,
       newPassword: formData.newPassword || undefined,
     };
-
     try {
       const response = await fetch("/api/customer/profile", {
         method: "PUT",
@@ -262,30 +263,18 @@ export default function CustomerProfile() {
         },
         body: JSON.stringify(payload),
       });
-
       const result = await response.json();
-
       if (response.ok) {
         toast.success("Profile updated successfully!");
-        
-        // Update local user state with new data (except password)
         const updatedUser = { 
           ...user, 
           firstName: formData.firstName,
           lastName: formData.lastName,
           contactNumber: formData.contactNumber,
         };
-        
         setUser(updatedUser);
         localStorage.setItem("customerUser", JSON.stringify(updatedUser));
-        
-        // Clear password field
-        setFormData(prev => ({
-          ...prev,
-          newPassword: ""
-        }));
-        
-        // Exit edit mode
+        setFormData(prev => ({ ...prev, newPassword: "" }));
         setIsEditing(false);
       } else {
         toast.error(result.message || "Failed to update profile.");
@@ -296,31 +285,26 @@ export default function CustomerProfile() {
     }
   };
 
+  // Profile image upload
   const handleImageUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
-
     setIsUploading(true);
     setUploadError("");
-
     try {
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('type', 'customer');
-
+      const formDataObj = new FormData();
+      formDataObj.append('file', file);
+      formDataObj.append('type', 'customer');
       const uploadResponse = await fetch('/api/upload', {
         method: 'POST',
-        body: formData,
+        body: formDataObj,
       });
-
       if (!uploadResponse.ok) {
         throw new Error('Failed to upload image');
       }
-
       const { url } = await uploadResponse.json();
-      
       // Update profile with new image URL
-      const token = localStorage.getItem('customerToken');
+      const token = await auth.currentUser?.getIdToken();
       const updateResponse = await fetch('/api/customer/profile', {
         method: 'PUT',
         headers: {
@@ -335,26 +319,18 @@ export default function CustomerProfile() {
           profileImage: url,
         }),
       });
-
       if (!updateResponse.ok) {
         throw new Error('Failed to update profile');
       }
-
       const result = await updateResponse.json();
-      console.log('Profile update response:', result);
-
-      // Update local state and storage with the returned user data
       const updatedUserData = { 
         ...user,
         ...result.user, // Use the user data from the response
         profileImage: url
       };
-      
       setUser(updatedUserData);
       localStorage.setItem('customerUser', JSON.stringify(updatedUserData));
-      
       toast.success('Profile image updated successfully');
-
     } catch (error) {
       console.error('Error:', error);
       setUploadError("Failed to upload image. Please try again.");
@@ -368,7 +344,7 @@ export default function CustomerProfile() {
     if (!confirm('Are you sure you want to cancel this reservation?')) return;
     
     try {
-      const token = localStorage.getItem('customerToken');
+      const token = await auth.currentUser?.getIdToken();
       const response = await fetch(`/api/bookings/customer`, {
         method: 'PUT',
         headers: {
@@ -395,7 +371,7 @@ export default function CustomerProfile() {
     if (!confirm('Are you sure you want to delete this reservation?')) return;
 
     try {
-      const token = localStorage.getItem('customerToken');
+      const token = await auth.currentUser?.getIdToken();
       const response = await fetch(`/api/bookings/${bookingId}`, {
         method: 'DELETE',
         headers: {

@@ -1,86 +1,51 @@
 import { NextResponse } from "next/server";
-import bcrypt from "bcryptjs";
-import jwt from "jsonwebtoken";
 import dbConnect from "@/lib/mongodb";
-import mongoose from 'mongoose';
+import User from "@/models/user";
 
 export async function POST(req) {
   try {
-    const { email, password } = await req.json();
-    console.log('Login attempt for email:', email);
+    const { firebaseUid, email } = await req.json();
 
-    // Basic validation
-    if (!email || !password) {
+    console.log("🔐 Login API called with:", { firebaseUid, email });
+
+    if (!firebaseUid || !email) {
       return NextResponse.json(
-        { message: "Email and password are required" },
+        { message: "firebaseUid and email are required" },
         { status: 400 }
       );
     }
 
     await dbConnect();
 
-    // Use direct MongoDB query
-    const collection = mongoose.connection.collection('users');
-    const user = await collection.findOne({ email });
-
-    console.log('Found user data:', {
-      id: user?._id,
-      email: user?.email,
-      profileImage: user?.profileImage
-    });
+    // Find user by firebaseUid and email
+    const user = await User.findOne({ firebaseUid, email });
 
     if (!user) {
-      console.log('No user found for email:', email);
+      console.log("❌ No user found for UID:", firebaseUid);
       return NextResponse.json(
         { message: "User not found" },
         { status: 404 }
       );
     }
 
-    // Compare provided password with stored hashed password
-    const isPasswordMatch = await bcrypt.compare(password, user.password);
-    if (!isPasswordMatch) {
-      console.log('Invalid password for user:', email);
-      return NextResponse.json(
-        { message: "Invalid password" },
-        { status: 401 }
-      );
-    }
+    console.log("✅ User found:", user.email);
 
-    // Create JWT token
-    const token = jwt.sign(
-      { userId: user._id, email: user.email, role: user.role },
-      process.env.JWT_SECRET,
-      { expiresIn: "1h" }
-    );
-
-    // Get the full profile image URL
-    const profileImage = user.profileImage 
-      ? (user.profileImage.startsWith('http') 
-          ? user.profileImage 
-          : user.profileImage)
-      : null;
-
-    console.log('Processed profile image URL:', profileImage);
-
+    // Prepare response
     const userData = {
+      id: user._id,
+      email: user.email,
+      role: user.role,
       firstName: user.firstName,
       lastName: user.lastName,
-      email: user.email,
       contactNumber: user.contactNumber,
-      role: user.role,
-      profileImage: user.profileImage
     };
 
-    console.log('Sending user data:', userData);
-
-    return NextResponse.json({
-      message: "Login successful",
-      token,
-      user: userData
-    });
+    return NextResponse.json(
+      { message: "Login successful", user: userData },
+      { status: 200 }
+    );
   } catch (error) {
-    console.error("Error in login API:", error);
+    console.error("🔥 Error in login API:", error);
     return NextResponse.json(
       { message: "Internal Server Error" },
       { status: 500 }

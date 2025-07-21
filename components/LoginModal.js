@@ -3,7 +3,10 @@
 import { useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faEnvelope, faLock, faUtensils } from "@fortawesome/free-solid-svg-icons";
+import { faGoogle } from "@fortawesome/free-brands-svg-icons";
 import { motion, AnimatePresence } from "framer-motion";
+import { auth } from "@/lib/firebase-config";
+import { signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider } from "firebase/auth";
 
 export default function LoginModal({ isOpen, onClose, openSignupModal, onLoginSuccess }) {
   const [email, setEmail] = useState("");
@@ -11,36 +14,49 @@ export default function LoginModal({ isOpen, onClose, openSignupModal, onLoginSu
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
+  // Sync or fetch MongoDB profile after Firebase login
+  const syncProfile = async (firebaseUid, email) => {
+    const res = await fetch("/api/signup", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, firebaseUid }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || "Failed to sync profile");
+    return data.user;
+  };
+
   const handleLogin = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError("");
-
     try {
-      const response = await fetch("/api/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Invalid credentials");
-      }
-
-      const data = await response.json();
-
-      // Preserve restaurant owner session while updating only customer session
-      localStorage.removeItem("restaurantOwnerUser");
-      localStorage.removeItem("restaurantOwnerToken");
-
-      localStorage.setItem("customerUser", JSON.stringify(data.user));
-      localStorage.setItem("customerToken", data.token);
-
-      onLoginSuccess(data.user);
+      // 1. Firebase Auth
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      // 2. Sync/fetch MongoDB profile
+      const userProfile = await syncProfile(userCredential.user.uid, userCredential.user.email);
+      // 3. Store in localStorage
+      localStorage.setItem("customerUser", JSON.stringify(userProfile));
+      if (onLoginSuccess) onLoginSuccess(userProfile);
       onClose();
     } catch (error) {
-      console.error("Login error:", error);
+      setError(error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const provider = new GoogleAuthProvider();
+      const result = await signInWithPopup(auth, provider);
+      const userProfile = await syncProfile(result.user.uid, result.user.email);
+      localStorage.setItem("customerUser", JSON.stringify(userProfile));
+      if (onLoginSuccess) onLoginSuccess(userProfile);
+      onClose();
+    } catch (error) {
       setError(error.message);
     } finally {
       setLoading(false);
@@ -156,6 +172,29 @@ export default function LoginModal({ isOpen, onClose, openSignupModal, onLoginSu
               whileTap={{ scale: 0.98 }}
             >
               {loading ? "Logging in..." : "Login"}
+            </motion.button>
+
+            {/* Divider */}
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-[#141517]/20"></div>
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="px-2 bg-white text-[#141517]/60">Or continue with</span>
+              </div>
+            </div>
+
+            {/* Google Login Button */}
+            <motion.button
+              type="button"
+              onClick={handleGoogleLogin}
+              disabled={loading}
+              className="w-full py-4 bg-white border border-[#141517]/20 text-[#141517] font-semibold rounded-xl hover:bg-[#F2F4F7] transition-all transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center justify-center space-x-3"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              <FontAwesomeIcon icon={faGoogle} className="text-red-500 text-lg" />
+              <span>{loading ? "Signing in..." : "Sign in with Google"}</span>
             </motion.button>
 
             <p className="text-center text-[#141517]/60 text-sm">
