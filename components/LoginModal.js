@@ -4,17 +4,21 @@ import { useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faEnvelope, faLock, faUtensils } from "@fortawesome/free-solid-svg-icons";
 import { motion, AnimatePresence } from "framer-motion";
+import { useAuth } from "@/context/AuthContext";
+import { toast } from "react-hot-toast";
 
-export default function LoginModal({ isOpen, onClose, openSignupModal, onLoginSuccess }) {
+export default function LoginModal({ isOpen, onClose, openSignupModal }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const { login } = useAuth();
 
   const handleLogin = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError("");
+    const toastId = toast.loading("Logging in...");
 
     try {
       const response = await fetch("/api/login", {
@@ -23,25 +27,23 @@ export default function LoginModal({ isOpen, onClose, openSignupModal, onLoginSu
         body: JSON.stringify({ email, password }),
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Invalid credentials");
-      }
-
       const data = await response.json();
 
-      // Preserve restaurant owner session while updating only customer session
-      localStorage.removeItem("restaurantOwnerUser");
-      localStorage.removeItem("restaurantOwnerToken");
-
-      localStorage.setItem("customerUser", JSON.stringify(data.user));
-      localStorage.setItem("customerToken", data.token);
-
-      onLoginSuccess(data.user);
+      if (!response.ok) {
+        throw new Error(data.message || "Invalid credentials");
+      }
+      
+      // Use the login function from the context
+      login(data.user);
+      
+      toast.success("Login successful!", { id: toastId });
       onClose();
+      // The page reload is now handled by the context/app logic if needed
+      
     } catch (error) {
       console.error("Login error:", error);
       setError(error.message);
+      toast.error(error.message, { id: toastId });
     } finally {
       setLoading(false);
     }

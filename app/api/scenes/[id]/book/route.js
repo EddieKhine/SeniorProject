@@ -1,8 +1,10 @@
 import { NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
 import dbConnect from '@/lib/mongodb';
 import Floorplan from '@/models/Floorplan';
 import Booking from '@/models/Booking';
 import Restaurant from '@/models/Restaurants';
+import User from '@/models/user'; // Import the User model
 import jwt from 'jsonwebtoken';
 
 // Helper function to generate time slots
@@ -137,16 +139,27 @@ export async function POST(request, { params }) {
       }, { status: 400 });
     }
 
-    // Get user from token
-    const token = request.headers.get("authorization")?.split(" ")[1];
+    // Get user from token or cookie and fetch their full profile
+    let token = request.headers.get("authorization")?.split(" ")[1];
+    if (!token) {
+        const cookieStore = await cookies();
+        token = cookieStore.get('customerToken')?.value;
+    }
+    
     if (!token) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     
-    // Create and save booking with the provided times
+    // Fetch the full user profile from the database to ensure data is up-to-date
+    const currentUser = await User.findById(decoded.userId);
+    if (!currentUser) {
+        return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+    
+    // Create and save booking using the server-fetched user data
     const booking = new Booking({
-      userId: decoded.userId,
+      userId: currentUser._id,
       restaurantId,
       floorplanId: id,
       tableId: tableId,
@@ -155,9 +168,9 @@ export async function POST(request, { params }) {
       endTime,
       guestCount,
       status: 'confirmed',
-      customerName: `${customerData.firstName} ${customerData.lastName}`.trim(),
-      customerEmail: customerData.email,
-      customerPhone: customerData.contactNumber
+      customerName: `${currentUser.firstName} ${currentUser.lastName || ''}`.trim(),
+      customerEmail: currentUser.email,
+      customerPhone: currentUser.contactNumber // Use the reliable, server-fetched phone number
     });
 
     // Add initial history entry

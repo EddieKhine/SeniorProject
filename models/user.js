@@ -16,11 +16,11 @@ const userSchema = new mongoose.Schema({
   },
   lastName: {
     type: String,
-    required: true,
+    required: false,
   },
   contactNumber: {
     type: String,
-    required: true,
+    required: false,
   },
   role: {
     type: String,
@@ -31,6 +31,12 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: false,
     default: null
+  },
+  lineUserId: {
+    type: String,
+    unique: true,
+    sparse: true,
+    required: false
   },
   createdAt: {
     type: Date,

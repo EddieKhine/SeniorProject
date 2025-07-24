@@ -9,7 +9,7 @@ import User from '@/models/user';
 // GET: Fetch reviews for a restaurant
 export async function GET(req, { params }) {
   await dbConnect();
-  const { id } = params;
+  const { id } = await params;
 
   try {
     const reviews = await Review.find({ 
@@ -43,7 +43,7 @@ export async function GET(req, { params }) {
 // POST: Create a new review
 export async function POST(req, { params }) {
   await dbConnect();
-  const { id } = params;
+  const { id } = await params;
 
   try {
     const { rating, comment, images } = await req.json();

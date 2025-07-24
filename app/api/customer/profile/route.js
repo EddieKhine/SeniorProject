@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
-import { headers } from 'next/headers';
+import { headers, cookies } from 'next/headers';
 import jwt from "jsonwebtoken";
 import dbConnect from "@/lib/mongodb";
 import User from "@/models/user";
@@ -9,7 +9,13 @@ import User from "@/models/user";
 export async function GET(req) {
   try {
     const headersList = await headers();
-    const token = headersList.get('authorization')?.split(' ')[1];
+    let token = headersList.get('authorization')?.split(' ')[1];
+
+    // If no authorization header, check for the HttpOnly cookie
+    if (!token) {
+        const cookieStore = await cookies();
+        token = cookieStore.get('customerToken')?.value;
+    }
     
     if (!token) {
       return new Response(JSON.stringify({ message: "Unauthorized" }), {
@@ -45,7 +51,13 @@ export async function GET(req) {
 export async function PUT(req) {
   try {
     const headersList = await headers();
-    const token = headersList.get('authorization')?.split(' ')[1];
+    let token = headersList.get('authorization')?.split(' ')[1];
+
+    // If no authorization header, check for the HttpOnly cookie
+    if (!token) {
+        const cookieStore = await cookies();
+        token = cookieStore.get('customerToken')?.value;
+    }
     
     if (!token) {
       console.log('No token provided in profile update');

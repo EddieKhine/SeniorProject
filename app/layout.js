@@ -9,8 +9,8 @@ import { Toaster } from 'react-hot-toast';
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata = {
-  title: "Restaurant Reservation System",
-  description: "Book your table easily",
+  title: "FoodLoft",
+  description: "A modern restaurant reservation system with an interactive 3D floorplan.",
 };
 
 export default function RootLayout({ children }) {
@@ -25,9 +25,9 @@ export default function RootLayout({ children }) {
         <AuthProvider>
           <GoogleMapsProvider>
             {children}
+            <Toaster position="bottom-center" />
           </GoogleMapsProvider>
         </AuthProvider>
-        <Toaster position="top-center" />
       </body>
     </html>
   );

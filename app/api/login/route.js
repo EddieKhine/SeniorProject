@@ -74,11 +74,20 @@ export async function POST(req) {
 
     console.log('Sending user data:', userData);
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       message: "Login successful",
-      token,
       user: userData
+      // The token is now sent via a secure cookie, not in the body
     });
+
+    // Set the token as an HttpOnly cookie
+    response.headers.set(
+      "Set-Cookie",
+      `customerToken=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=3600; Secure`
+    );
+
+    return response;
+
   } catch (error) {
     console.error("Error in login API:", error);
     return NextResponse.json(

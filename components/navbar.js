@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faUser, faUserEdit, faSignOutAlt, faChevronDown, faUtensils, faBell, faCalendar, faHeart } from "@fortawesome/free-solid-svg-icons";
 import Link from "next/link";
@@ -8,43 +7,16 @@ import LoginModal from "./LoginModal";
 import SignupModal from "./SignupModal";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-
+import { useState, useEffect } from "react";
+import { useAuth } from "@/context/AuthContext";
 
 export default function Navbar() {
   const router = useRouter();
+  const { user, logout } = useAuth();
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [isSignupModalOpen, setIsSignupModalOpen] = useState(false);
-  const [user, setUser] = useState(null);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
-
-  // Load user from localStorage
-  const loadUserFromStorage = () => {
-    const storedUser = localStorage.getItem("customerUser");
-    if (!storedUser || storedUser === "undefined") {
-      setUser(null);
-      return;
-    }
-    try {
-      setUser(JSON.parse(storedUser));
-    } catch (error) {
-      console.error('Error parsing user data:', error);
-      setUser(null);
-      localStorage.removeItem("customerUser"); // Clean up invalid data
-    }
-  };
-
-  useEffect(() => {
-    loadUserFromStorage();
-    const handleStorageChange = () => {
-      loadUserFromStorage();
-    };
-
-    window.addEventListener("storage", handleStorageChange);
-    return () => {
-      window.removeEventListener("storage", handleStorageChange);
-    };
-  }, []);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -55,36 +27,18 @@ export default function Navbar() {
   }, []);
 
   const handleLogout = () => {
-    localStorage.removeItem("customerUser");
-    localStorage.removeItem("customerToken");
-    setUser(null);
+    logout();
     setIsDropdownOpen(false);
-    router.push("/");
   };
 
-  const openLoginModal = () => {
-    setIsLoginModalOpen(true);
-    setIsSignupModalOpen(false);
-  };
-
-  const openSignupModal = () => {
-    setIsSignupModalOpen(true);
-    setIsLoginModalOpen(false);
-  };
-
+  const openLoginModal = () => setIsLoginModalOpen(true);
+  const openSignupModal = () => setIsSignupModalOpen(true);
   const closeModal = () => {
     setIsLoginModalOpen(false);
     setIsSignupModalOpen(false);
   };
 
-  const handleSuccessfulLogin = (userData) => {
-    setUser(userData);
-    localStorage.setItem("customerUser", JSON.stringify(userData));
-  };
-
-  const toggleDropdown = () => {
-    setIsDropdownOpen(!isDropdownOpen);
-  };
+  const toggleDropdown = () => setIsDropdownOpen(!isDropdownOpen);
 
   return (
     <>
@@ -266,9 +220,8 @@ export default function Navbar() {
         isOpen={isLoginModalOpen}
         onClose={closeModal}
         openSignupModal={openSignupModal}
-        onLoginSuccess={handleSuccessfulLogin}
       />
-      <SignupModal isOpen={isSignupModalOpen} onClose={closeModal} />
+      <SignupModal isOpen={isSignupModalOpen} onClose={closeModal} openLoginModal={openLoginModal} />
     </>
   );
 }

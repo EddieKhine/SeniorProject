@@ -17,6 +17,7 @@ import gsap from 'gsap';
 import { motion, AnimatePresence } from "framer-motion";
 import { performanceMonitor, measurePerformance } from '@/utils/performance';
 import { handleSceneError } from '@/utils/errorHandler';
+import { useAuth } from '@/context/AuthContext';
 
 export default function PublicFloorPlan({ floorplanData, floorplanId, restaurantId }) {
   const containerRef = useRef(null);
@@ -40,6 +41,7 @@ export default function PublicFloorPlan({ floorplanData, floorplanId, restaurant
   const loadingOverlayRef = useRef(null);
   const [sceneLoaded, setSceneLoaded] = useState(false);
   const [preloadProgress, setPreloadProgress] = useState(0);
+  const { user, loading: authLoading } = useAuth(); // Use the centralized auth state
 
   const dateRef = useRef(selectedDate);
   const timeRef = useRef(selectedTime);
@@ -489,6 +491,17 @@ export default function PublicFloorPlan({ floorplanData, floorplanId, restaurant
           const mouse = new THREE.Vector2();
 
           const handleClick = (event) => {
+            // GUARD: Use the loading state from the AuthContext.
+            if (authLoading) {
+                toast.error("Verifying login status, please wait...");
+                return;
+            }
+            // Now, use the user from the context for the booking check
+            if (!user) {
+                toast.error("Please log in to make a booking.");
+                return;
+            }
+
             console.log('Click detected');
             console.log('Current state values:', {
               date: dateRef.current,
@@ -715,16 +728,12 @@ export default function PublicFloorPlan({ floorplanData, floorplanId, restaurant
           // All scene setup code, event handlers, and input validation must be before this return!
           return () => {
             window.removeEventListener('resize', handleResize);
-            renderer.domElement.removeEventListener('webglcontextlost', handleContextLost);
-            renderer.domElement.removeEventListener('webglcontextrestored', handleContextRestored);
-            renderer.domElement.removeEventListener('click', handleClick);
+            if (rendererRef.current) {
+                rendererRef.current.domElement.removeEventListener('webglcontextlost', handleContextLost);
+                rendererRef.current.domElement.removeEventListener('webglcontextrestored', handleContextRestored);
+                rendererRef.current.domElement.removeEventListener('click', handleClick);
+            }
             cleanup();
-            if (containerRef.current?.contains(renderer.domElement)) {
-              containerRef.current.removeChild(renderer.domElement);
-            }
-            if (containerRef.current) {
-              containerRef.current.removeEventListener('click', handleClick);
-            }
           };
         } catch (error) {
           console.error('Error initializing scene:', error);
@@ -848,10 +857,8 @@ export default function PublicFloorPlan({ floorplanData, floorplanId, restaurant
   };
 
   const handleBookingSubmission = async (table, tableId, bookingDetails) => {
-    const customerToken = localStorage.getItem('customerToken');
-    const customerData = localStorage.getItem('customerUser');
-    
-    if (!customerToken || !customerData) {
+    // The `user` from the context is now the single source of truth.
+    if (!user) {
         throw new Error('Please log in to make a booking');
     }
 
@@ -867,7 +874,7 @@ export default function PublicFloorPlan({ floorplanData, floorplanId, restaurant
         throw new Error('This table is no longer available for the selected time slot');
     }
 
-    const customer = JSON.parse(customerData);
+    const customer = user;
     
     const [startTime, endTime] = bookingDetails.time.split(' - ');
     
@@ -943,8 +950,8 @@ export default function PublicFloorPlan({ floorplanData, floorplanId, restaurant
     const response = await fetch(`/api/scenes/${floorplanId}/book`, {
         method: 'POST',
         headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${customerToken}`
+            'Content-Type': 'application/json'
+            // No 'Authorization' header is needed; the cookie is sent automatically
         },
         body: JSON.stringify(bookingData)
     });

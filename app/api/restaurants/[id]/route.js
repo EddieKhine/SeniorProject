@@ -7,7 +7,7 @@ export async function GET(request, { params }) {
         await dbConnect();
 
         // Get restaurant by ID
-        const { id } = params;
+        const { id } = await params;
         const restaurant = await Restaurant.findById(id);
 
         if (!restaurant) {
@@ -27,7 +27,7 @@ export async function GET(request, { params }) {
 export async function PUT(request, { params }) {
     try {
         await dbConnect();
-        const { id } = params;
+        const { id } = await params;
         const updateData = await request.json();
         
         const restaurant = await Restaurant.findByIdAndUpdate(
