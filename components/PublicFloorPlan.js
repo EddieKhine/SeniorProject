@@ -18,6 +18,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { performanceMonitor, measurePerformance } from '@/utils/performance';
 import { handleSceneError } from '@/utils/errorHandler';
 import { useAuth } from '@/context/AuthContext';
+import { auth } from "@/lib/firebase-config";
 
 export default function PublicFloorPlan({ floorplanData, floorplanId, restaurantId }) {
   const containerRef = useRef(null);
@@ -36,6 +37,34 @@ export default function PublicFloorPlan({ floorplanData, floorplanId, restaurant
   const [availableTimeSlots, setAvailableTimeSlots] = useState([]);
   const [restaurant, setRestaurant] = useState(null);
   const [availableTables, setAvailableTables] = useState(new Set());
+
+  // Helper function to get the appropriate auth token
+  const getAuthToken = async () => {
+    try {
+      const storedUser = localStorage.getItem('customerUser');
+      if (storedUser) {
+        const userData = JSON.parse(storedUser);
+        if (userData.isLineUser && userData.lineUserId) {
+          // Return LINE user token format
+          return `line.${userData.lineUserId}`;
+        }
+      }
+      
+      // Check if user is authenticated with Firebase
+      if (auth.currentUser) {
+        // Return Firebase token for regular users
+        const token = await auth.currentUser.getIdToken();
+        console.log('Firebase token generated successfully');
+        return token;
+      } else {
+        console.warn('No Firebase user found, user may need to login');
+        return null;
+      }
+    } catch (error) {
+      console.error('Error getting auth token:', error);
+      return null;
+    }
+  };
   const [showInstructions, setShowInstructions] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const loadingOverlayRef = useRef(null);
@@ -947,11 +976,13 @@ export default function PublicFloorPlan({ floorplanData, floorplanId, restaurant
     }
 
     // Proceed with booking API call
+    const token = await getAuthToken();
+    console.log('Sending token:', token ? `${token.substring(0, 20)}...` : 'No token');
     const response = await fetch(`/api/scenes/${floorplanId}/book`, {
         method: 'POST',
         headers: {
-            'Content-Type': 'application/json'
-            // No 'Authorization' header is needed; the cookie is sent automatically
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify(bookingData)
     });

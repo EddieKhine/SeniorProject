@@ -1,138 +1,169 @@
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
-import { headers, cookies } from 'next/headers';
-import jwt from "jsonwebtoken";
+import { headers } from 'next/headers';
 import dbConnect from "@/lib/mongodb";
 import User from "@/models/user";
+import { getAuth } from "@/lib/firebase-admin";
+import { NextResponse } from "next/server";
 
 // 🚀 GET Request: Fetch User Data
 export async function GET(req) {
   try {
-    const headersList = await headers();
-    let token = headersList.get('authorization')?.split(' ')[1];
+    const headersList = headers();
+    const authorization = headersList.get('authorization');
+    const token = authorization?.split(' ')[1];
 
-    // If no authorization header, check for the HttpOnly cookie
     if (!token) {
-        const cookieStore = await cookies();
-        token = cookieStore.get('customerToken')?.value;
-    }
-    
-    if (!token) {
-      return new Response(JSON.stringify({ message: "Unauthorized" }), {
-        status: 401,
-        headers: { "Content-Type": "application/json" },
+      return NextResponse.json({
+        message: "Unauthorized: No token provided"
+      }, {
+        status: 401
       });
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
     await dbConnect();
+    let user;
 
-    const user = await User.findOne({ email: decoded.email }).select('-password');
+    // Handle different authentication types
+    if (token.startsWith('line.')) {
+      // LINE user authentication - extract LINE User ID from token
+      const lineUserId = token.replace('line.', '');
+      user = await User.findOne({ lineUserId });
+      if (!user) {
+        return NextResponse.json({
+          message: "LINE user not found"
+        }, {
+          status: 404
+        });
+      }
+    } else {
+      // Firebase user authentication
+      try {
+        const decoded = await getAuth().verifyIdToken(token);
+        user = await User.findOne({ email: decoded.email });
+      } catch (firebaseError) {
+        console.error('Firebase token verification failed:', firebaseError);
+        return NextResponse.json({
+          message: "Invalid Firebase token"
+        }, {
+          status: 401
+        });
+      }
+    }
+    
     console.log('GET - Current user state:', {
       id: user?._id,
       email: user?.email,
       profileImage: user?.profileImage
     });
 
-    return new Response(JSON.stringify({ user }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
+    if (!user) {
+      return NextResponse.json({
+        message: "User not found"
+      }, {
+        status: 404
+      });
+    }
+
+    return NextResponse.json({
+      user: {
+        id: user._id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        contactNumber: user.contactNumber,
+        role: user.role,
+        profileImage: user.profileImage
+      }
     });
   } catch (error) {
-    console.error("Error fetching profile:", error);
-    return new Response(JSON.stringify({ message: "Internal Server Error" }), {
-      status: 500,
-      headers: { "Content-Type": "application/json" },
+    console.error('Error in GET /api/customer/profile:', error);
+    return NextResponse.json({
+      message: "Internal Server Error"
+    }, {
+      status: 500
     });
   }
 }
 
-// 🚀 PUT Request: Update User Information
+// 🚀 PUT Request: Update User Profile
 export async function PUT(req) {
   try {
-    const headersList = await headers();
-    let token = headersList.get('authorization')?.split(' ')[1];
+    const headersList = headers();
+    const authorization = headersList.get('authorization');
+    const token = authorization?.split(' ')[1];
 
-    // If no authorization header, check for the HttpOnly cookie
     if (!token) {
-        const cookieStore = await cookies();
-        token = cookieStore.get('customerToken')?.value;
-    }
-    
-    if (!token) {
-      console.log('No token provided in profile update');
-      return new Response(JSON.stringify({ message: "Unauthorized" }), {
-        status: 401,
-        headers: { "Content-Type": "application/json" },
+      return NextResponse.json({
+        message: "Unauthorized: No token provided"
+      }, {
+        status: 401
       });
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const body = await req.json();
     const { email, firstName, lastName, contactNumber, newPassword, profileImage } = body;
 
     await dbConnect();
+    let user;
 
-    // Get the MongoDB collection directly
-    const collection = mongoose.connection.collection('users');
-    
-    // Prepare update document
-    const updateDoc = {
-      firstName,
-      lastName,
-      contactNumber,
-    };
-    if (profileImage) {
-      updateDoc.profileImage = profileImage;
+    // Handle different authentication types
+    if (token.startsWith('line.')) {
+      // LINE user authentication
+      const lineUserId = token.replace('line.', '');
+      user = await User.findOne({ lineUserId });
+    } else {
+      // Firebase user authentication
+      const decoded = await getAuth().verifyIdToken(token);
+      user = await User.findOne({ email: decoded.email });
+    }
+    if (!user) {
+      return NextResponse.json({
+        message: "User not found"
+      }, {
+        status: 404
+      });
     }
 
-    if (newPassword) {
-      updateDoc.password = await bcrypt.hash(newPassword, 10);
+    // Update user fields
+    if (firstName !== undefined) user.firstName = firstName;
+    if (lastName !== undefined) user.lastName = lastName;
+    if (contactNumber !== undefined) user.contactNumber = contactNumber;
+    if (profileImage !== undefined) user.profileImage = profileImage;
+
+    // Handle password change if provided
+    if (newPassword && newPassword.trim() !== '') {
+      const hashedPassword = await bcrypt.hash(newPassword, 10);
+      user.password = hashedPassword;
     }
 
-    console.log('Attempting direct MongoDB update with:', updateDoc);
+    await user.save();
 
-    // Perform direct MongoDB update
-    const result = await collection.updateOne(
-      { email: decoded.email },
-      { $set: updateDoc }
-    );
-
-    console.log('MongoDB update result:', result);
-
-    // Fetch updated document
-    const updatedUser = await collection.findOne(
-      { email: decoded.email },
-      { projection: { password: 0 } }
-    );
-
-    console.log('Updated user from DB:', updatedUser);
-
-    const userResponse = {
-      firstName: updatedUser.firstName,
-      lastName: updatedUser.lastName,
-      email: updatedUser.email,
-      contactNumber: updatedUser.contactNumber,
-      role: updatedUser.role,
-      profileImage: updatedUser.profileImage
-    };
-
-    return new Response(JSON.stringify({
-      message: "Profile updated successfully!",
-      user: userResponse
-    }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
+    console.log('PUT - Updated user state:', {
+      id: user._id,
+      email: user.email,
+      profileImage: user.profileImage
     });
 
+    return NextResponse.json({
+      message: "Profile updated successfully",
+      user: {
+        id: user._id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        contactNumber: user.contactNumber,
+        role: user.role,
+        profileImage: user.profileImage
+      }
+    });
   } catch (error) {
-    console.error("Error updating profile:", error);
-    return new Response(JSON.stringify({ 
+    console.error('Error in PUT /api/customer/profile:', error);
+    return NextResponse.json({
       message: "Internal Server Error",
-      error: error.message 
-    }), {
-      status: 500,
-      headers: { "Content-Type": "application/json" },
+      error: error.message
+    }, {
+      status: 500
     });
   }
 }

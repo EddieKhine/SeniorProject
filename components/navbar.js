@@ -40,6 +40,34 @@ export default function Navbar() {
 
   const toggleDropdown = () => setIsDropdownOpen(!isDropdownOpen);
 
+  // Helper to get initials
+  const getInitials = (user) => {
+    if (user.firstName && user.lastName) {
+      return `${user.firstName.charAt(0)}${user.lastName.charAt(0)}`;
+    }
+    if (user.firstName) {
+      return user.firstName.charAt(0);
+    }
+    if (user.email) {
+      return user.email.charAt(0).toUpperCase();
+    }
+    return '?';
+  };
+
+  // Helper to get display name
+  const getDisplayName = (user) => {
+    if (user.firstName && user.lastName) {
+      return `${user.firstName} ${user.lastName}`;
+    }
+    if (user.firstName) {
+      return user.firstName;
+    }
+    if (user.email) {
+      return user.email;
+    }
+    return 'User';
+  };
+
   return (
     <>
       <nav className={`fixed w-full z-50 transition-all duration-500 ${
@@ -98,24 +126,22 @@ export default function Navbar() {
                       }`}
                   >
                     <div className="hidden md:block text-right">
-                      <p className="font-medium text-sm">{user.firstName} {user.lastName}</p>
-                      <p className={`text-xs ${isScrolled ? 'text-[#141517]/60' : 'text-white/80'}`}>
-                        @{user.firstName.toLowerCase()}
-                      </p>
+                      <p className="font-medium text-sm">{getDisplayName(user)}</p>
+                      <p className={`text-xs ${isScrolled ? 'text-[#141517]/60' : 'text-white/80'}`}>{user.email}</p>
                     </div>
                     <div className="w-10 h-10 rounded-xl overflow-hidden ring-2 ring-[#FF4F18] shadow-lg transition-all duration-300 hover:scale-105">
                       {user.profileImage ? (
-                        <Image 
-                          src={user.profileImage} 
-                          alt="Profile" 
-                          width={40} 
-                          height={40} 
-                          className="w-full h-full object-cover"
-                        />
+                                                        <Image 
+                                  src={user.profileImage} 
+                                  alt="Profile" 
+                                  width={64} 
+                                  height={64} 
+                                  className="w-full h-full object-cover"
+                                />
                       ) : (
                         <div className="w-full h-full bg-gradient-to-br from-[#FF4F18] to-[#FF8F6B] flex items-center justify-center">
                           <span className="text-white font-medium text-lg">
-                            {user.firstName.charAt(0)}{user.lastName.charAt(0)}
+                            {getInitials(user)}
                           </span>
                         </div>
                       )}
@@ -141,14 +167,14 @@ export default function Navbar() {
                               ) : (
                                 <div className="w-full h-full bg-gradient-to-br from-[#FF4F18] to-[#FF8F6B] flex items-center justify-center">
                                   <span className="text-white font-medium text-xl">
-                                    {user.firstName.charAt(0)}{user.lastName.charAt(0)}
+                                    {getInitials(user)}
                                   </span>
                                 </div>
                               )}
                             </div>
                           </div>
                           <div>
-                            <p className="text-[#141517] font-semibold text-lg">{user.firstName} {user.lastName}</p>
+                            <p className="text-[#141517] font-semibold text-lg">{getDisplayName(user)}</p>
                             <p className="text-sm text-[#141517]/60">{user.email}</p>
                           </div>
                         </div>

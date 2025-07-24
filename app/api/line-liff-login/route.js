@@ -1,7 +1,6 @@
 import dbConnect from "@/lib/mongodb";
 import User from "@/models/user";
 import { NextResponse } from "next/server";
-import jwt from "jsonwebtoken";
 
 export async function POST(req) {
   try {
@@ -14,39 +13,65 @@ export async function POST(req) {
     // Check if user exists by LINE userId
     let user = await User.findOne({ lineUserId: userId });
     if (!user) {
-      // Create new user
+      // Create new user compatible with Firebase auth system
+      // Use a unique email format for LINE users
+      const lineEmail = `line.${userId}@foodloft.local`;
+      
       user = new User({
-        firstName: displayName,
+        email: lineEmail,
+        firebaseUid: null, // LINE users don't have Firebase UID initially
+        firstName: displayName || "LINE User",
         lastName: "",
-        email: `${userId}@line.me`, // LINE does not provide email by default
-        profileImage: pictureUrl,
+        profileImage: pictureUrl || "",
         lineUserId: userId,
-        password: "liff", // placeholder, not used
         contactNumber: "",
         role: "customer",
       });
       await user.save();
-      console.log("New user created in MongoDB:", user);
+      console.log("New LINE user created in MongoDB:", user);
     } else {
-      console.log("Existing user found in MongoDB:", user);
+      // Update profile info if changed
+      let updated = false;
+      if (displayName && user.firstName !== displayName) {
+        user.firstName = displayName;
+        updated = true;
+      }
+      if (pictureUrl && user.profileImage !== pictureUrl) {
+        user.profileImage = pictureUrl;
+        updated = true;
+      }
+      if (updated) {
+        await user.save();
+        console.log("Updated existing LINE user:", user);
+      } else {
+        console.log("Existing LINE user found:", user);
+      }
     }
 
-    // Generate JWT
-    const token = jwt.sign(
-      { userId: user._id, email: user.email, role: user.role },
-      process.env.JWT_SECRET,
-      { expiresIn: "1h" }
-    );
+    // Prepare user data for response (compatible with new auth system)
+    const userData = {
+      id: user._id,
+      email: user.email,
+      role: user.role,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      contactNumber: user.contactNumber,
+      profileImage: user.profileImage,
+      lineUserId: user.lineUserId,
+      isLineUser: true // Flag to identify LINE users
+    };
 
-    // Set HTTP-only cookie
-    const response = NextResponse.json({ user });
-    response.headers.set(
-      "Set-Cookie",
-      `customerToken=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=3600; Secure`
-    );
-    return response;
+    // Store user data in localStorage (client-side will handle this)
+    // No JWT tokens needed anymore with new auth system
+    return NextResponse.json({ 
+      message: "LINE login successful", 
+      user: userData 
+    });
   } catch (error) {
     console.error("LINE LIFF login error:", error);
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+    return NextResponse.json({ 
+      message: "Internal Server Error", 
+      error: error.message 
+    }, { status: 500 });
   }
 } 

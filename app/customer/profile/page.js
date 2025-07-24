@@ -30,6 +30,8 @@ import { toast } from "react-hot-toast";
 import ImageUpload from '@/components/ImageUpload';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faCamera } from '@fortawesome/free-solid-svg-icons';
+import { auth } from "@/lib/firebase-config";
+import { onAuthStateChanged, signOut } from "firebase/auth";
 
 export default function CustomerProfile() {
   const router = useRouter();
@@ -51,52 +53,96 @@ export default function CustomerProfile() {
   const [bookingsLoading, setBookingsLoading] = useState(false);
   const [loading, setLoading] = useState(true);
 
+  // Helper function to get the appropriate auth token
+  const getAuthToken = async () => {
+    const storedUser = localStorage.getItem('customerUser');
+    if (storedUser) {
+      const userData = JSON.parse(storedUser);
+      if (userData.isLineUser && userData.lineUserId) {
+        // Return LINE user token format
+        return `line.${userData.lineUserId}`;
+      }
+    }
+    // Return Firebase token for regular users
+    return await auth.currentUser?.getIdToken();
+  };
+
   useEffect(() => {
-    const loadUserData = () => {
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      // Check if user is logged in via LINE first
       const storedUser = localStorage.getItem('customerUser');
-      const storedToken = localStorage.getItem('customerToken');
-      
-      if (!storedUser || !storedToken) {
+      if (storedUser) {
+        try {
+          const userData = JSON.parse(storedUser);
+          if (userData.isLineUser) {
+            // LINE user is already authenticated
+            setUser(userData);
+            setFormData({
+              firstName: userData.firstName || "",
+              lastName: userData.lastName || "",
+              email: userData.email || "",
+              contactNumber: userData.contactNumber || "",
+              newPassword: "",
+            });
+            setLoading(false);
+            return;
+          }
+        } catch (error) {
+          console.error('Error parsing stored user data:', error);
+        }
+      }
+
+      // Handle Firebase users
+      if (!firebaseUser) {
+        setUser(null);
         setLoading(false);
+        router.push("/"); // or your login page
         return;
       }
 
+      // Sync/fetch MongoDB profile
       try {
-        const userData = JSON.parse(storedUser);
-        setUser(userData);
-        // Initialize form data with user data
-        setFormData({
-          firstName: userData.firstName || "",
-          lastName: userData.lastName || "",
-          email: userData.email || "",
-          contactNumber: userData.contactNumber || "",
-          newPassword: "",
+        const res = await fetch("/api/signup", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: firebaseUser.email,
+            firebaseUid: firebaseUser.uid,
+          }),
         });
+        const data = await res.json();
+        if (res.ok && data.user) {
+          setUser(data.user);
+          setFormData({
+            firstName: data.user.firstName || "",
+            lastName: data.user.lastName || "",
+            email: data.user.email || "",
+            contactNumber: data.user.contactNumber || "",
+            newPassword: "",
+          });
+          localStorage.setItem("customerUser", JSON.stringify(data.user));
+        } else {
+          setUser(null);
+        }
       } catch (error) {
         console.error('Error parsing user data:', error);
+        setUser(null);
       } finally {
         setLoading(false);
       }
-    };
+    });
 
-    loadUserData();
+    return () => unsubscribe();
   }, []);
 
   useEffect(() => {
     const fetchSavedRestaurants = async () => {
       if (user && user.email) {
         try {
-          const token = localStorage.getItem("customerToken");
-          if (!token) {
-            console.error("No token found");
-            return;
-          }
-
           // First, fetch favorite restaurant IDs
+          const token = await getAuthToken();
           const response = await fetch('/api/user/favorites', {
-            headers: {
-              'Authorization': `Bearer ${token}`
-            }
+            headers: token ? { 'Authorization': `Bearer ${token}` } : {},
           });
 
           if (!response.ok) {
@@ -148,7 +194,7 @@ export default function CustomerProfile() {
     
     setBookingsLoading(true);
     try {
-      const token = localStorage.getItem('customerToken');
+      const token = await getAuthToken();
       const response = await fetch('/api/bookings/customer', {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -193,7 +239,7 @@ export default function CustomerProfile() {
   // Add new function to update booking status
   const updateBookingStatus = async (bookingId, status) => {
     try {
-      const token = localStorage.getItem('customerToken');
+      const token = await getAuthToken();
       const response = await fetch(`/api/bookings/${bookingId}/status`, {
         method: 'PATCH',
         headers: {
@@ -218,8 +264,10 @@ export default function CustomerProfile() {
     }
   }, [activeTab, activeSubTab, user]);
 
-  const handleLogout = () => {
+  // Logout: also sign out from Firebase
+  const handleLogout = async () => {
     localStorage.removeItem("customerUser");
+    await signOut(auth);
     router.push("/");
   };
 
@@ -239,7 +287,7 @@ export default function CustomerProfile() {
       return;
     }
 
-    const token = localStorage.getItem('customerToken');
+    const token = await getAuthToken();
     if (!token) {
       toast.error("Please log in again.");
       return;
@@ -268,22 +316,8 @@ export default function CustomerProfile() {
       if (response.ok) {
         toast.success("Profile updated successfully!");
         
-        // Update local user state with new data (except password)
-        const updatedUser = { 
-          ...user, 
-          firstName: formData.firstName,
-          lastName: formData.lastName,
-          contactNumber: formData.contactNumber,
-        };
-        
-        setUser(updatedUser);
-        localStorage.setItem("customerUser", JSON.stringify(updatedUser));
-        
         // Clear password field
-        setFormData(prev => ({
-          ...prev,
-          newPassword: ""
-        }));
+        setFormData(prev => ({ ...prev, newPassword: "" }));
         
         // Exit edit mode
         setIsEditing(false);
@@ -304,13 +338,13 @@ export default function CustomerProfile() {
     setUploadError("");
 
     try {
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('type', 'customer');
+      const formDataObj = new FormData();
+      formDataObj.append('file', file);
+      formDataObj.append('type', 'customer');
 
       const uploadResponse = await fetch('/api/upload', {
         method: 'POST',
-        body: formData,
+        body: formDataObj,
       });
 
       if (!uploadResponse.ok) {
@@ -320,7 +354,7 @@ export default function CustomerProfile() {
       const { url } = await uploadResponse.json();
       
       // Update profile with new image URL
-      const token = localStorage.getItem('customerToken');
+      const token = await getAuthToken();
       const updateResponse = await fetch('/api/customer/profile', {
         method: 'PUT',
         headers: {
@@ -368,7 +402,7 @@ export default function CustomerProfile() {
     if (!confirm('Are you sure you want to cancel this reservation?')) return;
     
     try {
-      const token = localStorage.getItem('customerToken');
+      const token = await getAuthToken();
       const response = await fetch(`/api/bookings/customer`, {
         method: 'PUT',
         headers: {
@@ -395,7 +429,7 @@ export default function CustomerProfile() {
     if (!confirm('Are you sure you want to delete this reservation?')) return;
 
     try {
-      const token = localStorage.getItem('customerToken');
+      const token = await getAuthToken();
       const response = await fetch(`/api/bookings/${bookingId}`, {
         method: 'DELETE',
         headers: {

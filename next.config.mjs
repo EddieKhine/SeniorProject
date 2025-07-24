@@ -13,8 +13,26 @@ const nextConfig = {
       }
     ]
   },
+  env: {
+    NEXTAUTH_SECRET: process.env.NEXTAUTH_SECRET,
+    NEXTAUTH_URL: process.env.NEXTAUTH_URL
+  },
+  eslint: {
+    ignoreDuringBuilds: true
+  },
   images: {
+    domains: [
+      "lh3.googleusercontent.com",
+      "storage.googleapis.com",
+      // add any other domains you need here
+    ],
     remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'firebasestorage.googleapis.com',
+        port: '',
+        pathname: '/**',
+      },
       {
         protocol: 'https',
         hostname: 'storage.googleapis.com',
@@ -23,11 +41,41 @@ const nextConfig = {
       },
       {
         protocol: 'https',
-        hostname: 'foodloft-images-123.s3.ap-southeast-1.amazonaws.com',
+        hostname: 'www.google.com',
         port: '',
         pathname: '/**',
       },
-    ],
+      {
+        protocol: 'https',
+        hostname: 'images.unsplash.com',
+        port: '',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'plus.unsplash.com',
+        port: '',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'media.istockphoto.com',
+        port: '',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'as1.ftcdn.net',
+        port: '',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'as2.ftcdn.net',
+        port: '',
+        pathname: '/**',
+      },
+    ]
   },
   // Disable React StrictMode in development for better 3D performance
   reactStrictMode: process.env.NODE_ENV === 'production',

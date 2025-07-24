@@ -41,7 +41,12 @@ export default function RestaurantFloorplanPage() {
                       body: JSON.stringify(profile)
                     })
                     .then(res => res.json())
-                    .then(() => {
+                    .then(data => {
+                      if (data.user) {
+                        // Store LINE user data in localStorage (compatible with new auth system)
+                        localStorage.setItem('customerUser', JSON.stringify(data.user));
+                        console.log('LINE user logged in:', data.user);
+                      }
                       // Set the flag before reloading to break the loop
                       sessionStorage.setItem('liffLoginComplete', 'true');
                       window.location.reload();

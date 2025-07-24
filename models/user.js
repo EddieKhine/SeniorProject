@@ -1,36 +1,35 @@
 import mongoose from 'mongoose';
 
 const userSchema = new mongoose.Schema({
+  firebaseUid: {
+    type: String,
+    required: true,
+    unique: true,
+  },
   email: {
     type: String,
     required: true,
     unique: true,
   },
-  password: {
-    type: String,
-    required: true,
-  },
   firstName: {
     type: String,
-    required: true,
+    required: false,
+    default: '',
   },
   lastName: {
     type: String,
     required: false,
+    default: '',
   },
   contactNumber: {
     type: String,
     required: false,
+    default: '',
   },
-  role: {
-    type: String,
-    enum: ["customer", "restaurant owner"],
-    default: "customer"
-  },
-  profileImage: { 
+  profileImage: {
     type: String,
     required: false,
-    default: null
+    default: '',
   },
   lineUserId: {
     type: String,
@@ -38,37 +37,19 @@ const userSchema = new mongoose.Schema({
     sparse: true,
     required: false
   },
+  role: {
+    type: String,
+    required: true,
+    default: 'customer',
+    enum: ['customer', 'admin', 'restaurant']
+  },
   createdAt: {
     type: Date,
-    default: Date.now
+    default: Date.now,
   }
 }, { 
   timestamps: true,
-  strict: true // Ensure strict mode is enabled
+  strict: true
 });
 
-// Debug middleware
-userSchema.pre('save', function(next) {
-  console.log('Pre-save hook:', {
-    id: this._id,
-    email: this.email,
-    profileImage: this.profileImage
-  });
-  next();
-});
-
-userSchema.pre('updateOne', function() {
-  console.log('Update operation:', this.getUpdate());
-});
-
-// Ensure profileImage is properly handled in JSON
-userSchema.set('toJSON', {
-  transform: function(doc, ret) {
-    ret.profileImage = ret.profileImage || null;
-    return ret;
-  }
-});
-
-// Ensure model is only compiled once
-const User = mongoose.models.User || mongoose.model('User', userSchema);
-export default User;
+export default mongoose.models.User || mongoose.model('User', userSchema);

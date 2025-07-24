@@ -6,6 +6,7 @@ import Booking from '@/models/Booking';
 import Restaurant from '@/models/Restaurants';
 import User from '@/models/user'; // Import the User model
 import jwt from 'jsonwebtoken';
+import { getAuth } from "@/lib/firebase-admin";
 
 // Helper function to generate time slots
 function generateTimeSlots(openingTime, closingTime, interval = 30) {
@@ -139,7 +140,7 @@ export async function POST(request, { params }) {
       }, { status: 400 });
     }
 
-    // Get user from token or cookie and fetch their full profile
+    // Get user from token and fetch their full profile
     let token = request.headers.get("authorization")?.split(" ")[1];
     if (!token) {
         const cookieStore = await cookies();
@@ -149,10 +150,38 @@ export async function POST(request, { params }) {
     if (!token) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    
-    // Fetch the full user profile from the database to ensure data is up-to-date
-    const currentUser = await User.findById(decoded.userId);
+
+    let currentUser;
+
+    console.log('Token received:', token ? `${token.substring(0, 20)}...` : 'No token');
+
+    // Handle different authentication types
+    if (token.startsWith('line.')) {
+      // LINE user authentication
+      const lineUserId = token.replace('line.', '');
+      console.log('LINE user lookup for:', lineUserId);
+      currentUser = await User.findOne({ lineUserId });
+    } else {
+      // Firebase user authentication
+      try {
+        const decoded = await getAuth().verifyIdToken(token);
+        currentUser = await User.findOne({ email: decoded.email });
+      } catch (firebaseError) {
+        console.error('Firebase token verification failed:', firebaseError);
+        // Fallback to JWT for backward compatibility (temporary)
+        try {
+          const jwt = require('jsonwebtoken');
+          const decoded = jwt.verify(token, process.env.JWT_SECRET);
+          currentUser = await User.findById(decoded.userId);
+        } catch (jwtError) {
+          console.error('JWT token verification failed:', jwtError);
+          return NextResponse.json({ 
+            error: "Invalid token", 
+            details: "Both Firebase and JWT verification failed" 
+          }, { status: 401 });
+        }
+      }
+    }
     if (!currentUser) {
         return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
@@ -170,7 +199,7 @@ export async function POST(request, { params }) {
       status: 'confirmed',
       customerName: `${currentUser.firstName} ${currentUser.lastName || ''}`.trim(),
       customerEmail: currentUser.email,
-      customerPhone: currentUser.contactNumber // Use the reliable, server-fetched phone number
+      customerPhone: currentUser.contactNumber || 'Not provided' // Handle missing phone numbers
     });
 
     // Add initial history entry

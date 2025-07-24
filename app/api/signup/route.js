@@ -1,55 +1,86 @@
 import { NextResponse } from "next/server";
-import bcrypt from "bcryptjs";
 import dbConnect from "@/lib/mongodb";
-import User from "@/models/user"; // Assuming you have a User model
+import User from "@/models/user";
 
 export async function POST(req) {
   try {
-    await dbConnect(); // Use the shared database connection
+    console.log("📌 [API] Signup request received");
 
-    const { email, firstName, lastName, password, contactNumber } = await req.json();
+    await dbConnect();
+    console.log("✅ [API] Database connected successfully");
+    
+    const body = await req.json();
+    console.log("📥 [API] Request Body:", body);
+    const { email, firebaseUid, firstName = '', lastName = '', profileImage = '' } = body;
 
     // Basic validation
-    if (!email || !firstName || !lastName || !password || !contactNumber) {
+    if (!email || !firebaseUid) {
+      console.warn("⚠️ [API] Missing required fields:", { email, firebaseUid });
       return NextResponse.json(
-        { message: "All fields are required" },
+        { message: "Email and firebaseUid are required" },
         { status: 400 }
       );
     }
 
     // Check if user already exists
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
+    let user = await User.findOne({ email });
+    if (user) {
+      // Always overwrite with new info if provided
+      let updated = false;
+      if (firstName) { user.firstName = firstName; updated = true; }
+      if (lastName) { user.lastName = lastName; updated = true; }
+      if (profileImage) { user.profileImage = profileImage; updated = true; }
+      if (updated) await user.save();
+      
+      const userData = {
+        id: user._id,
+        email: user.email,
+        role: user.role,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        contactNumber: user.contactNumber,
+        profileImage: user.profileImage,
+      };
+      
       return NextResponse.json(
-        { message: "Email already exists" },
-        { status: 409 }
+        { message: "User already exists", user: userData },
+        { status: 200 }
       );
     }
 
-    // Hash the password
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    // Create new user using Mongoose model
-    const newUser = new User({
+    // Create new user profile in MongoDB
+    console.log("🆕 [API] Creating new user:", email);
+    user = new User({
       email,
+      firebaseUid,
       firstName,
       lastName,
-      password: hashedPassword,
-      contactNumber,
+      profileImage,
       createdAt: new Date(),
       role: "customer",
     });
 
-    await newUser.save();
+    await user.save();
+    console.log("✅ [API] New user saved in MongoDB:", user);
+    
+    const userData = {
+      id: user._id,
+      email: user.email,
+      role: user.role,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      contactNumber: user.contactNumber,
+      profileImage: user.profileImage,
+    };
 
     return NextResponse.json(
-      { message: "Signup successful", userId: newUser._id },
+      { message: "Profile created successfully", user: userData },
       { status: 201 }
     );
   } catch (error) {
-    console.error("Error in signup API:", error);
+    console.error("❌ [API] Error in signup API:", error);
     return NextResponse.json(
-      { message: "Internal Server Error" },
+      { message: "Internal Server Error", error: error.message },
       { status: 500 }
     );
   }
