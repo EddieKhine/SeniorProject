@@ -168,6 +168,10 @@ export class FileManager {
             const result = await response.json();
             console.log('Save successful:', result);
 
+            // Capture and upload screenshot
+            const floorplanId = existingFloorplanId || result.floorplan._id;
+            await this.captureAndUploadScreenshot(floorplanId, token, existingFloorplanId ? true : false);
+
             // Only update restaurantData if we're creating a new floorplan
             if (!existingFloorplanId) {
                 restaurantData.floorplanId = result.floorplan._id;
@@ -182,6 +186,112 @@ export class FileManager {
             alert(`Save failed: ${error.message}`);
         } finally {
             this.ui.showLoading(false);
+        }
+    }
+
+    async captureAndUploadScreenshot(floorplanId, token, isEditing = false) {
+        try {
+            console.log('Capturing screenshot for floorplan:', floorplanId);
+            
+            // Hide UI elements temporarily for clean screenshot
+            const elementsToHide = [
+                document.querySelector('.sidebar'),
+                document.querySelector('.toolbar'),
+                document.querySelector('.file-controls'),
+                document.getElementById('scale-panel')
+            ];
+            
+            const originalDisplayValues = elementsToHide.map(el => {
+                if (el) {
+                    const display = el.style.display;
+                    el.style.display = 'none';
+                    return display;
+                }
+                return null;
+            });
+
+            // Wait a frame for UI to hide
+            await new Promise(resolve => requestAnimationFrame(resolve));
+            
+            // Position camera for better screenshot angle
+            const originalCameraPosition = this.ui.camera.position.clone();
+            const originalCameraRotation = this.ui.camera.rotation.clone();
+            
+            // Set optimal camera position for top-down view
+            this.ui.camera.position.set(0, 15, 0);
+            this.ui.camera.lookAt(0, 0, 0);
+            this.ui.camera.updateMatrixWorld();
+            
+            // Render the scene
+            this.ui.renderer.render(this.ui.scene, this.ui.camera);
+            
+            // Capture screenshot as blob
+            const canvas = this.ui.renderer.domElement;
+            const blob = await new Promise(resolve => {
+                canvas.toBlob(resolve, 'image/png', 0.9);
+            });
+            
+            // Restore camera position
+            this.ui.camera.position.copy(originalCameraPosition);
+            this.ui.camera.rotation.copy(originalCameraRotation);
+            this.ui.camera.updateMatrixWorld();
+            
+            // Restore UI elements
+            elementsToHide.forEach((el, index) => {
+                if (el && originalDisplayValues[index] !== null) {
+                    el.style.display = originalDisplayValues[index];
+                }
+            });
+            
+            // Upload screenshot
+            if (blob) {
+                const formData = new FormData();
+                formData.append('screenshot', blob, `floorplan_${floorplanId}.png`);
+                formData.append('floorplanId', floorplanId);
+                formData.append('isEditing', isEditing.toString());
+                
+                const uploadResponse = await fetch('/api/floorplan-screenshot', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: formData
+                });
+                
+                if (uploadResponse.ok) {
+                    const uploadResult = await uploadResponse.json();
+                    console.log('Screenshot uploaded successfully:', uploadResult.imageUrl);
+                    
+                    // Update floorplan with screenshot URL
+                    await this.updateFloorplanScreenshot(floorplanId, uploadResult.imageUrl, token);
+                } else {
+                    console.error('Failed to upload screenshot');
+                }
+            }
+            
+        } catch (error) {
+            console.error('Error capturing screenshot:', error);
+        }
+    }
+
+    async updateFloorplanScreenshot(floorplanId, screenshotUrl, token) {
+        try {
+            const response = await fetch(`/api/scenes/${floorplanId}/screenshot`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ screenshotUrl })
+            });
+            
+            if (response.ok) {
+                console.log('Floorplan screenshot URL updated successfully');
+            } else {
+                console.error('Failed to update floorplan screenshot URL');
+            }
+        } catch (error) {
+            console.error('Error updating floorplan screenshot URL:', error);
         }
     }
 

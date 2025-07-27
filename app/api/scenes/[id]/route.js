@@ -56,16 +56,24 @@ export async function PUT(request, { params }) {
       );
     }
 
+    // Prepare update object
+    const updateData = {
+      name: data.name,
+      data: {
+        objects: data.data.objects,
+        version: data.data.version || 1
+      }
+    };
+
+    // Include screenshot URL if provided
+    if (data.screenshotUrl !== undefined) {
+      updateData.screenshotUrl = data.screenshotUrl;
+    }
+
     // Update floorplan
     const updatedFloorplan = await Floorplan.findByIdAndUpdate(
       id,
-      {
-        name: data.name,
-        data: {
-          objects: data.data.objects,
-          version: data.data.version || 1
-        }
-      },
+      updateData,
       { new: true }
     );
 

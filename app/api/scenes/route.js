@@ -54,6 +54,7 @@ export async function POST(request) {
         name: data.name || "Restaurant Floor Plan",
         restaurantId: data.restaurantId,
         ownerId: ownerId,
+        screenshotUrl: data.screenshotUrl || '',
         data: {
           objects: data.data?.objects || [],
           version: data.data?.version || 1

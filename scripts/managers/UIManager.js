@@ -34,7 +34,7 @@ export class UIManager {
         this.windowManager = new WindowManager(scene, this.wallManager, renderer);
         this.fileManager = new FileManager(this);
         this.sidebarManager = new SidebarManager(this);
-        // dragManager will be set later
+        this.dragManager = new DragManager(this);
 
         // If view-only mode, load the specified scene
         const sceneId = urlParams.get('scene');
@@ -92,7 +92,9 @@ export class UIManager {
             } else if (this.windowManager.isPlacementMode) {
                 this.windowManager.updatePreview(this.camera, event);
             } else {
-                this.dragManager.handleMouseMove(event);
+                if (this.dragManager) {
+                    this.dragManager.handleMouseMove(event);
+                }
             }
         });
 
@@ -106,12 +108,16 @@ export class UIManager {
             } else if (this.windowManager.isPlacementMode) {
                 this.windowManager.placeWindow(this.camera, event);
             } else {
-                this.dragManager.handleMouseDown(event);
+                if (this.dragManager) {
+                    this.dragManager.handleMouseDown(event);
+                }
             }
         });
 
         canvas.addEventListener('mouseup', () => {
-            this.dragManager.stopDragging();
+            if (this.dragManager) {
+                this.dragManager.stopDragging();
+            }
         });
 
         canvas.addEventListener('contextmenu', (e) => {

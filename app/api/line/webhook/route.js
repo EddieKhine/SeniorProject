@@ -2,6 +2,9 @@
 import { Client, validateSignature } from "@line/bot-sdk";
 import { NextResponse } from "next/server";
 import { MongoClient } from "mongodb";
+import dbConnect from "@/lib/mongodb";
+import Restaurant from "@/models/Restaurants";
+import Floorplan from "@/models/Floorplan";
 
 const config = {
   channelAccessToken: process.env.LINE_CHANNEL_ACCESS_TOKEN,
@@ -41,6 +44,59 @@ async function getBookings() {
   return bookings;
 }
 
+// Hard-coded restaurant ID for this LINE bot
+const RESTAURANT_ID = "67b7164d8d2856f0a190046d";
+
+async function getFloorplanImage() {
+  try {
+    await dbConnect();
+    
+    console.log('Looking for restaurant with ID:', RESTAURANT_ID);
+    
+    // Get the specific restaurant this LINE bot is assigned to
+    const restaurant = await Restaurant.findById(RESTAURANT_ID);
+    
+    console.log('Found restaurant:', restaurant ? 'Yes' : 'No');
+    if (restaurant) {
+      console.log('Restaurant name:', restaurant.restaurantName);
+      console.log('Has floorplanId:', restaurant.floorplanId ? 'Yes' : 'No');
+    }
+    
+    if (!restaurant) {
+      console.log('No restaurant found with ID:', RESTAURANT_ID);
+      return null;
+    }
+    
+    if (!restaurant.floorplanId) {
+      console.log('Restaurant has no floorplanId');
+      return null;
+    }
+
+    console.log('Looking for floorplan with ID:', restaurant.floorplanId);
+    const floorplan = await Floorplan.findById(restaurant.floorplanId);
+    
+    console.log('Found floorplan:', floorplan ? 'Yes' : 'No');
+    if (floorplan) {
+      console.log('Has screenshotUrl:', floorplan.screenshotUrl ? 'Yes' : 'No');
+      console.log('Screenshot URL:', floorplan.screenshotUrl);
+    }
+    
+    if (!floorplan || !floorplan.screenshotUrl) {
+      console.log('No floorplan or screenshot URL found');
+      return null;
+    }
+
+    return {
+      restaurantName: restaurant.restaurantName, // Fixed: was restaurant.name
+      imageUrl: floorplan.screenshotUrl,
+      floorplan: floorplan
+    };
+  } catch (error) {
+    console.error('Error fetching floorplan:', error);
+    return null;
+  }
+}
+
 async function handleEvent(event) {
   if (event.type === "message" && event.message.type === "text") {
     return client.replyMessage(event.replyToken, {
@@ -65,6 +121,12 @@ async function handleEvent(event) {
             label: "Show Bookings",
             data: "action=show_bookings",
             displayText: "Show me bookings",
+          },
+          {
+            type: "postback",
+            label: "Show Floorplan",
+            data: "action=show_floorplan",
+            displayText: "Show me the restaurant layout",
           },
         ],
       },
@@ -116,6 +178,53 @@ async function handleEvent(event) {
       return client.replyMessage(event.replyToken, {
         type: "text",
         text: "Error fetching bookings.",
+      });
+    }
+  } else if (
+    event.type === "postback" &&
+    event.postback.data === "action=show_floorplan"
+  ) {
+    try {
+      const floorplanData = await getFloorplanImage();
+      
+      if (!floorplanData) {
+        return client.replyMessage(event.replyToken, {
+          type: "text",
+          text: "Sorry, no floorplan image is available at the moment.",
+        });
+      }
+
+      // Get the full URL for the image using ngrok URL
+      const baseUrl = 'https://075a9a8e23fc.ngrok-free.app';
+      const fullImageUrl = floorplanData.imageUrl.startsWith('http') 
+        ? floorplanData.imageUrl 
+        : `${baseUrl}${floorplanData.imageUrl}`;
+      
+      console.log('Base URL:', baseUrl);
+      console.log('Image URL from DB:', floorplanData.imageUrl);
+      console.log('Full Image URL:', fullImageUrl);
+
+      // Send the floorplan image
+      return client.replyMessage(event.replyToken, [
+        {
+          type: "text",
+          text: `Here's the floorplan for ${floorplanData.restaurantName}:`,
+        },
+        {
+          type: "image",
+          originalContentUrl: fullImageUrl,
+          previewImageUrl: fullImageUrl,
+        },
+        {
+          type: "text",
+          text: "You can tap 'Visit Website' above to book a table or explore the interactive floorplan!",
+        }
+      ]);
+    } catch (error) {
+      console.error('Error fetching floorplan image:', error);
+      return client.replyMessage(event.replyToken, {
+        type: "text",
+        text: "Sorry, there was an error retrieving the floorplan image.",
       });
     }
   }

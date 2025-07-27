@@ -19,7 +19,7 @@ export async function POST(req) {
       
       user = new User({
         email: lineEmail,
-        firebaseUid: null, // LINE users don't have Firebase UID initially
+        // firebaseUid is omitted for LINE users as they don't have Firebase UID
         firstName: displayName || "LINE User",
         lastName: "",
         profileImage: pictureUrl || "",
