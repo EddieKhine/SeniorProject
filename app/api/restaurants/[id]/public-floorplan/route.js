@@ -6,7 +6,7 @@ import Floorplan from '@/models/Floorplan';
 export async function GET(request, { params }) {
   try {
     await dbConnect();
-    const { id } = params;
+    const { id } = await params;
 
     console.log('Fetching restaurant with ID:', id);
 

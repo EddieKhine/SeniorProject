@@ -31,6 +31,12 @@ const userSchema = new mongoose.Schema({
     required: false,
     default: '',
   },
+  lineUserId: {
+    type: String,
+    unique: true,
+    sparse: true,
+    required: false
+  },
   role: {
     type: String,
     required: true,
@@ -41,6 +47,9 @@ const userSchema = new mongoose.Schema({
     type: Date,
     default: Date.now,
   }
+}, { 
+  timestamps: true,
+  strict: true
 });
 
 export default mongoose.models.User || mongoose.model('User', userSchema);

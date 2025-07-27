@@ -2,14 +2,56 @@ import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
 import Review from '@/models/Review';
 import mongoose from 'mongoose';
-import jwt from 'jsonwebtoken';
 import Restaurant from '@/models/Restaurants';
 import User from '@/models/user';
+import { verifyFirebaseAuth } from '@/lib/firebase-admin';
+
+// Helper function to ensure user exists in MongoDB
+async function ensureUserExists(firebaseUid, email) {
+  try {
+    // First try to find by firebaseUid
+    let user = await User.findOne({ firebaseUid });
+    
+    if (!user) {
+      console.log("User not found by firebaseUid, attempting to create...");
+      try {
+        // Create new user
+        user = await User.create({
+          firebaseUid,
+          email,
+          role: 'customer'
+        });
+        console.log("New user created:", user._id);
+      } catch (createError) {
+        // If duplicate email error, try to find by email as fallback
+        if (createError.code === 11000) {
+          console.log("Duplicate key error, finding existing user by email...");
+          user = await User.findOne({ email });
+          if (user) {
+            // Update existing user with firebaseUid if missing
+            if (!user.firebaseUid) {
+              user.firebaseUid = firebaseUid;
+              await user.save();
+            }
+          }
+        }
+        if (!user) {
+          throw createError;
+        }
+      }
+    }
+    
+    return user;
+  } catch (error) {
+    console.error("Error in ensureUserExists:", error);
+    throw error;
+  }
+}
 
 // GET: Fetch reviews for a restaurant
 export async function GET(req, { params }) {
   await dbConnect();
-  const { id } = params;
+  const { id } = await params;
 
   try {
     const reviews = await Review.find({ 
@@ -43,21 +85,25 @@ export async function GET(req, { params }) {
 // POST: Create a new review
 export async function POST(req, { params }) {
   await dbConnect();
-  const { id } = params;
+  const { id } = await params;
 
   try {
     const { rating, comment, images } = await req.json();
-    const token = req.headers.get('authorization')?.split(' ')[1];
     
-    if (!token) {
-      return NextResponse.json({ error: 'No token provided' }, { status: 401 });
+    // Verify Firebase authentication
+    const authResult = await verifyFirebaseAuth(req);
+    if (!authResult.success) {
+      return NextResponse.json({ error: authResult.error }, { status: 401 });
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const { firebaseUid, email } = authResult;
+
+    // Ensure user exists in MongoDB
+    const user = await ensureUserExists(firebaseUid, email);
     
     const review = await Review.create({
       restaurantId: new mongoose.Types.ObjectId(id),
-      userId: new mongoose.Types.ObjectId(decoded.userId),
+      userId: new mongoose.Types.ObjectId(user._id),
       rating,
       comment,
       images: images || [] // Make sure images array is properly formatted
@@ -83,6 +129,14 @@ export async function POST(req, { params }) {
     return NextResponse.json({ review });
   } catch (error) {
     console.error('Error creating review:', error);
+    
+    // Handle MongoDB duplicate key errors specifically
+    if (error.code === 11000) {
+      return NextResponse.json({ 
+        error: "User account conflict. Please contact support." 
+      }, { status: 409 });
+    }
+    
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
@@ -94,19 +148,23 @@ export async function DELETE(req, { params }) {
     const id = params.id;
     const { reviewId } = await req.json();
     
-    const token = req.headers.get("authorization")?.split(" ")[1];
-    if (!token) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    // Verify Firebase authentication
+    const authResult = await verifyFirebaseAuth(req);
+    if (!authResult.success) {
+      return NextResponse.json({ error: authResult.error }, { status: 401 });
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const { firebaseUid, email } = authResult;
+
+    // Ensure user exists in MongoDB
+    const user = await ensureUserExists(firebaseUid, email);
     
     const review = await Review.findById(reviewId);
     if (!review) {
       return NextResponse.json({ error: "Review not found" }, { status: 404 });
     }
 
-    if (review.userId.toString() !== decoded.userId) {
+    if (review.userId.toString() !== user._id.toString()) {
       return NextResponse.json({ error: "Not authorized to delete this review" }, { status: 403 });
     }
 
@@ -125,6 +183,14 @@ export async function DELETE(req, { params }) {
     return NextResponse.json({ message: "Review deleted successfully" });
   } catch (error) {
     console.error('Error deleting review:', error);
+    
+    // Handle MongoDB duplicate key errors specifically
+    if (error.code === 11000) {
+      return NextResponse.json({ 
+        error: "User account conflict. Please contact support." 
+      }, { status: 409 });
+    }
+    
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 } 

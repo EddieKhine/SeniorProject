@@ -4,15 +4,15 @@ import { useState, useEffect, useCallback } from 'react';
 import { FaStar, FaImage, FaTimes, FaTrash, FaRegSmile, FaRegMeh, FaRegFrown, FaCamera } from 'react-icons/fa';
 import Image from 'next/image';
 import ImageUpload from '@/components/ImageUpload';
+import { useFirebaseAuth } from '@/contexts/FirebaseAuthContext';
 
 export default function ReviewSection({ restaurantId, onLoginClick }) {
+  const { userProfile, isAuthenticated, getAuthToken } = useFirebaseAuth();
   const [reviews, setReviews] = useState([]);
   const [newReview, setNewReview] = useState({ rating: 5, comment: '', images: [] });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [currentUser, setCurrentUser] = useState(null);
   const [userReview, setUserReview] = useState(null);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
 
@@ -36,22 +36,14 @@ export default function ReviewSection({ restaurantId, onLoginClick }) {
 
   useEffect(() => {
     fetchReviews();
-    const token = localStorage.getItem('customerToken');
-    const user = localStorage.getItem('customerUser');
-    setIsLoggedIn(!!token);
-    if (user) {
-      setCurrentUser(JSON.parse(user));
-    }
   }, [fetchReviews, restaurantId]);
 
   useEffect(() => {
-    if (reviews.length > 0 && isLoggedIn) {
-      const token = localStorage.getItem('customerToken');
-      const userId = JSON.parse(atob(token.split('.')[1])).userId;
-      const existingReview = reviews.find(review => review.userId?._id === userId);
+    if (reviews.length > 0 && isAuthenticated && userProfile) {
+      const existingReview = reviews.find(review => review.userId?._id === userProfile._id);
       setUserReview(existingReview);
     }
-  }, [reviews, isLoggedIn]);
+  }, [reviews, isAuthenticated, userProfile]);
 
   const handleImageUpload = async (e) => {
     const files = Array.from(e.target.files);
@@ -113,7 +105,7 @@ export default function ReviewSection({ restaurantId, onLoginClick }) {
 
   const handleDeleteAndResubmit = async () => {
     try {
-      const token = localStorage.getItem('customerToken');
+      const token = await getAuthToken();
       const response = await fetch(`/api/restaurants/${restaurantId}/reviews`, {
         method: 'DELETE',
         headers: {
@@ -142,7 +134,7 @@ export default function ReviewSection({ restaurantId, onLoginClick }) {
     setError('');
     
     try {
-      const token = localStorage.getItem('customerToken');
+      const token = await getAuthToken();
       if (!token) {
         setError('Please log in to submit a review');
         return;
@@ -182,7 +174,7 @@ export default function ReviewSection({ restaurantId, onLoginClick }) {
     if (!window.confirm('Are you sure you want to delete this review?')) return;
     
     try {
-      const token = localStorage.getItem('customerToken');
+      const token = await getAuthToken();
       const response = await fetch(`/api/restaurants/${restaurantId}/reviews`, {
         method: 'DELETE',
         headers: {
@@ -247,7 +239,7 @@ export default function ReviewSection({ restaurantId, onLoginClick }) {
   };
 
   const renderReviewForm = () => {
-    if (!isLoggedIn) {
+    if (!isAuthenticated) {
       return (
         <div className="bg-gradient-to-r from-white to-gray-50 rounded-xl p-6 sm:p-8 shadow-lg border border-gray-100">
           <div className="text-center space-y-3 sm:space-y-4">
@@ -270,8 +262,8 @@ export default function ReviewSection({ restaurantId, onLoginClick }) {
         <div className="flex items-center gap-3 sm:gap-4 pb-3 sm:pb-4 border-b border-gray-100">
           <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gray-100 rounded-full overflow-hidden">
             <Image 
-              src={getProfileImageUrl(currentUser)}
-              alt={`${currentUser?.firstName || 'Anonymous'}'s profile`}
+              src={getProfileImageUrl(userProfile)}
+              alt={`${userProfile?.firstName || 'Anonymous'}'s profile`}
               width={48}
               height={48}
               className="object-cover"
@@ -279,7 +271,7 @@ export default function ReviewSection({ restaurantId, onLoginClick }) {
           </div>
           <div>
             <p className="font-medium text-gray-900 text-sm sm:text-base">
-              {currentUser?.firstName} {currentUser?.lastName}
+              {userProfile?.firstName} {userProfile?.lastName}
             </p>
             <p className="text-xs sm:text-sm text-gray-500">Sharing your experience</p>
           </div>
@@ -417,7 +409,7 @@ export default function ReviewSection({ restaurantId, onLoginClick }) {
                 </div>
               </div>
             </div>
-            {isLoggedIn && review.userId?._id === JSON.parse(atob(localStorage.getItem('customerToken').split('.')[1])).userId && (
+            {isAuthenticated && review.userId?._id === userProfile?._id && (
               <button
                 onClick={() => handleDeleteReview(review._id)}
                 className="text-gray-400 hover:text-red-500 transition-colors p-1.5 sm:p-2 hover:bg-red-50 rounded-full"

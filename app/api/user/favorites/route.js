@@ -1,23 +1,68 @@
 import { NextResponse } from "next/server";
 import dbConnect from "@/lib/mongodb";
 import Favorite from "@/models/favorites";
-import jwt from "jsonwebtoken";
+import User from "@/models/user";
+import { verifyFirebaseAuth } from "@/lib/firebase-admin";
+
+// Helper function to ensure user exists in MongoDB
+async function ensureUserExists(firebaseUid, email) {
+  try {
+    // First try to find by firebaseUid
+    let user = await User.findOne({ firebaseUid });
+    
+    if (!user) {
+      console.log("User not found by firebaseUid, attempting to create...");
+      try {
+        // Create new user
+        user = await User.create({
+          firebaseUid,
+          email,
+          role: 'customer'
+        });
+        console.log("New user created:", user._id);
+      } catch (createError) {
+        // If duplicate email error, try to find by email as fallback
+        if (createError.code === 11000) {
+          console.log("Duplicate key error, finding existing user by email...");
+          user = await User.findOne({ email });
+          if (user) {
+            // Update existing user with firebaseUid if missing
+            if (!user.firebaseUid) {
+              user.firebaseUid = firebaseUid;
+              await user.save();
+            }
+          }
+        }
+        if (!user) {
+          throw createError;
+        }
+      }
+    }
+    
+    return user;
+  } catch (error) {
+    console.error("Error in ensureUserExists:", error);
+    throw error;
+  }
+}
 
 // GET: Fetch user's favorite restaurants
 export async function GET(req) {
   await dbConnect();
 
   try {
-    const authHeader = req.headers.get("authorization");
-    if (!authHeader) {
-      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+    // Verify Firebase authentication
+    const authResult = await verifyFirebaseAuth(req);
+    if (!authResult.success) {
+      return NextResponse.json({ message: authResult.error }, { status: 401 });
     }
 
-    const token = authHeader.split(" ")[1];
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const userId = decoded.userId;
+    const { firebaseUid, email } = authResult;
 
-    const favorites = await Favorite.find({ userId }).populate('restaurantId');
+    // Ensure user exists in MongoDB
+    const user = await ensureUserExists(firebaseUid, email);
+
+    const favorites = await Favorite.find({ userId: user._id }).populate('restaurantId');
 
     // Add null check before accessing _id
     return NextResponse.json({ 
@@ -25,7 +70,15 @@ export async function GET(req) {
     });
 
   } catch (error) {
-    console.error("Error fetching favorites:", error);
+    console.error("Error in favorites GET API:", error);
+    
+    // Handle MongoDB duplicate key errors specifically
+    if (error.code === 11000) {
+      return NextResponse.json({ 
+        message: "User account conflict. Please contact support." 
+      }, { status: 409 });
+    }
+    
     return NextResponse.json({ message: "Error fetching favorites" }, { status: 500 });
   }
 }
@@ -35,28 +88,31 @@ export async function PUT(req) {
   try {
     await dbConnect();
     
-    const token = req.headers.get("authorization")?.split(" ")[1];
-    if (!token) {
-      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+    // Verify Firebase authentication
+    const authResult = await verifyFirebaseAuth(req);
+    if (!authResult.success) {
+      return NextResponse.json({ message: authResult.error }, { status: 401 });
     }
 
+    const { firebaseUid, email } = authResult;
     const { restaurantId } = await req.json();
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const userId = decoded.userId;
+
+    // Ensure user exists in MongoDB
+    const user = await ensureUserExists(firebaseUid, email);
 
     // Check if the favorite already exists
-    const existingFavorite = await Favorite.findOne({ userId, restaurantId });
+    const existingFavorite = await Favorite.findOne({ userId: user._id, restaurantId });
 
     if (existingFavorite) {
       // Remove favorite
-      await Favorite.deleteOne({ userId, restaurantId });
+      await Favorite.deleteOne({ userId: user._id, restaurantId });
       return NextResponse.json({
         message: "Restaurant removed from favorites",
         isFavorite: false
       });
     } else {
       // Add favorite
-      await Favorite.create({ userId, restaurantId });
+      await Favorite.create({ userId: user._id, restaurantId });
       return NextResponse.json({
         message: "Restaurant added to favorites",
         isFavorite: true
@@ -64,10 +120,15 @@ export async function PUT(req) {
     }
 
   } catch (error) {
-    console.error("Error in favorites API:", error);
-    if (error.name === 'JsonWebTokenError') {
-      return NextResponse.json({ message: "Invalid token" }, { status: 401 });
+    console.error("Error in favorites PUT API:", error);
+    
+    // Handle MongoDB duplicate key errors specifically
+    if (error.code === 11000) {
+      return NextResponse.json({ 
+        message: "User account conflict. Please contact support." 
+      }, { status: 409 });
     }
+    
     return NextResponse.json({ message: "Internal server error" }, { status: 500 });
   }
 } 

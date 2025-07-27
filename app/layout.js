@@ -2,15 +2,15 @@ import { Inter } from "next/font/google";
 import Script from "next/script";
 import "./globals.css";
 import Navbar from '../components/navbar';
-import { AuthProvider } from '@/context/AuthContext';
+import { FirebaseAuthProvider } from '@/contexts/FirebaseAuthContext';
 import { GoogleMapsProvider } from '../contexts/GoogleMapsContext';
 import { Toaster } from 'react-hot-toast';
 
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata = {
-  title: "Restaurant Reservation System",
-  description: "Book your table easily",
+  title: "FoodLoft",
+  description: "A modern restaurant reservation system with an interactive 3D floorplan.",
 };
 
 export default function RootLayout({ children }) {
@@ -22,12 +22,12 @@ export default function RootLayout({ children }) {
           strategy="beforeInteractive"
           src={`https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&libraries=places`}
         />
-        <AuthProvider>
+        <FirebaseAuthProvider>
           <GoogleMapsProvider>
             {children}
+            <Toaster position="bottom-center" />
           </GoogleMapsProvider>
-        </AuthProvider>
-        <Toaster position="top-center" />
+        </FirebaseAuthProvider>
       </body>
     </html>
   );

@@ -30,12 +30,11 @@ import { toast } from "react-hot-toast";
 import ImageUpload from '@/components/ImageUpload';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faCamera } from '@fortawesome/free-solid-svg-icons';
-import { auth } from "@/lib/firebase-config";
-import { onAuthStateChanged, signOut } from "firebase/auth";
+import { useFirebaseAuth } from "@/contexts/FirebaseAuthContext";
 
 export default function CustomerProfile() {
   const router = useRouter();
-  const [user, setUser] = useState(null);
+  const { userProfile, isAuthenticated, logout, getAuthToken, loading: authLoading } = useFirebaseAuth();
   const [activeTab, setActiveTab] = useState("profile");
   const [activeSubTab, setActiveSubTab] = useState("saved");
   const [savedRestaurants, setSavedRestaurants] = useState([]);
@@ -51,57 +50,31 @@ export default function CustomerProfile() {
   });
   const [bookings, setBookings] = useState([]);
   const [bookingsLoading, setBookingsLoading] = useState(false);
-  const [loading, setLoading] = useState(true);
-
+  // Check authentication and redirect if not logged in
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      if (!firebaseUser) {
-        setUser(null);
-        setLoading(false);
-        router.push("/"); // or your login page
-        return;
-      }
-
-      // Sync/fetch MongoDB profile
-      try {
-        const res = await fetch("/api/signup", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            email: firebaseUser.email,
-            firebaseUid: firebaseUser.uid,
-          }),
-        });
-        const data = await res.json();
-        if (res.ok && data.user) {
-          setUser(data.user);
-          setFormData({
-            firstName: data.user.firstName || "",
-            lastName: data.user.lastName || "",
-            email: data.user.email || "",
-            contactNumber: data.user.contactNumber || "",
-            newPassword: "",
-          });
-          localStorage.setItem("customerUser", JSON.stringify(data.user));
-        } else {
-          setUser(null);
-        }
-      } catch (error) {
-        setUser(null);
-      } finally {
-        setLoading(false);
-      }
-    });
-
-    return () => unsubscribe();
-  }, []);
+    if (!authLoading && !isAuthenticated) {
+      router.push("/");
+      return;
+    }
+    
+    // Initialize form data when userProfile is available
+    if (userProfile && !isEditing) {
+      setFormData({
+        firstName: userProfile.firstName || "",
+        lastName: userProfile.lastName || "",
+        email: userProfile.email || "",
+        contactNumber: userProfile.contactNumber || "",
+        newPassword: "",
+      });
+    }
+  }, [authLoading, isAuthenticated, userProfile, router, isEditing]);
 
   // Fetch saved restaurants with Firebase ID token
   useEffect(() => {
     const fetchSavedRestaurants = async () => {
-      if (user && user.email) {
+      if (userProfile && userProfile.email) {
         try {
-          const token = await auth.currentUser?.getIdToken();
+          const token = await getAuthToken();
           const response = await fetch('/api/user/favorites', {
             headers: token ? { 'Authorization': `Bearer ${token}` } : {},
           });
@@ -143,14 +116,14 @@ export default function CustomerProfile() {
     if (activeTab === "activities" && activeSubTab === "saved") {
       fetchSavedRestaurants();
     }
-  }, [user, activeTab, activeSubTab]);
+  }, [userProfile, activeTab, activeSubTab, getAuthToken]);
 
   const fetchUserBookings = async () => {
-    if (!user?.email) return;
+    if (!userProfile?.email) return;
     
     setBookingsLoading(true);
     try {
-      const token = await auth.currentUser?.getIdToken();
+      const token = await getAuthToken();
       const response = await fetch('/api/bookings/customer', {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -218,12 +191,11 @@ export default function CustomerProfile() {
     if (activeTab === "activities" && activeSubTab === "reservations") {
       fetchUserBookings();
     }
-  }, [activeTab, activeSubTab, user]);
+  }, [activeTab, activeSubTab, userProfile]);
 
   // Logout: also sign out from Firebase
   const handleLogout = async () => {
-    localStorage.removeItem("customerUser");
-    await signOut(auth);
+    await logout();
     router.push("/");
   };
 
@@ -238,17 +210,17 @@ export default function CustomerProfile() {
   // Profile update (edit profile)
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!user || !user.email) {
+    if (!userProfile || !userProfile.email) {
       toast.error("User email is missing.");
       return;
     }
-    const token = await auth.currentUser?.getIdToken();
+    const token = await getAuthToken();
     if (!token) {
       toast.error("Please log in again.");
       return;
     }
     const payload = {
-      email: user.email,
+      email: userProfile.email,
       firstName: formData.firstName,
       lastName: formData.lastName,
       contactNumber: formData.contactNumber,
@@ -266,14 +238,6 @@ export default function CustomerProfile() {
       const result = await response.json();
       if (response.ok) {
         toast.success("Profile updated successfully!");
-        const updatedUser = { 
-          ...user, 
-          firstName: formData.firstName,
-          lastName: formData.lastName,
-          contactNumber: formData.contactNumber,
-        };
-        setUser(updatedUser);
-        localStorage.setItem("customerUser", JSON.stringify(updatedUser));
         setFormData(prev => ({ ...prev, newPassword: "" }));
         setIsEditing(false);
       } else {
@@ -304,7 +268,7 @@ export default function CustomerProfile() {
       }
       const { url } = await uploadResponse.json();
       // Update profile with new image URL
-      const token = await auth.currentUser?.getIdToken();
+      const token = await getAuthToken();
       const updateResponse = await fetch('/api/customer/profile', {
         method: 'PUT',
         headers: {
@@ -312,10 +276,10 @@ export default function CustomerProfile() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          email: user.email,
-          firstName: user.firstName,
-          lastName: user.lastName,
-          contactNumber: user.contactNumber,
+          email: userProfile.email,
+          firstName: userProfile.firstName,
+          lastName: userProfile.lastName,
+          contactNumber: userProfile.contactNumber,
           profileImage: url,
         }),
       });
@@ -323,13 +287,6 @@ export default function CustomerProfile() {
         throw new Error('Failed to update profile');
       }
       const result = await updateResponse.json();
-      const updatedUserData = { 
-        ...user,
-        ...result.user, // Use the user data from the response
-        profileImage: url
-      };
-      setUser(updatedUserData);
-      localStorage.setItem('customerUser', JSON.stringify(updatedUserData));
       toast.success('Profile image updated successfully');
     } catch (error) {
       console.error('Error:', error);
@@ -395,21 +352,21 @@ export default function CustomerProfile() {
 
   // Render profile image section
   const renderProfileImage = () => {
-    if (!user) return null;
+    if (!userProfile) return null;
 
     return (
       <div className="relative group mx-auto">
         <div className="w-32 h-32 rounded-2xl overflow-hidden ring-4 ring-[#FF4F18]/20 group-hover:ring-[#FF4F18] transition-all duration-300 shadow-xl">
-          {user.profileImage ? (
+          {userProfile.profileImage ? (
             <img
-              src={user.profileImage}
+              src={userProfile.profileImage}
               alt="Profile"
               className="w-full h-full object-cover"
             />
           ) : (
             <div className="w-full h-full bg-gradient-to-br from-[#FF4F18] to-[#FF8F6B] flex items-center justify-center">
               <span className="text-white font-semibold text-3xl">
-                {user.firstName?.charAt(0)}{user.lastName?.charAt(0)}
+                {userProfile.firstName?.charAt(0)}{userProfile.lastName?.charAt(0)}
               </span>
             </div>
           )}
@@ -572,22 +529,22 @@ export default function CustomerProfile() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="bg-gray-50 rounded-xl p-4 hover:shadow-md transition-all duration-300">
                   <p className="text-sm font-medium text-gray-500 mb-1">First Name</p>
-                  <p className="text-lg font-semibold text-gray-800">{user?.firstName || "Not set"}</p>
+                  <p className="text-lg font-semibold text-gray-800">{userProfile?.firstName || "Not set"}</p>
                 </div>
 
                 <div className="bg-gray-50 rounded-xl p-4 hover:shadow-md transition-all duration-300">
                   <p className="text-sm font-medium text-gray-500 mb-1">Last Name</p>
-                  <p className="text-lg font-semibold text-gray-800">{user?.lastName || "Not set"}</p>
+                  <p className="text-lg font-semibold text-gray-800">{userProfile?.lastName || "Not set"}</p>
                 </div>
               
                 <div className="bg-gray-50 rounded-xl p-4 hover:shadow-md transition-all duration-300">
                   <p className="text-sm font-medium text-gray-500 mb-1">Email Address</p>
-                  <p className="text-lg font-semibold text-gray-800">{user?.email || "Not set"}</p>
+                  <p className="text-lg font-semibold text-gray-800">{userProfile?.email || "Not set"}</p>
                 </div>
                 
                 <div className="bg-gray-50 rounded-xl p-4 hover:shadow-md transition-all duration-300">
                   <p className="text-sm font-medium text-gray-500 mb-1">Contact Number</p>
-                  <p className="text-lg font-semibold text-gray-800">{user?.contactNumber || "Not set"}</p>
+                  <p className="text-lg font-semibold text-gray-800">{userProfile?.contactNumber || "Not set"}</p>
                 </div>
               </div>
 
@@ -602,7 +559,7 @@ export default function CustomerProfile() {
     );
   };
 
-  if (loading) {
+  if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-pulse flex flex-col items-center space-y-4">
@@ -613,7 +570,7 @@ export default function CustomerProfile() {
     );
   }
 
-  if (!user) {
+  if (!userProfile) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
@@ -642,9 +599,9 @@ export default function CustomerProfile() {
             {renderProfileImage()}
             <div className="text-center">
               <h2 className="text-xl font-bold text-gray-900">
-                {user?.firstName} {user?.lastName}
+                {userProfile?.firstName} {userProfile?.lastName}
               </h2>
-              <p className="text-sm text-gray-500">{user?.email}</p>
+              <p className="text-sm text-gray-500">{userProfile?.email}</p>
             </div>
           </div>
 

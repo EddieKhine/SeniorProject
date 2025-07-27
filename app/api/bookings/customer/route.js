@@ -1,37 +1,30 @@
 import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
 import Booking from '@/models/Booking';
-import jwt from 'jsonwebtoken';
+import User from '@/models/user';
+import { verifyFirebaseAuth } from '@/lib/firebase-admin';
 
 // GET endpoint for fetching customer bookings
 export async function GET(request) {
     try {
       await dbConnect();
   
-      // Verify token
-      const authHeader = request.headers.get('authorization');
-      if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        return NextResponse.json(
-          { error: 'No token provided' },
-          { status: 401 }
-        );
+      // Verify Firebase authentication
+      const authResult = await verifyFirebaseAuth(request);
+      if (!authResult.success) {
+        return NextResponse.json({ error: authResult.error }, { status: 401 });
       }
-  
-      const token = authHeader.split(' ')[1];
-      let decoded;
-  
-      try {
-        decoded = jwt.verify(token, process.env.JWT_SECRET);
-      } catch (error) {
-        console.error('Token verification error:', error);
-        return NextResponse.json(
-          { error: 'Invalid or expired token' },
-          { status: 401 }
-        );
+
+      const { firebaseUid } = authResult;
+
+      // Find user by Firebase UID
+      const user = await User.findOne({ firebaseUid });
+      if (!user) {
+        return NextResponse.json({ error: 'User not found' }, { status: 404 });
       }
   
       // Find all bookings for this user
-      const bookings = await Booking.find({ userId: decoded.userId })
+      const bookings = await Booking.find({ userId: user._id })
         .populate('restaurantId', 'restaurantName')
         .sort({ date: -1 });
   
@@ -73,18 +66,24 @@ export async function PUT(request) {
       }, { status: 400 });
     }
 
-    // Get user from token
-    const token = request.headers.get("authorization")?.split(" ")[1];
-    if (!token) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    // Verify Firebase authentication
+    const authResult = await verifyFirebaseAuth(request);
+    if (!authResult.success) {
+      return NextResponse.json({ error: authResult.error }, { status: 401 });
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const { firebaseUid } = authResult;
+
+    // Find user by Firebase UID
+    const user = await User.findOne({ firebaseUid });
+    if (!user) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
     
     // Find and update the booking
     const booking = await Booking.findOne({ 
       _id: bookingId,
-      userId: decoded.userId 
+      userId: user._id 
     });
 
     if (!booking) {

@@ -8,7 +8,7 @@ export async function POST(req) {
 
     await dbConnect();
     console.log("✅ [API] Database connected successfully");
-
+    
     const body = await req.json();
     console.log("📥 [API] Request Body:", body);
 
@@ -32,7 +32,7 @@ export async function POST(req) {
       if (lastName) { user.lastName = lastName; updated = true; }
       if (profileImage) { user.profileImage = profileImage; updated = true; }
       if (updated) await user.save();
-
+      
       const userData = {
         id: user._id,
         email: user.email,
@@ -42,6 +42,7 @@ export async function POST(req) {
         contactNumber: user.contactNumber,
         profileImage: user.profileImage,
       };
+      
       return NextResponse.json(
         { message: "User already exists", user: userData },
         { status: 200 }
@@ -62,7 +63,7 @@ export async function POST(req) {
 
     await user.save();
     console.log("✅ [API] New user saved in MongoDB:", user);
-
+    
     const userData = {
       id: user._id,
       email: user.email,

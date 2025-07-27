@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect, use } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { useRouter, useParams } from 'next/navigation';
 import RestaurantFloorPlan from '@/components/RestaurantFloorPlan';
 import { FaMapMarkerAlt, FaClock, FaPhone, FaStar, FaHome, FaShare, FaBookmark, FaUtensils, FaComments, FaChevronLeft, FaChevronRight } from 'react-icons/fa';
 import Image from 'next/image';
@@ -12,8 +12,9 @@ import CustomerChat from '@/components/CustomerChat';
 import { MdRestaurantMenu } from 'react-icons/md';
 import { RiImageAddLine } from 'react-icons/ri';
 
-export default function RestaurantFloorplanPage({ params }) {
-  const restaurantId = use(params).id;
+export default function RestaurantFloorplanPage() {
+  const params = useParams();
+  const restaurantId = params.id;
   const [restaurant, setRestaurant] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isSaved, setIsSaved] = useState(false);
@@ -23,6 +24,63 @@ export default function RestaurantFloorplanPage({ params }) {
   const router = useRouter();
 
   useEffect(() => {
+    if (typeof window !== "undefined") {
+      function startLiff() {
+        window.liff.init({ liffId: "2007787204-zGYZn1ZE" })
+          .then(() => {
+            if (window.liff.isInClient()) {
+              // Use sessionStorage to prevent infinite login loop in LIFF environment
+              const loginAttempted = sessionStorage.getItem('liffLoginComplete');
+
+              if (!loginAttempted) {
+                if (window.liff.isLoggedIn()) {
+                  window.liff.getProfile().then(profile => {
+                    fetch("/api/line-liff-login", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify(profile)
+                    })
+                    .then(res => res.json())
+                    .then(data => {
+                      if (data.user) {
+                        // Store LINE user data in localStorage (compatible with new auth system)
+                        localStorage.setItem('customerUser', JSON.stringify(data.user));
+                        console.log('LINE user logged in:', data.user);
+                      }
+                      // Set the flag before reloading to break the loop
+                      sessionStorage.setItem('liffLoginComplete', 'true');
+                      window.location.reload();
+                    })
+                    .catch(fetchErr => {
+                      console.error("Fetch error during LIFF login:", fetchErr);
+                    });
+                  }).catch(profileErr => {
+                    console.error("Error getting LIFF profile:", profileErr);
+                  });
+                } else {
+                  // If not logged into LINE, initiate login
+                  window.liff.login();
+                }
+              }
+              // If loginAttempted is true, do nothing. The user is logged in.
+            }
+            // If NOT in LINE app, do nothing (web/PC flow continues as normal)
+          })
+          .catch(err => {
+            console.error("LIFF init error:", err);
+          });
+      }
+
+      if (!window.liff) {
+        const script = document.createElement("script");
+        script.src = "https://static.line-scdn.net/liff/edge/2/sdk.js";
+        script.onload = startLiff;
+        document.body.appendChild(script);
+      } else {
+        startLiff();
+      }
+    }
+
     const fetchRestaurantAndFloorplan = async () => {
       try {
         console.log('Fetching restaurant data for ID:', restaurantId);
@@ -33,17 +91,6 @@ export default function RestaurantFloorplanPage({ params }) {
         }
         
         const data = await response.json();
-        console.log('DEBUG - Full restaurant data:', data);
-        console.log('DEBUG - Contact number:', data.contactNumber || 'NOT SET');
-        console.log('DEBUG - Images object:', data.images);
-        console.log('DEBUG - Menu images array:', data.images?.menu);
-        console.log('DEBUG - Number of menu images:', data.images?.menu?.length || 0);
-        
-        // Ensure menu images is always an array
-        if (data.images && !Array.isArray(data.images.menu)) {
-          data.images.menu = data.images.menu ? [data.images.menu] : [];
-        }
-        
         setRestaurant(data);
       } catch (error) {
         console.error('Error fetching restaurant data:', error);
@@ -71,144 +118,15 @@ export default function RestaurantFloorplanPage({ params }) {
 
   const handleSave = () => {
     setIsSaved(!isSaved);
-    // Add logic to save to user's favorites
   };
 
-  // Format opening hours for display
-  const formatOpeningHours = (hours) => {
-    if (!hours) return 'Hours not available';
-    
-    // Get current day
-    const today = new Date().toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
-    
-    // Format a single day's hours
-    const formatDayHours = (dayHours) => {
-      if (!dayHours || !dayHours.open || !dayHours.close) return 'Closed';
-      return `${dayHours.open} - ${dayHours.close}`;
-    };
-
-    // Convert long weekday name to match your schema
-    const getDayKey = (day) => {
-      const dayMap = {
-        'sunday': 'sunday',
-        'monday': 'monday',
-        'tuesday': 'tuesday',
-        'wednesday': 'wednesday',
-        'thursday': 'thursday',
-        'friday': 'friday',
-        'saturday': 'saturday'
-      };
-      return dayMap[day];
-    };
-
-    // If we want to show today's hours
-    const dayKey = getDayKey(today);
-    if (hours[dayKey]) {
-      return `Today: ${formatDayHours(hours[dayKey])}`;
-    }
-
-    // Show all days
-    return Object.entries(hours)
-      .map(([day, hours]) => {
-        const formattedDay = day.charAt(0).toUpperCase() + day.slice(1);
-        return `${formattedDay}: ${formatDayHours(hours)}`;
-      })
-      .join('\n');
-  };
-
-  // Add this function to handle menu navigation
-  const handleMenuNav = (direction) => {
-    if (!restaurant?.images?.menu?.length) return;
-    
-    if (direction === 'next') {
-      setCurrentMenuIndex((prev) => 
-        prev === restaurant.images.menu.length - 1 ? 0 : prev + 1
-      );
-    } else {
-      setCurrentMenuIndex((prev) => 
-        prev === 0 ? restaurant.images.menu.length - 1 : prev - 1
-      );
-    }
-  };
-
-  // Add a separate function to render menu section with debugging
-  const renderMenuSection = () => {
-    console.log('DEBUG - Rendering menu section');
-    console.log('DEBUG - Current restaurant state:', restaurant);
-    console.log('DEBUG - Menu images in state:', restaurant?.images?.menu);
-    console.log('DEBUG - Menu images count:', restaurant?.images?.menu?.length || 0);
-
-    // Ensure menu images is an array
-    const menuImages = Array.isArray(restaurant?.images?.menu) 
-      ? restaurant.images.menu 
-      : restaurant?.images?.menu 
-        ? [restaurant.images.menu] 
-        : [];
-
-    return (
-      <div id="menuSection" className="bg-white rounded-xl shadow-lg p-6 mb-8">
-        <h2 className="text-xl font-bold text-[#FF4F18] border-b pb-4 mb-6 flex items-center gap-2">
-          <MdRestaurantMenu />
-          Menu
-        </h2>
-        
-        {menuImages.length > 0 ? (
-          <>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {menuImages.map((url, index) => {
-                console.log('DEBUG - Rendering menu image:', url);
-                return (
-                  <div key={index} className="relative group">
-                    <div className="aspect-[3/4] relative rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300">
-                      <Image
-                        src={url}
-                        alt={`Menu page ${index + 1}`}
-                        fill
-                        className="object-cover"
-                        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                      />
-                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all duration-200 flex items-center justify-center">
-                        <div className="transform scale-0 group-hover:scale-100 transition-transform duration-200">
-                          <button 
-                            onClick={() => window.open(url, '_blank')}
-                            className="bg-white/90 text-[#FF4F18] px-4 py-2 rounded-lg hover:bg-white transition-all duration-200"
-                          >
-                            View Full Size
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-            <p className="text-sm text-gray-500 mt-4">
-              Click any menu image to view in full size
-            </p>
-          </>
-        ) : (
-          <div className="text-center py-12">
-            <MdRestaurantMenu className="text-6xl text-gray-300 mx-auto mb-4" />
-            <p className="text-gray-500">Menu images are not available at the moment.</p>
-          </div>
-        )}
-      </div>
-    );
-  };
-
-  // Add this function to handle gallery navigation
   const handleGalleryNav = (direction) => {
     if (!restaurant?.images?.gallery?.length) return;
-    
-    if (direction === 'next') {
-      setCurrentGalleryIndex((prev) => 
-        prev === restaurant.images.gallery.length - 1 ? 0 : prev + 1
-      );
-    } else {
-      setCurrentGalleryIndex((prev) => 
-        prev === 0 ? restaurant.images.gallery.length - 1 : prev - 1
-      );
-    }
+    setCurrentGalleryIndex((prev) => 
+      direction === 'next' 
+        ? (prev === restaurant.images.gallery.length - 1 ? 0 : prev + 1)
+        : (prev === 0 ? restaurant.images.gallery.length - 1 : prev - 1)
+    );
   };
 
   if (loading) {
@@ -235,7 +153,7 @@ export default function RestaurantFloorplanPage({ params }) {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="bg-gray-100 min-h-screen">
       {/* Modern Navigation */}
       <nav className="bg-white border-b border-gray-100 sticky top-0 z-50 backdrop-blur-lg bg-white/80">
         <div className="max-w-full mx-auto px-4 sm:px-6 py-3 sm:py-4">
@@ -325,7 +243,9 @@ export default function RestaurantFloorplanPage({ params }) {
                       <button
                         onClick={(e) => {
                           e.preventDefault();
-                          handleMenuNav('prev');
+                          setCurrentMenuIndex((prev) => 
+                            prev === 0 ? restaurant.images.menu.length - 1 : prev - 1
+                          );
                         }}
                         className="p-1.5 lg:p-2 rounded-full bg-black/30 text-white hover:bg-black/50 
                           transition-all duration-200 transform hover:scale-110"
@@ -335,7 +255,9 @@ export default function RestaurantFloorplanPage({ params }) {
                       <button
                         onClick={(e) => {
                           e.preventDefault();
-                          handleMenuNav('next');
+                          setCurrentMenuIndex((prev) => 
+                            prev === restaurant.images.menu.length - 1 ? 0 : prev + 1
+                          );
                         }}
                         className="p-1.5 lg:p-2 rounded-full bg-black/30 text-white hover:bg-black/50 
                           transition-all duration-200 transform hover:scale-110"
@@ -478,7 +400,10 @@ export default function RestaurantFloorplanPage({ params }) {
                 <span className="font-medium text-sm lg:text-base">Opening Hours</span>
               </div>
               <p className="text-gray-600 text-sm lg:text-base pl-6 lg:pl-8 whitespace-pre-line">
-                {formatOpeningHours(restaurant.openingHours)}
+                {restaurant.openingHours ? Object.entries(restaurant.openingHours).map(([day, hours]) => {
+                  const formattedDay = day.charAt(0).toUpperCase() + day.slice(1);
+                  return `${formattedDay}: ${hours.open} - ${hours.close}\n`;
+                }).join('') : 'Hours not available'}
               </p>
             </div>
 

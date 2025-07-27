@@ -1,9 +1,53 @@
 import { NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
 import dbConnect from '@/lib/mongodb';
 import Floorplan from '@/models/Floorplan';
 import Booking from '@/models/Booking';
 import Restaurant from '@/models/Restaurants';
-import jwt from 'jsonwebtoken';
+import User from '@/models/user'; // Import the User model
+import { verifyFirebaseAuth } from "@/lib/firebase-admin";
+
+// Helper function to ensure user exists in MongoDB
+async function ensureUserExists(firebaseUid, email) {
+  try {
+    // First try to find by firebaseUid
+    let user = await User.findOne({ firebaseUid });
+    
+    if (!user) {
+      console.log("User not found by firebaseUid, attempting to create...");
+      try {
+        // Create new user
+        user = await User.create({
+          firebaseUid,
+          email,
+          role: 'customer'
+        });
+        console.log("New user created:", user._id);
+      } catch (createError) {
+        // If duplicate email error, try to find by email as fallback
+        if (createError.code === 11000) {
+          console.log("Duplicate key error, finding existing user by email...");
+          user = await User.findOne({ email });
+          if (user) {
+            // Update existing user with firebaseUid if missing
+            if (!user.firebaseUid) {
+              user.firebaseUid = firebaseUid;
+              await user.save();
+            }
+          }
+        }
+        if (!user) {
+          throw createError;
+        }
+      }
+    }
+    
+    return user;
+  } catch (error) {
+    console.error("Error in ensureUserExists:", error);
+    throw error;
+  }
+}
 
 // Helper function to generate time slots
 function generateTimeSlots(openingTime, closingTime, interval = 30) {
@@ -137,16 +181,52 @@ export async function POST(request, { params }) {
       }, { status: 400 });
     }
 
-    // Get user from token
-    const token = request.headers.get("authorization")?.split(" ")[1];
+    // Get user from token and fetch their full profile
+    let token = request.headers.get("authorization")?.split(" ")[1];
+    if (!token) {
+        const cookieStore = await cookies();
+        token = cookieStore.get('customerToken')?.value;
+    }
+    
     if (!token) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    let currentUser;
+
+    console.log('Token received:', token ? `${token.substring(0, 20)}...` : 'No token');
+
+    // Handle different authentication types
+    if (token.startsWith('line.')) {
+      // LINE user authentication
+      const lineUserId = token.replace('line.', '');
+      console.log('LINE user lookup for:', lineUserId);
+      currentUser = await User.findOne({ lineUserId });
+    } else {
+      // Firebase user authentication
+      try {
+        const authResult = await verifyFirebaseAuth(request);
+        if (!authResult.success) {
+          return NextResponse.json({ error: authResult.error }, { status: 401 });
+        }
+
+        const { firebaseUid, email } = authResult;
+        currentUser = await ensureUserExists(firebaseUid, email);
+      } catch (firebaseError) {
+        console.error('Firebase token verification failed:', firebaseError);
+        return NextResponse.json({ 
+          error: "Invalid token", 
+          details: "Firebase verification failed" 
+        }, { status: 401 });
+      }
+    }
+    if (!currentUser) {
+        return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
     
-    // Create and save booking with the provided times
+    // Create and save booking using the server-fetched user data
     const booking = new Booking({
-      userId: decoded.userId,
+      userId: currentUser._id,
       restaurantId,
       floorplanId: id,
       tableId: tableId,
@@ -155,9 +235,9 @@ export async function POST(request, { params }) {
       endTime,
       guestCount,
       status: 'confirmed',
-      customerName: `${customerData.firstName} ${customerData.lastName}`.trim(),
-      customerEmail: customerData.email,
-      customerPhone: customerData.contactNumber
+      customerName: `${currentUser.firstName} ${currentUser.lastName || ''}`.trim(),
+      customerEmail: currentUser.email,
+      customerPhone: currentUser.contactNumber || 'Not provided' // Handle missing phone numbers
     });
 
     // Add initial history entry
@@ -192,6 +272,14 @@ export async function POST(request, { params }) {
     });
   } catch (error) {
     console.error('Booking error:', error);
+    
+    // Handle MongoDB duplicate key errors specifically
+    if (error.code === 11000) {
+      return NextResponse.json({ 
+        error: "User account conflict. Please contact support." 
+      }, { status: 409 });
+    }
+    
     return NextResponse.json({ 
       error: error.message,
       stack: process.env.NODE_ENV === 'development' ? error.stack : undefined

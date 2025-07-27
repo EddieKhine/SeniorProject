@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faUser, faUserEdit, faSignOutAlt, faChevronDown, faUtensils, faBell, faCalendar, faHeart } from "@fortawesome/free-solid-svg-icons";
 import Link from "next/link";
@@ -8,43 +7,16 @@ import LoginModal from "./LoginModal";
 import SignupModal from "./SignupModal";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-
+import { useState, useEffect } from "react";
+import { useFirebaseAuth } from "@/contexts/FirebaseAuthContext";
 
 export default function Navbar() {
   const router = useRouter();
+  const { userProfile, isAuthenticated, logout } = useFirebaseAuth();
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [isSignupModalOpen, setIsSignupModalOpen] = useState(false);
-  const [user, setUser] = useState(null);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
-
-  // Load user from localStorage
-  const loadUserFromStorage = () => {
-    const storedUser = localStorage.getItem("customerUser");
-    if (!storedUser || storedUser === "undefined") {
-      setUser(null);
-      return;
-    }
-    try {
-      setUser(JSON.parse(storedUser));
-    } catch (error) {
-      console.error('Error parsing user data:', error);
-      setUser(null);
-      localStorage.removeItem("customerUser"); // Clean up invalid data
-    }
-  };
-
-  useEffect(() => {
-    loadUserFromStorage();
-    const handleStorageChange = () => {
-      loadUserFromStorage();
-    };
-
-    window.addEventListener("storage", handleStorageChange);
-    return () => {
-      window.removeEventListener("storage", handleStorageChange);
-    };
-  }, []);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -55,36 +27,18 @@ export default function Navbar() {
   }, []);
 
   const handleLogout = () => {
-    localStorage.removeItem("customerUser");
-    localStorage.removeItem("customerToken");
-    setUser(null);
+    logout();
     setIsDropdownOpen(false);
-    router.push("/");
   };
 
-  const openLoginModal = () => {
-    setIsLoginModalOpen(true);
-    setIsSignupModalOpen(false);
-  };
-
-  const openSignupModal = () => {
-    setIsSignupModalOpen(true);
-    setIsLoginModalOpen(false);
-  };
-
+  const openLoginModal = () => setIsLoginModalOpen(true);
+  const openSignupModal = () => setIsSignupModalOpen(true);
   const closeModal = () => {
     setIsLoginModalOpen(false);
     setIsSignupModalOpen(false);
   };
 
-  const handleSuccessfulLogin = (userData) => {
-    setUser(userData);
-    localStorage.setItem("customerUser", JSON.stringify(userData));
-  };
-
-  const toggleDropdown = () => {
-    setIsDropdownOpen(!isDropdownOpen);
-  };
+  const toggleDropdown = () => setIsDropdownOpen(!isDropdownOpen);
 
   // Helper to get initials
   const getInitials = (user) => {
@@ -160,7 +114,7 @@ export default function Navbar() {
 
           {/* Right Side - Authentication & Profile */}
           <div className="flex items-center space-x-4">
-            {user ? (
+            {isAuthenticated && userProfile ? (
               <div className="flex items-center space-x-6">
                 <div className="relative">
                   <button
@@ -172,22 +126,22 @@ export default function Navbar() {
                       }`}
                   >
                     <div className="hidden md:block text-right">
-                      <p className="font-medium text-sm">{getDisplayName(user)}</p>
-                      <p className={`text-xs ${isScrolled ? 'text-[#141517]/60' : 'text-white/80'}`}>{user.email}</p>
+                                              <p className="font-medium text-sm">{getDisplayName(userProfile)}</p>
+                      <p className={`text-xs ${isScrolled ? 'text-[#141517]/60' : 'text-white/80'}`}>{userProfile.email}</p>
                     </div>
                     <div className="w-10 h-10 rounded-xl overflow-hidden ring-2 ring-[#FF4F18] shadow-lg transition-all duration-300 hover:scale-105">
-                      {user.profileImage ? (
-                        <Image 
-                          src={user.profileImage} 
-                          alt="Profile" 
-                          width={40} 
-                          height={40} 
-                          className="w-full h-full object-cover"
-                        />
+                      {userProfile.profileImage ? (
+                                                        <Image 
+                                  src={userProfile.profileImage} 
+                                  alt="Profile" 
+                                  width={64} 
+                                  height={64} 
+                                  className="w-full h-full object-cover"
+                                />
                       ) : (
                         <div className="w-full h-full bg-gradient-to-br from-[#FF4F18] to-[#FF8F6B] flex items-center justify-center">
                           <span className="text-white font-medium text-lg">
-                            {getInitials(user)}
+                            {getInitials(userProfile)}
                           </span>
                         </div>
                       )}
@@ -202,9 +156,9 @@ export default function Navbar() {
                         <div className="flex items-center space-x-4">
                           <div className="flex-shrink-0">
                             <div className="w-16 h-16 rounded-xl overflow-hidden ring-2 ring-[#FF4F18] shadow-lg">
-                              {user.profileImage ? (
+                              {userProfile.profileImage ? (
                                 <Image 
-                                  src={user.profileImage} 
+                                  src={userProfile.profileImage} 
                                   alt="Profile" 
                                   width={64} 
                                   height={64} 
@@ -213,15 +167,15 @@ export default function Navbar() {
                               ) : (
                                 <div className="w-full h-full bg-gradient-to-br from-[#FF4F18] to-[#FF8F6B] flex items-center justify-center">
                                   <span className="text-white font-medium text-xl">
-                                    {getInitials(user)}
+                                    {getInitials(userProfile)}
                                   </span>
                                 </div>
                               )}
                             </div>
                           </div>
                           <div>
-                            <p className="text-[#141517] font-semibold text-lg">{getDisplayName(user)}</p>
-                            <p className="text-sm text-[#141517]/60">{user.email}</p>
+                            <p className="text-[#141517] font-semibold text-lg">{getDisplayName(userProfile)}</p>
+                            <p className="text-sm text-[#141517]/60">{userProfile.email}</p>
                           </div>
                         </div>
                       </div>
@@ -292,9 +246,8 @@ export default function Navbar() {
         isOpen={isLoginModalOpen}
         onClose={closeModal}
         openSignupModal={openSignupModal}
-        onLoginSuccess={handleSuccessfulLogin}
       />
-      <SignupModal isOpen={isSignupModalOpen} onClose={closeModal} />
+      <SignupModal isOpen={isSignupModalOpen} onClose={closeModal} openLoginModal={openLoginModal} />
     </>
   );
 }

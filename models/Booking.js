@@ -40,7 +40,8 @@ const bookingSchema = new mongoose.Schema({
     },
     customerPhone: {
         type: String,
-        required: [true, 'Please provide customer phone number']
+        required: false, // Made optional to support Google login users without phone numbers
+        default: 'Not provided'
     },
     date: {
         type: Date,
