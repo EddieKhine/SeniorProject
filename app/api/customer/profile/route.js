@@ -167,8 +167,30 @@ export async function PUT(req) {
       updateDoc.profileImage = profileImage;
     }
 
+    // Handle password updates based on authentication type
+    let passwordUpdateResult = null;
     if (newPassword) {
-      updateDoc.password = await bcrypt.hash(newPassword, 10);
+      if (token.startsWith('line.')) {
+        // For LINE users, store password in MongoDB (they don't use Firebase Auth)
+        updateDoc.password = await bcrypt.hash(newPassword, 10);
+      } else {
+        // For Firebase users, update password through Firebase Admin
+        try {
+          const decoded = await adminAuth.verifyIdToken(token);
+          await adminAuth.updateUser(decoded.uid, {
+            password: newPassword
+          });
+          passwordUpdateResult = 'Firebase password updated successfully';
+          console.log('✅ Firebase password updated for user:', decoded.uid);
+        } catch (firebaseError) {
+          console.error('❌ Firebase password update failed:', firebaseError);
+          return NextResponse.json({
+            message: "Failed to update password. Please try again."
+          }, {
+            status: 500
+          });
+        }
+      }
     }
 
     console.log('Attempting direct MongoDB update with:', updateDoc);
@@ -199,10 +221,19 @@ export async function PUT(req) {
     };
 
     return NextResponse.json({
-      message: "Profile updated successfully!",
-      user: userResponse
+      message: passwordUpdateResult 
+        ? "Profile updated successfully! Password has been changed." 
+        : "Profile updated successfully!",
+      user: userResponse,
+      passwordUpdated: !!passwordUpdateResult
     }, {
-      status: 200
+      status: 200,
+      headers: { 
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type, Authorization"
+      },
     });
 
   } catch (error) {

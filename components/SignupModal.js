@@ -45,7 +45,6 @@ export default function SignupModal({ isOpen, onClose, openLoginModal }) {
       );
       const userProfile = await createUserProfile(userCredential.user.uid);
       setMessage("Signup successful!");
-      localStorage.setItem("customerUser", JSON.stringify(userProfile));
       // TODO: Redirect to profile completion page/modal here
       setTimeout(() => {
         onClose();
@@ -101,7 +100,6 @@ export default function SignupModal({ isOpen, onClose, openLoginModal }) {
         profileImage
       );
       setMessage("Signup successful!");
-      localStorage.setItem("customerUser", JSON.stringify(userProfile));
       // TODO: Redirect to profile completion page/modal here if needed
       setTimeout(() => {
         onClose();

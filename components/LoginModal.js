@@ -35,8 +35,6 @@ export default function LoginModal({ isOpen, onClose, openSignupModal, onLoginSu
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       // 2. Sync/fetch MongoDB profile
       const userProfile = await syncProfile(userCredential.user.uid, userCredential.user.email);
-      // 3. Store in localStorage
-      localStorage.setItem("customerUser", JSON.stringify(userProfile));
       if (onLoginSuccess) onLoginSuccess(userProfile);
       onClose();
     } catch (error) {
@@ -53,7 +51,6 @@ export default function LoginModal({ isOpen, onClose, openSignupModal, onLoginSu
       const provider = new GoogleAuthProvider();
       const result = await signInWithPopup(auth, provider);
       const userProfile = await syncProfile(result.user.uid, result.user.email);
-      localStorage.setItem("customerUser", JSON.stringify(userProfile));
       if (onLoginSuccess) onLoginSuccess(userProfile);
       onClose();
     } catch (error) {

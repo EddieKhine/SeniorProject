@@ -54,6 +54,41 @@ export async function GET(req, { params }) {
   const { id } = await params;
 
   try {
+    const url = new URL(req.url);
+    const checkUserReview = url.searchParams.get('checkUserReview') === 'true';
+
+    // If checking for user's specific review
+    if (checkUserReview) {
+      const authResult = await verifyFirebaseAuth(req);
+      if (!authResult.success) {
+        return NextResponse.json({ error: authResult.error }, { status: 401 });
+      }
+
+      const { firebaseUid, email } = authResult;
+      const user = await ensureUserExists(firebaseUid, email);
+
+      const userReview = await Review.findOne({
+        restaurantId: new mongoose.Types.ObjectId(id),
+        userId: new mongoose.Types.ObjectId(user._id)
+      }).populate({
+        path: 'userId',
+        model: User,
+        select: 'firstName lastName profileImage email'
+      });
+
+      return NextResponse.json({ 
+        hasReview: !!userReview,
+        userReview: userReview && userReview.userId ? {
+          ...userReview.toObject(),
+          userId: {
+            ...userReview.userId.toObject(),
+            profileImage: userReview.userId.profileImage || `https://ui-avatars.com/api/?name=${encodeURIComponent(userReview.userId.firstName || 'U')}+${encodeURIComponent(userReview.userId.lastName || 'ser')}&background=f3f4f6&color=6b7280&size=128`
+          }
+        } : null
+      });
+    }
+
+    // Fetch all reviews for the restaurant
     const reviews = await Review.find({ 
       restaurantId: new mongoose.Types.ObjectId(id) 
     })
@@ -64,16 +99,18 @@ export async function GET(req, { params }) {
     })
     .sort({ createdAt: -1 });
 
-    // Ensure each review has a valid profile image
-    const processedReviews = reviews.map(review => ({
-      ...review.toObject(),
-      userId: {
-        ...review.userId.toObject(),
-        profileImage: review.userId.profileImage || '/default-avatar.png'
-      },
-      // When processing review images, do not attempt to construct S3 URLs. Assume all image URLs are full URLs (Firebase Storage or otherwise).
-      images: review.images
-    }));
+    // Ensure each review has a valid profile image and handle null userIds
+    const processedReviews = reviews
+      .filter(review => review.userId) // Filter out reviews with null userId
+      .map(review => ({
+        ...review.toObject(),
+        userId: {
+          ...review.userId.toObject(),
+          profileImage: review.userId.profileImage || `https://ui-avatars.com/api/?name=${encodeURIComponent(review.userId.firstName || 'U')}+${encodeURIComponent(review.userId.lastName || 'ser')}&background=f3f4f6&color=6b7280&size=128`
+        },
+        // When processing review images, do not attempt to construct S3 URLs. Assume all image URLs are full URLs (Firebase Storage or otherwise).
+        images: review.images
+      }));
 
     return NextResponse.json({ reviews: processedReviews });
   } catch (error) {
@@ -101,13 +138,29 @@ export async function POST(req, { params }) {
     // Ensure user exists in MongoDB
     const user = await ensureUserExists(firebaseUid, email);
     
-    const review = await Review.create({
+    // Check if user has already reviewed this restaurant
+    const existingReview = await Review.findOne({
       restaurantId: new mongoose.Types.ObjectId(id),
-      userId: new mongoose.Types.ObjectId(user._id),
-      rating,
-      comment,
-      images: images || [] // Make sure images array is properly formatted
+      userId: new mongoose.Types.ObjectId(user._id)
     });
+
+    let review;
+    if (existingReview) {
+      // Update existing review
+      existingReview.rating = rating;
+      existingReview.comment = comment;
+      existingReview.images = images || [];
+      review = await existingReview.save();
+    } else {
+      // Create new review
+      review = await Review.create({
+        restaurantId: new mongoose.Types.ObjectId(id),
+        userId: new mongoose.Types.ObjectId(user._id),
+        rating,
+        comment,
+        images: images || [] // Make sure images array is properly formatted
+      });
+    }
 
     // Update restaurant rating
     const allReviews = await Review.find({ restaurantId: id });
@@ -126,7 +179,11 @@ export async function POST(req, { params }) {
       select: 'firstName lastName profileImage'
     });
 
-    return NextResponse.json({ review });
+    return NextResponse.json({ 
+      review,
+      message: existingReview ? 'Review updated successfully' : 'Review created successfully',
+      isUpdate: !!existingReview
+    });
   } catch (error) {
     console.error('Error creating review:', error);
     

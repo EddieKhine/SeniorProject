@@ -71,6 +71,38 @@ export default function PublicFloorPlan({ floorplanData, floorplanId, restaurant
   const [sceneLoaded, setSceneLoaded] = useState(false);
   const [preloadProgress, setPreloadProgress] = useState(0);
   const { userProfile, isAuthenticated, loading: authLoading } = useFirebaseAuth(); // Use the centralized auth state
+  const [authLoadingOverride, setAuthLoadingOverride] = useState(false);
+  
+  // Debug auth state changes
+  useEffect(() => {
+    console.log('🔍 PublicFloorPlan auth state:', {
+      authLoading,
+      isAuthenticated,
+      hasUserProfile: !!userProfile,
+      userProfileId: userProfile?.firebaseUid || userProfile?.uid || 'none'
+    });
+  }, [authLoading, isAuthenticated, userProfile]);
+
+  // Log initial mount state
+  useEffect(() => {
+    console.log('🎯 PublicFloorPlan mounted with initial auth state:', {
+      authLoading,
+      isAuthenticated,
+      hasUserProfile: !!userProfile
+    });
+  }, []);
+
+  // Override loading state after 3 seconds to prevent permanent blocking
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (authLoading) {
+        console.warn('🚨 PublicFloorPlan: Overriding auth loading after 3 seconds');
+        setAuthLoadingOverride(true);
+      }
+    }, 3000);
+
+    return () => clearTimeout(timer);
+  }, [authLoading]);
 
   const dateRef = useRef(selectedDate);
   const timeRef = useRef(selectedTime);
@@ -520,12 +552,17 @@ export default function PublicFloorPlan({ floorplanData, floorplanId, restaurant
           const mouse = new THREE.Vector2();
 
           const handleClick = (event) => {
-            // GUARD: Use the loading state from the AuthContext.
-            if (authLoading) {
+            // GUARD: Only block if we're still loading AND don't have any user info yet AND haven't overridden
+            const effectiveLoading = authLoading && !authLoadingOverride;
+            if (effectiveLoading && !userProfile && !isAuthenticated) {
+                console.log('🚫 Blocking table click due to auth loading:', { authLoading, authLoadingOverride, userProfile: !!userProfile, isAuthenticated });
                 toast.error("Verifying login status, please wait...");
                 return;
             }
-            // Now, use the user from the context for the booking check
+            
+            console.log('✅ Auth check passed for table click:', { authLoading, authLoadingOverride, userProfile: !!userProfile, isAuthenticated });
+            
+            // Check authentication after loading is complete
             if (!isAuthenticated || !userProfile) {
                 toast.error("Please log in to make a booking.");
                 return;

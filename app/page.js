@@ -28,9 +28,11 @@ import Toast from "../components/Toast";
 import { motion } from "framer-motion";
 import Image from "next/image";
 import { fetchWithRetry } from '@/utils/fetchWithRetry';
+import { useFirebaseAuth } from "@/contexts/FirebaseAuthContext";
 config.autoAddCss = false;
 
 export default function HomePage() {
+  const { isAuthenticated, getAuthToken } = useFirebaseAuth();
   const [restaurants, setRestaurants] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedLocation, setSelectedLocation] = useState("");
@@ -98,10 +100,12 @@ export default function HomePage() {
 
   useEffect(() => {
     const fetchFavorites = async () => {
-      const token = localStorage.getItem("customerToken");
-      if (!token) return;
+      if (!isAuthenticated) return;
 
       try {
+        const token = await getAuthToken();
+        if (!token) return;
+
         const response = await fetchWithRetry('/api/user/favorites', {
           headers: {
             'Authorization': `Bearer ${token}`
@@ -120,7 +124,7 @@ export default function HomePage() {
     };
 
     fetchFavorites();
-  }, []); // Run once when component mounts
+  }, [isAuthenticated, getAuthToken]); // Re-run when authentication state changes
 
   const filteredRestaurants = restaurants.filter((restaurant) => {
     const matchesSearchTerm = restaurant.name.toLowerCase().includes(searchTerm.toLowerCase());
@@ -150,14 +154,20 @@ export default function HomePage() {
   };
 
   const handleFavorite = async (restaurant) => {
-    const token = localStorage.getItem("customerToken");
-    if (!token) {
+    if (!isAuthenticated) {
       setToastMessage("Please login to save restaurants");
       setShowToast(true);
       return;
     }
 
     try {
+      const token = await getAuthToken();
+      if (!token) {
+        setToastMessage("Please login to save restaurants");
+        setShowToast(true);
+        return;
+      }
+
       const response = await fetchWithRetry('/api/user/favorites', {
         method: 'PUT',
         headers: {

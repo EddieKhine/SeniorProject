@@ -44,93 +44,97 @@ export const FirebaseAuthProvider = ({ children }) => {
   };
 
   useEffect(() => {
+    console.log('🚀 Initializing Firebase Auth listener...');
+    setLoading(true); // Start in loading state
+    
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      console.log('🔐 Auth state changed:', firebaseUser ? 'User logged in' : 'User logged out');
-      setLoading(true);
-
-      // Set a timeout to prevent infinite loading
+      console.log('🔐 Auth state changed:', firebaseUser ? `User logged in (${firebaseUser.uid})` : 'User logged out');
+      
+      // Set a timeout to prevent infinite loading - this is critical
       const loadingTimeout = setTimeout(() => {
-        console.warn('⚠️ Authentication flow timeout, forcing loading to false');
+        console.warn('⚠️ Authentication flow timeout (5s), forcing loading to false');
         setLoading(false);
-      }, 10000); // 10 second timeout
+      }, 5000);
       
-      if (firebaseUser) {
-        // User is signed in
-        console.log('✅ Firebase user found:', firebaseUser.uid);
-        setUser(firebaseUser);
-        
-        try {
-          // First, try to get existing user data
-          console.log('🔄 Getting ID token...');
-          const token = await firebaseUser.getIdToken();
-          console.log('✅ Token obtained, fetching profile...');
+      try {
+        if (firebaseUser) {
+          console.log('✅ Firebase user found:', firebaseUser.uid);
+          setUser(firebaseUser);
           
-          const getUserResponse = await fetch('/api/customer/profile', {
-            method: 'GET',
-            headers: {
-              'Authorization': `Bearer ${token}`,
-              'Content-Type': 'application/json',
-            },
-          });
+          // Create a basic user profile from Firebase data
+          const basicProfile = {
+            firebaseUid: firebaseUser.uid,
+            email: firebaseUser.email,
+            firstName: firebaseUser.displayName?.split(' ')[0] || '',
+            lastName: firebaseUser.displayName?.split(' ').slice(1).join(' ') || '',
+            profileImage: firebaseUser.photoURL || '',
+            role: 'customer'
+          };
           
-          console.log('📡 Profile fetch response:', getUserResponse.status);
+          // Set the basic profile immediately to unblock the UI
+          setUserProfile(basicProfile);
+          console.log('✅ Basic user profile set, UI should be unblocked now');
           
-          if (getUserResponse.ok) {
-            // User exists, use their existing data
-            console.log('✅ User profile found, parsing data...');
-            const userData = await getUserResponse.json();
-            console.log('📄 User data received:', userData);
-            setUserProfile(userData.user);
-            console.log('✅ User profile set successfully');
-          } else if (getUserResponse.status === 404) {
-            // User doesn't exist, create new user
-            console.log('❌ User not found (404), creating new user...');
-            const signupResponse = await fetch('/api/signup', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                email: firebaseUser.email,
-                firebaseUid: firebaseUser.uid,
-                firstName: firebaseUser.displayName?.split(' ')[0] || '',
-                lastName: firebaseUser.displayName?.split(' ').slice(1).join(' ') || '',
-                profileImage: firebaseUser.photoURL || ''
-              }),
-            });
-            
-            console.log('📡 Signup response:', signupResponse.status);
-            if (signupResponse.ok) {
-              const signupData = await signupResponse.json();
-              console.log('✅ New user created:', signupData);
-              setUserProfile(signupData.user);
-            } else {
-              console.error('❌ Failed to create new user:', signupResponse.status);
+          // Clear loading immediately after setting basic profile
+          clearTimeout(loadingTimeout);
+          setLoading(false);
+          console.log('🏁 Loading set to false (basic profile ready)');
+          
+          // Fetch full profile in background (non-blocking)
+          setTimeout(async () => {
+            try {
+              console.log('🔄 Fetching full profile in background...');
+              const token = await firebaseUser.getIdToken();
+              const response = await fetch('/api/customer/profile', {
+                method: 'GET',
+                headers: {
+                  'Authorization': `Bearer ${token}`,
+                  'Content-Type': 'application/json',
+                },
+              });
+              
+              if (response.ok) {
+                const userData = await response.json();
+                setUserProfile(userData.user);
+                console.log('✅ Full user profile loaded from server');
+              } else {
+                console.log('ℹ️ Full profile fetch failed, keeping basic profile');
+              }
+            } catch (error) {
+              console.error('Background profile fetch failed:', error);
+              // Don't affect the UI, we already have basic profile
             }
-          } else {
-            console.error('❌ Failed to get user profile:', getUserResponse.status);
-          }
-        } catch (error) {
-          console.error('❌ Error syncing user profile:', error);
-          console.error('Error details:', {
-            message: error.message,
-            stack: error.stack,
-            name: error.name
-          });
+          }, 100);
+          
+        } else {
+          // User is signed out
+          console.log('👋 User signed out, clearing state');
+          setUser(null);
+          setUserProfile(null);
+          clearTimeout(loadingTimeout);
+          setLoading(false);
+          console.log('🏁 Loading set to false (signed out)');
         }
-      } else {
-        // User is signed out
-        console.log('👋 User signed out');
-        setUser(null);
-        setUserProfile(null);
+      } catch (error) {
+        console.error('❌ Error in auth state change:', error);
+        // Always clear loading state, even on error
+        clearTimeout(loadingTimeout);
+        setLoading(false);
+        console.log('🏁 Loading set to false (error case)');
       }
-      
-      console.log('🏁 Setting loading to false');
-      clearTimeout(loadingTimeout);
-      setLoading(false);
     });
 
-    return () => unsubscribe();
+    // Also set a backup timeout to ensure loading never stays true forever
+    const backupTimeout = setTimeout(() => {
+      console.warn('🚨 BACKUP TIMEOUT: Forcing loading to false after 10 seconds');
+      setLoading(false);
+    }, 10000);
+
+    return () => {
+      console.log('🧹 Cleaning up auth listener');
+      unsubscribe();
+      clearTimeout(backupTimeout);
+    };
   }, []);
 
   const logout = async () => {
