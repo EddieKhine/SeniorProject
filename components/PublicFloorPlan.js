@@ -979,40 +979,7 @@ export default function PublicFloorPlan({ floorplanData, floorplanId, restaurant
         throw new Error('This table has just been booked by someone else');
     }
 
-    // Show payment dialog before proceeding with booking
-    const paymentResult = await new Promise((resolve) => {
-      const paymentDialog = document.createElement('div');
-      paymentDialog.id = 'payment-dialog-container';
-      document.body.appendChild(paymentDialog);
-
-      const root = createRoot(paymentDialog);
-      root.render(
-        <PaymentDialog
-          bookingDetails={{
-            date: dateRef.current,
-            time: timeRef.current,
-            tableId,
-            guestCount: bookingDetails.guestCount
-          }}
-          onClose={() => {
-            root.unmount();
-            document.body.removeChild(paymentDialog);
-            resolve(false);
-          }}
-          onSuccess={() => {
-            root.unmount();
-            document.body.removeChild(paymentDialog);
-            resolve(true);
-          }}
-        />
-      );
-    });
-
-    if (!paymentResult) {
-      throw new Error('Payment cancelled');
-    }
-
-    // Proceed with booking API call
+    // First, create the booking
     const token = await getAuthToken();
     console.log('Sending token:', token ? `${token.substring(0, 20)}...` : 'No token');
     const response = await fetch(`/api/scenes/${floorplanId}/book`, {
@@ -1031,7 +998,47 @@ export default function PublicFloorPlan({ floorplanData, floorplanId, restaurant
 
     const result = await response.json();
 
-    // Immediately update table color to red after successful booking
+    // Show payment dialog with booking details
+    const paymentResult = await new Promise((resolve) => {
+      const paymentDialog = document.createElement('div');
+      paymentDialog.id = 'payment-dialog-container';
+      document.body.appendChild(paymentDialog);
+
+      const root = createRoot(paymentDialog);
+      root.render(
+        <PaymentDialog
+          bookingDetails={{
+            date: dateRef.current,
+            time: timeRef.current,
+            tableId,
+            guestCount: bookingDetails.guestCount,
+            bookingId: result.booking._id,
+            restaurantId,
+            customerName: result.booking.customerName,
+            customerEmail: result.booking.customerEmail
+          }}
+          onClose={() => {
+            root.unmount();
+            document.body.removeChild(paymentDialog);
+            resolve(false);
+          }}
+          onSuccess={() => {
+            root.unmount();
+            document.body.removeChild(paymentDialog);
+            resolve(true);
+          }}
+        />
+      );
+    });
+
+    if (!paymentResult) {
+      // If payment was cancelled, we should clean up the pending booking
+      // For now, we'll just show a message
+      toast.error('Payment was cancelled. Your booking is pending payment.');
+      return;
+    }
+
+    // Payment was successful, update table status
     if (table && table.children) {
         table.traverse((child) => {
             if (child.isMesh) {

@@ -2,11 +2,15 @@ import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
 import Restaurant from '@/models/Restaurants';
 import Floorplan from '@/models/Floorplan';
+import { calculateTableFee } from '@/utils/bookingFee';
 
 export async function GET(request, { params }) {
   try {
     await dbConnect();
     const { id } = await params;
+    const url = new URL(request.url);
+    // Optionally allow guestCount as a query param (default 2)
+    const guestCount = parseInt(url.searchParams.get('guestCount') || '2', 10);
 
     console.log('Fetching restaurant with ID:', id);
 
@@ -30,7 +34,22 @@ export async function GET(request, { params }) {
       const floorplan = await Floorplan.findById(restaurant.floorplanId).lean();
       if (floorplan) {
         console.log('Found floorplan with objects:', floorplan.data.objects.length);
-        floorplanData = floorplan.data;
+        // For each table, add the adjusted fee
+        const objectsWithFee = await Promise.all(
+          floorplan.data.objects.map(async obj => {
+            if (obj.type === 'furniture' && obj.userData?.isTable) {
+              const fee = await calculateTableFee({
+                guestCount,
+                restaurant,
+                tableId: obj.objectId,
+                restaurantId: restaurant._id
+              });
+              return { ...obj, userData: { ...obj.userData, bookingFee: fee } };
+            }
+            return obj;
+          })
+        );
+        floorplanData = { ...floorplan.data, objects: objectsWithFee };
       } else {
         console.warn('Referenced floorplan not found:', restaurant.floorplanId);
       }

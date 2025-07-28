@@ -4,10 +4,10 @@ import dbConnect from '@/lib/mongodb';
 import Floorplan from '@/models/Floorplan';
 import Booking from '@/models/Booking';
 import Restaurant from '@/models/Restaurants';
-import User from '@/models/user'; // Import the User model
+import User from '@/models/user'; 
 import { verifyFirebaseAuth } from "@/lib/firebase-admin";
+import { calculateTableFee } from '@/utils/bookingFee';
 
-// Helper function to ensure user exists in MongoDB
 async function ensureUserExists(firebaseUid, email) {
   try {
     // First try to find by firebaseUid
@@ -224,6 +224,14 @@ export async function POST(request, { params }) {
         return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
     
+    // Calculate the adjusted booking fee for this table
+    const bookingFee = await calculateTableFee({
+      guestCount,
+      restaurant,
+      tableId,
+      restaurantId
+    });
+
     // Create and save booking using the server-fetched user data
     const booking = new Booking({
       userId: currentUser._id,
@@ -234,7 +242,10 @@ export async function POST(request, { params }) {
       startTime,
       endTime,
       guestCount,
-      status: 'confirmed',
+      status: 'pending', // Set to pending until payment is confirmed
+      paymentStatus: 'pending',
+      amount: bookingFee,
+      currency: 'usd',
       customerName: `${currentUser.firstName} ${currentUser.lastName || ''}`.trim(),
       customerEmail: currentUser.email,
       customerPhone: currentUser.contactNumber || 'Not provided' // Handle missing phone numbers
@@ -255,20 +266,22 @@ export async function POST(request, { params }) {
       { _id: id, 'data.objects.objectId': tableId },
       {
         $set: {
-          'data.objects.$.userData.bookingStatus': 'booked',
+          'data.objects.$.userData.bookingStatus': 'pending',
           'data.objects.$.userData.currentBooking': booking._id
         }
       }
     );
 
     return NextResponse.json({ 
-      message: "Booking confirmed",
+      message: "Booking created - payment required",
       booking,
       tableDetails: {
         friendlyId: tableId,
-        bookingStatus: 'booked',
+        bookingStatus: 'pending',
         bookingId: booking._id
-      }
+      },
+      bookingFee,
+      requiresPayment: true
     });
   } catch (error) {
     console.error('Booking error:', error);
