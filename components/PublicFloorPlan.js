@@ -21,6 +21,19 @@ import { useFirebaseAuth } from '@/contexts/FirebaseAuthContext';
 import { auth } from "@/lib/firebase-config";
 
 export default function PublicFloorPlan({ floorplanData, floorplanId, restaurantId }) {
+  // Clean up any existing tooltips on component mount
+  useEffect(() => {
+    const cleanupExistingTooltips = () => {
+      const existingTooltips = document.querySelectorAll('.table-hover-tooltip');
+      existingTooltips.forEach(tooltip => {
+        if (document.body.contains(tooltip)) {
+          document.body.removeChild(tooltip);
+        }
+      });
+    };
+    
+    cleanupExistingTooltips();
+  }, []);
   const containerRef = useRef(null);
   const sceneRef = useRef(null);
   const rendererRef = useRef(null);
@@ -551,6 +564,75 @@ export default function PublicFloorPlan({ floorplanData, floorplanId, restaurant
           const raycaster = new THREE.Raycaster();
           const mouse = new THREE.Vector2();
 
+          // Table hover tooltip functionality
+          let hoverTooltip = null;
+
+          const createHoverTooltip = (tableId, event) => {
+            // Remove existing tooltip
+            if (hoverTooltip) {
+              document.body.removeChild(hoverTooltip);
+            }
+
+            // Create new tooltip
+            hoverTooltip = document.createElement('div');
+            hoverTooltip.className = 'table-hover-tooltip';
+            hoverTooltip.innerHTML = `
+              <div class="tooltip-content">
+                <span class="table-number">Table ${tableId}</span>
+              </div>
+            `;
+
+            // Position tooltip near mouse
+            hoverTooltip.style.position = 'fixed';
+            hoverTooltip.style.left = (event.clientX + 15) + 'px';
+            hoverTooltip.style.top = (event.clientY - 10) + 'px';
+            hoverTooltip.style.zIndex = '10000';
+            hoverTooltip.style.pointerEvents = 'none';
+            
+            document.body.appendChild(hoverTooltip);
+          };
+
+          const removeHoverTooltip = () => {
+            if (hoverTooltip && document.body.contains(hoverTooltip)) {
+              document.body.removeChild(hoverTooltip);
+              hoverTooltip = null;
+            }
+          };
+
+          const handleMouseMove = (event) => {
+            const rect = containerRef.current.getBoundingClientRect();
+            const x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+            const y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+            raycaster.setFromCamera(new THREE.Vector2(x, y), camera);
+            const intersects = raycaster.intersectObjects(sceneRef.current.children, true);
+            
+            const tableObject = intersects.find(item => 
+              item.object?.userData?.isTable || 
+              item.object?.parent?.userData?.isTable
+            );
+
+            if (tableObject) {
+              const table = tableObject.object.userData?.isTable 
+                ? tableObject.object 
+                : tableObject.object.parent;
+
+              const tableId = table.userData.objectId || table.userData.friendlyId || 'Unknown';
+              
+              // Change cursor to pointer
+              renderer.domElement.style.cursor = 'pointer';
+              
+              // Create or update tooltip
+              createHoverTooltip(tableId, event);
+            } else {
+              // Reset cursor
+              renderer.domElement.style.cursor = 'default';
+              
+              // Remove tooltip
+              removeHoverTooltip();
+            }
+          };
+
           const handleClick = (event) => {
             // GUARD: Only block if we're still loading AND don't have any user info yet AND haven't overridden
             const effectiveLoading = authLoading && !authLoadingOverride;
@@ -800,14 +882,17 @@ export default function PublicFloorPlan({ floorplanData, floorplanId, restaurant
           };
 
           renderer.domElement.addEventListener('click', handleClick);
+          renderer.domElement.addEventListener('mousemove', handleMouseMove);
 
           // All scene setup code, event handlers, and input validation must be before this return!
           return () => {
             window.removeEventListener('resize', handleResize);
+            removeHoverTooltip(); // Clean up hover tooltip
             if (rendererRef.current) {
                 rendererRef.current.domElement.removeEventListener('webglcontextlost', handleContextLost);
                 rendererRef.current.domElement.removeEventListener('webglcontextrestored', handleContextRestored);
                 rendererRef.current.domElement.removeEventListener('click', handleClick);
+                rendererRef.current.domElement.removeEventListener('mousemove', handleMouseMove);
             }
             cleanup();
           };
@@ -1400,6 +1485,82 @@ export default function PublicFloorPlan({ floorplanData, floorplanId, restaurant
 
     return () => {
       document.head.removeChild(style);
+    };
+  }, []);
+
+  // Table hover tooltip styles
+  const tableHoverTooltipStyles = `
+    .table-hover-tooltip {
+      position: fixed;
+      z-index: 10000;
+      background: linear-gradient(135deg, #FF4F18 0%, #FF6B3D 100%);
+      color: white;
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      box-shadow: 0 4px 12px rgba(255, 79, 24, 0.3);
+      pointer-events: none;
+      transform: translateY(-5px);
+      animation: tooltipFadeIn 0.2s ease-out;
+      border: 2px solid rgba(255, 255, 255, 0.2);
+      backdrop-filter: blur(10px);
+    }
+
+    .table-hover-tooltip::before {
+      content: '';
+      position: absolute;
+      top: 100%;
+      left: 20px;
+      border: 6px solid transparent;
+      border-top-color: #FF4F18;
+      transform: translateX(-50%);
+    }
+
+    .table-hover-tooltip .tooltip-content {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .table-hover-tooltip .table-number {
+      font-weight: 700;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+    }
+
+    @keyframes tooltipFadeIn {
+      from { 
+        opacity: 0; 
+        transform: translateY(-10px) scale(0.9); 
+      }
+      to { 
+        opacity: 1; 
+        transform: translateY(-5px) scale(1); 
+      }
+    }
+  `;
+
+  // Add table hover tooltip styles to the document
+  useEffect(() => {
+    const style = document.createElement('style');
+    style.id = 'public-floorplan-tooltip-styles'; // Add unique ID
+    style.textContent = tableHoverTooltipStyles;
+    document.head.appendChild(style);
+
+    return () => {
+      // More robust cleanup
+      const existingStyle = document.getElementById('public-floorplan-tooltip-styles');
+      if (existingStyle) {
+        document.head.removeChild(existingStyle);
+      }
+      
+      // Also clean up any leftover tooltip elements
+      const leftoverTooltips = document.querySelectorAll('.table-hover-tooltip');
+      leftoverTooltips.forEach(tooltip => {
+        if (document.body.contains(tooltip)) {
+          document.body.removeChild(tooltip);
+        }
+      });
     };
   }, []);
 

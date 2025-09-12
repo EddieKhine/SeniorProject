@@ -9,6 +9,75 @@ import { WindowManager } from '@/scripts/managers/WindowManager';
 import '@/css/loading.css';
 
 export default function RestaurantFloorPlan({ token, restaurantId, isCustomerView = false }) {
+  // Restaurant table label styles - professional and clear for staff
+  const restaurantTableLabelStyles = `
+    .restaurant-table-label {
+      position: absolute;
+      z-index: 1000;
+      background: linear-gradient(135deg, #3A2E2B 0%, #4A3C39 100%);
+      color: white;
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 700;
+      box-shadow: 0 3px 8px rgba(58, 46, 43, 0.4);
+      pointer-events: none;
+      transform: translate(-50%, -50%);
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      backdrop-filter: blur(5px);
+      min-width: 32px;
+      text-align: center;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+    }
+
+    .restaurant-table-label .table-number {
+      font-weight: 800;
+      font-size: 13px;
+      letter-spacing: 0.5px;
+    }
+
+    /* Add a subtle glow effect for better visibility */
+    .restaurant-table-label::before {
+      content: '';
+      position: absolute;
+      top: -2px;
+      left: -2px;
+      right: -2px;
+      bottom: -2px;
+      background: linear-gradient(135deg, #FF4F18, #3A2E2B);
+      border-radius: 10px;
+      z-index: -1;
+      opacity: 0.7;
+    }
+
+    /* Responsive sizing */
+    @media (max-width: 768px) {
+      .restaurant-table-label {
+        font-size: 12px;
+        padding: 4px 8px;
+      }
+      
+      .restaurant-table-label .table-number {
+        font-size: 11px;
+      }
+    }
+  `;
+
+  // Add restaurant table label styles to the document
+  useEffect(() => {
+    const style = document.createElement('style');
+    style.id = 'restaurant-floorplan-label-styles';
+    style.textContent = restaurantTableLabelStyles;
+    document.head.appendChild(style);
+
+    return () => {
+      const existingStyle = document.getElementById('restaurant-floorplan-label-styles');
+      if (existingStyle) {
+        document.head.removeChild(existingStyle);
+      }
+    };
+  }, []);
   const containerRef = useRef(null);
   const sceneRef = useRef(null);
   const rendererRef = useRef(null);
@@ -23,6 +92,14 @@ export default function RestaurantFloorPlan({ token, restaurantId, isCustomerVie
 
   // Cleanup function to properly dispose of Three.js resources
   const cleanup = () => {
+    // Clean up table labels
+    const existingLabels = document.querySelectorAll('.restaurant-table-label');
+    existingLabels.forEach(label => {
+      if (document.body.contains(label)) {
+        document.body.removeChild(label);
+      }
+    });
+
     if (sceneRef.current) {
       sceneRef.current.traverse((object) => {
         if (object.geometry) {
@@ -351,13 +428,79 @@ export default function RestaurantFloorPlan({ token, restaurantId, isCustomerVie
           await loadFloorplanData();
         }
 
+        // Table label functionality for restaurant staff
+        const tableLabels = [];
+
+        const createRestaurantTableLabels = () => {
+          // Clear existing labels
+          tableLabels.forEach(label => {
+            if (document.body.contains(label)) {
+              document.body.removeChild(label);
+            }
+          });
+          tableLabels.length = 0;
+
+          // Create labels for all tables
+          sceneRef.current.traverse((object) => {
+            if (object.userData?.isTable) {
+              const tableId = object.userData.objectId || object.userData.friendlyId || object.userData.id || 'T';
+              
+              // Create label element
+              const label = document.createElement('div');
+              label.className = 'restaurant-table-label';
+              label.innerHTML = `<span class="table-number">${tableId}</span>`;
+              label.style.position = 'absolute';
+              label.style.pointerEvents = 'none';
+              label.style.zIndex = '1000';
+              
+              // Store reference to the table object for positioning
+              label.tableObject = object;
+              
+              document.body.appendChild(label);
+              tableLabels.push(label);
+            }
+          });
+        };
+
+        const updateRestaurantTableLabelPositions = () => {
+          const rect = containerRef.current?.getBoundingClientRect();
+          if (!rect) return;
+          
+          tableLabels.forEach(label => {
+            if (label.tableObject) {
+              // Get world position of table
+              const worldPosition = new THREE.Vector3();
+              label.tableObject.getWorldPosition(worldPosition);
+              
+              // Convert to screen coordinates
+              const screenPosition = worldPosition.clone().project(camera);
+              
+              // Convert to pixel coordinates
+              const x = (screenPosition.x * 0.5 + 0.5) * rect.width + rect.left;
+              const y = (screenPosition.y * -0.5 + 0.5) * rect.height + rect.top;
+              
+              // Position label
+              label.style.left = x + 'px';
+              label.style.top = (y - 15) + 'px'; // Slightly above table center
+            }
+          });
+        };
+
         // Animation Loop
         const animate = () => {
           animationFrameRef.current = requestAnimationFrame(animate);
           controls.update();
           renderer.render(scene, camera);
+          
+          // Update table label positions on each frame
+          updateRestaurantTableLabelPositions();
         };
         animate();
+
+        // Create table labels after scene is loaded
+        setTimeout(() => {
+          createRestaurantTableLabels();
+        }, 500);
 
         // Handle window resize
         const handleResize = () => {

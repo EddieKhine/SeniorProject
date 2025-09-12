@@ -16,6 +16,9 @@ import gsap from 'gsap';
 import { motion, AnimatePresence } from "framer-motion";
 
 export default function RestaurantBookingManager({ floorplanData, floorplanId, restaurantId }) {
+  // State for WebGL context management
+  const [webglError, setWebglError] = useState(null);
+  const [webglSupported, setWebglSupported] = useState(true); // Start optimistic
   const containerRef = useRef(null);
   const sceneRef = useRef(null);
   const rendererRef = useRef(null);
@@ -45,6 +48,35 @@ export default function RestaurantBookingManager({ floorplanData, floorplanId, r
   const dateRef = useRef(selectedDate);
   const timeRef = useRef(selectedTime);
 
+  // Simplified WebGL check (used only for fallback UI logic)
+  const checkWebGLSupport = () => {
+    try {
+      const canvas = document.createElement('canvas');
+      const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+      return !!gl;
+    } catch (error) {
+      return false;
+    }
+  };
+
+  // WebGL context loss handlers
+  const handleContextLost = (event) => {
+    event.preventDefault();
+    console.warn('WebGL context lost. Attempting to restore...');
+    setWebglError('3D view temporarily unavailable. Refreshing...');
+    
+    // Cancel animation frame
+    if (animationFrameRef.current) {
+      cancelAnimationFrame(animationFrameRef.current);
+    }
+  };
+
+  const handleContextRestored = () => {
+    console.log('WebGL context restored. Reinitializing scene...');
+    setWebglError(null);
+    // Scene will be reinitialized by the useEffect
+  };
+
   useEffect(() => {
     dateRef.current = selectedDate;
     // When date changes, refresh bookings
@@ -62,6 +94,8 @@ export default function RestaurantBookingManager({ floorplanData, floorplanId, r
     console.log('Selected Date:', selectedDate, 'Selected Time:', selectedTime);
   }, [selectedDate, selectedTime]);
 
+  // Remove early WebGL check - let it happen during scene initialization
+
   useEffect(() => {
     console.log('RestaurantBookingManager useEffect triggered with:', {
       containerRef: !!containerRef.current,
@@ -77,6 +111,8 @@ export default function RestaurantBookingManager({ floorplanData, floorplanId, r
       console.log('Missing required refs or data, skipping initialization');
       return;
     }
+
+    // WebGL support will be checked during renderer creation
 
     // Cleanup function
     const cleanup = () => {
@@ -120,34 +156,38 @@ export default function RestaurantBookingManager({ floorplanData, floorplanId, r
       console.log('Starting scene initialization');
       cleanup();
 
-      // Create loading overlay
-      const loadingOverlay = document.createElement('div');
-      loadingOverlay.className = 'loading-overlay';
-      loadingOverlay.innerHTML = `
-        <div class="loading-container">
-          <div class="loading-spinner"></div>
-          <div class="loading-text">Loading Scene...</div>
-        </div>
-      `;
-      containerRef.current.appendChild(loadingOverlay);
-      loadingOverlayRef.current = loadingOverlay;
-
-      // Update loading text function
-      const updateLoadingProgress = (text, progress) => {
-        const progressElement = loadingOverlay.querySelector('.loading-progress');
-        const textElement = loadingOverlay.querySelector('.loading-text');
-        if (progressElement) progressElement.textContent = `${Math.round(progress)}%`;
-        if (textElement) textElement.textContent = text;
-      };
+      // Skip creating duplicate loading overlay - use the main one
+      console.log('Scene initialization starting - using main loading state');
 
       try {
-        // Initialize Three.js scene
+        // Initialize Three.js scene with enhanced error handling
         console.log('Creating WebGL renderer');
-        const renderer = new THREE.WebGLRenderer({ 
-          antialias: true,
-          powerPreference: "high-performance",
-          preserveDrawingBuffer: true  // Add this to help prevent context loss
-        });
+        let renderer;
+        
+        try {
+          renderer = new THREE.WebGLRenderer({ 
+            antialias: window.devicePixelRatio <= 1, // Disable antialiasing on high DPI displays
+            powerPreference: "default", // Changed from high-performance to reduce resource usage
+            preserveDrawingBuffer: false, // Set to false to reduce memory usage
+            alpha: false, // Disable alpha channel for better performance
+            premultipliedAlpha: false,
+            stencil: false,
+            depth: true,
+            logarithmicDepthBuffer: false,
+            failIfMajorPerformanceCaveat: false // Allow fallback to software rendering
+          });
+          
+          // If we get here, WebGL is working
+          setWebglSupported(true);
+          setWebglError(null);
+          
+        } catch (rendererError) {
+          console.error('Failed to create WebGL renderer:', rendererError);
+          setWebglError('Failed to initialize 3D graphics. Your browser may not support WebGL or resources are limited.');
+          setWebglSupported(false);
+          setIsLoading(false);
+          return;
+        }
         
         rendererRef.current = renderer;  // Store renderer reference
 
@@ -201,23 +241,10 @@ export default function RestaurantBookingManager({ floorplanData, floorplanId, r
         controls.minDistance = 5;
         controls.maxDistance = 20;
 
-        // Helper function to delay execution
-        const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
-
-        // 1. Add floor with fade-in animation
+        // 1. Add floor immediately (no delays)
         console.log('Adding floor');
         const floor = createFloor(20, 20, 2);
-        floor.material.transparent = true;
-        floor.material.opacity = 0;
         scene.add(floor);
-
-        // Faster floor fade-in
-        for (let i = 0; i <= 1; i += 0.2) { // Increased increment
-          floor.material.opacity = i;
-          await delay(20); // Reduced delay
-          renderer.render(scene, camera);
-        }
-        await delay(100); // Reduced pause after floor
 
         // Initialize managers
         console.log('Initializing managers');
@@ -229,15 +256,13 @@ export default function RestaurantBookingManager({ floorplanData, floorplanId, r
           console.log('Processing floorplan data with', floorplanData.objects.length, 'objects');
           const wallMap = new Map();
 
-          // 2. Create and add walls with faster fade-in
+          // 2. Create and add walls immediately
           console.log("Loading walls...");
           const wallObjects = floorplanData.objects.filter(obj => obj.type === 'wall');
           for (const objData of wallObjects) {
             const wallGeometry = new THREE.BoxGeometry(2, 2, 0.2);
             const wallMaterial = new THREE.MeshPhongMaterial({ 
-              color: 0x808080,
-              transparent: true,
-              opacity: 0
+              color: 0x808080
             });
             const wall = new THREE.Mesh(wallGeometry, wallMaterial);
             
@@ -256,16 +281,7 @@ export default function RestaurantBookingManager({ floorplanData, floorplanId, r
             
             scene.add(wall);
             wallMap.set(objData.userData.uuid, wall);
-
-            // Faster wall fade-in
-            for (let i = 0; i <= 1; i += 0.2) {
-              wallMaterial.opacity = i;
-              await delay(15);
-              renderer.render(scene, camera);
-            }
-            await delay(30); // Reduced delay between walls
           }
-          await delay(200); // Reduced pause after walls
 
           // 3. Create and add tables with faster fade-in
           console.log("Loading tables...");
@@ -314,23 +330,23 @@ export default function RestaurantBookingManager({ floorplanData, floorplanId, r
 
               scene.add(model);
 
-              // Faster table fade-in
-              for (let i = 0; i <= 1; i += 0.2) {
-                model.traverse((child) => {
-                  if (child.material) {
-                    if (Array.isArray(child.material)) {
-                      child.material.forEach(mat => mat.opacity = i);
-                    } else {
-                      child.material.opacity = i;
-                    }
+              // Set full opacity immediately
+              model.traverse((child) => {
+                if (child.material) {
+                  if (Array.isArray(child.material)) {
+                    child.material.forEach(mat => {
+                      mat.transparent = false;
+                      mat.opacity = 1;
+                    });
+                  } else {
+                    child.material.transparent = false;
+                    child.material.opacity = 1;
                   }
-                });
-                await delay(15);
-                renderer.render(scene, camera);
-              }
+                }
+              });
             }
           }
-          await delay(100); // Reduced pause after tables
+          // Removed pause for faster loading
 
           // 4. Create doors and windows with faster fade-in
           console.log("Loading doors and windows...");
@@ -372,7 +388,8 @@ export default function RestaurantBookingManager({ floorplanData, floorplanId, r
                 });
 
                 // Faster opening fade-in
-                for (let i = 0; i <= 1; i += 0.2) {
+                // Removed fade-in loop for faster loading - set opacity immediately
+              if (false) { // Skip this loop
                   opening.traverse((child) => {
                     if (child.material) {
                       child.material.opacity = i;
@@ -384,7 +401,7 @@ export default function RestaurantBookingManager({ floorplanData, floorplanId, r
               }
             }
           }
-          await delay(100); // Reduced pause after openings
+          // Removed pause for faster loading
 
           // 5. Create and add chairs with faster fade-in
           console.log("Loading chairs...");
@@ -421,7 +438,8 @@ export default function RestaurantBookingManager({ floorplanData, floorplanId, r
               scene.add(model);
 
               // Faster chair fade-in
-              for (let i = 0; i <= 1; i += 0.2) {
+              // Removed fade-in loop for faster loading - set opacity immediately
+              if (false) { // Skip this loop
                 model.traverse((child) => {
                   if (child.material) {
                     if (Array.isArray(child.material)) {
@@ -431,8 +449,7 @@ export default function RestaurantBookingManager({ floorplanData, floorplanId, r
                     }
                   }
                 });
-                await delay(10);
-                renderer.render(scene, camera);
+                // Removed delay for faster loading
               }
             }
           }
@@ -491,7 +508,8 @@ export default function RestaurantBookingManager({ floorplanData, floorplanId, r
               model.updateMatrix();
 
               // Faster plant fade-in
-              for (let i = 0; i <= 1; i += 0.2) {
+              // Removed fade-in loop for faster loading - set opacity immediately
+              if (false) { // Skip this loop
                 model.traverse((child) => {
                   if (child.material) {
                     if (Array.isArray(child.material)) {
@@ -501,16 +519,19 @@ export default function RestaurantBookingManager({ floorplanData, floorplanId, r
                     }
                   }
                 });
-                await delay(10);
-                renderer.render(scene, camera);
+                // Removed delay for faster loading
               }
             } else {
               console.error("Failed to load plant model");
             }
           }
-          await delay(50);
+          // Removed final delay
 
           console.log("Loading complete!");
+          
+          // Set loading to false immediately
+          setIsLoading(false);
+          setSceneLoaded(true);
 
           // Animation loop
           console.log('Starting animation loop');
@@ -611,7 +632,7 @@ export default function RestaurantBookingManager({ floorplanData, floorplanId, r
           };
 
           // Call handleLoadingComplete after scene is ready
-          handleLoadingComplete();
+          // handleLoadingComplete(); // Removed to prevent loading delays
 
           // After everything is loaded successfully
           setSceneLoaded(true);
@@ -1418,6 +1439,35 @@ export default function RestaurantBookingManager({ floorplanData, floorplanId, r
     
     return () => clearTimeout(timer);
   }, [sceneLoaded]);
+
+  // Render fallback UI only if there's an actual WebGL error
+  if (webglError && !isLoading) {
+    return (
+      <div className="relative w-full h-[600px] flex flex-col">
+        <div className="flex-1 flex items-center justify-center bg-gradient-to-b from-gray-50 to-gray-100 rounded-lg">
+          <div className="text-center p-8">
+            <div className="text-6xl mb-4">🏪</div>
+            <h3 className="text-xl font-semibold text-gray-700 mb-2">3D View Unavailable</h3>
+            <p className="text-gray-600 mb-4 max-w-md">
+              {webglError || 'Your browser does not support 3D graphics (WebGL). Please use a modern browser or enable hardware acceleration.'}
+            </p>
+            <div className="bg-white p-4 rounded-lg shadow-sm">
+              <h4 className="font-semibold text-gray-700 mb-2">Booking Management Available</h4>
+              <p className="text-sm text-gray-600">
+                You can still manage bookings using the date and time controls above.
+              </p>
+            </div>
+            <button 
+              onClick={() => window.location.reload()} 
+              className="mt-4 px-4 py-2 bg-[#FF4F18] text-white rounded-lg hover:bg-[#FF4F18]/90 transition-all"
+            >
+              Refresh Page
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="relative w-full h-[600px] flex flex-col">
