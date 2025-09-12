@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { FaUtensils, FaChartBar, FaCalendarAlt, FaCog, FaSignOutAlt, FaBars, FaTimes } from 'react-icons/fa';
+import { FaUtensils, FaChartBar, FaCalendarAlt, FaCog, FaSignOutAlt, FaBars, FaTimes, FaUsers } from 'react-icons/fa';
 import Image from 'next/image';
 
 const RestaurantOwnerNavbar = ({ onLoginClick }) => {
@@ -111,6 +111,17 @@ const RestaurantOwnerNavbar = ({ onLoginClick }) => {
                   <span className="text-lg"><FaUtensils /></span>
                   <span>Restaurant Portal</span>
                 </Link>
+                <Link
+                  href="/staff-management"
+                  className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-all duration-300 ${
+                    pathname === '/staff-management'
+                      ? 'text-[#FF4F18] bg-[#FF4F18]/10 font-medium'
+                      : 'text-[#FF4F18] hover:text-[#FF4F18] hover:bg-[#FF4F18]/10'
+                  }`}
+                >
+                  <span className="text-lg"><FaUsers /></span>
+                  <span>Staff Management</span>
+                </Link>
                 <div className="flex items-center space-x-4 border-l border-gray-200 pl-4">
                   <div className={`font-medium ${isScrolled ? 'text-[#FF4F18]' : 'text-[#FF4F18]'}`}>
                     Welcome, {user.firstName} {user.lastName}
@@ -199,6 +210,18 @@ const RestaurantOwnerNavbar = ({ onLoginClick }) => {
             >
               <span className="text-lg"><FaUtensils /></span>
               <span>Restaurant Portal</span>
+            </Link>
+            <Link
+              href="/staff-management"
+              className={`flex items-center space-x-2 px-3 py-2 rounded-lg transition-colors ${
+                pathname === '/staff-management'
+                  ? 'text-[#FF4F18] bg-[#FF4F18]/10'
+                  : 'text-gray-600 hover:text-[#FF4F18] hover:bg-[#FF4F18]/10'
+              }`}
+              onClick={() => setIsOpen(false)}
+            >
+              <span className="text-lg"><FaUsers /></span>
+              <span>Staff Management</span>
             </Link>
             <div className="flex items-center justify-between px-3 py-2 border-t">
               <Link

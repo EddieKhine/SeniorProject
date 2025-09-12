@@ -5,13 +5,14 @@ import { useRouter } from 'next/navigation'
 import RestaurantInformation from '@/components/RestaurantInformation'
 import RestaurantProfileForm from '@/components/RestaurantProfileForm'
 import SubscriptionPlans from '@/components/SubscriptionPlans'
-import { RiRestaurantLine, RiLayoutLine, RiCalendarLine, RiVipCrownLine, RiUserLine, RiMessage2Line } from 'react-icons/ri'
+import { RiRestaurantLine, RiLayoutLine, RiCalendarLine, RiVipCrownLine, RiUserLine, RiMessage2Line, RiTeamLine } from 'react-icons/ri'
 import { motion } from 'framer-motion'
 import OwnerProfile from '@/components/OwnerProfile'
 import RestaurantFloorPlan from '@/components/RestaurantFloorPlan'
 import RestaurantOwnerChat from '@/components/RestaurantOwnerChat'
 import RestaurantBookingManager from '@/components/RestaurantBookingManager'
 import RestaurantReservation from '@/components/RestaurantReservation'
+import StaffManagement from '@/components/StaffManagement'
 import Link from 'next/link'
 import Image from 'next/image'
 import { FaHome, FaSignOutAlt } from 'react-icons/fa'
@@ -220,6 +221,18 @@ export default function RestaurantSetupDashboard() {
             </button>
             
             <button
+              onClick={() => setActiveSection('staff')}
+              className={`flex items-center space-x-3 w-full p-3 rounded-lg transition-all duration-200 ${
+                activeSection === 'staff'
+                  ? 'bg-[#FF4F18] text-white font-medium shadow-lg'
+                  : 'text-gray-600 hover:bg-gray-50 hover:text-[#FF4F18]'
+              }`}
+            >
+              <RiTeamLine className="text-xl" />
+              <span>Staff Management</span>
+            </button>
+            
+            <button
               onClick={() => setActiveSection('messages')}
               className={`flex items-center space-x-3 w-full p-3 rounded-lg transition-all duration-200 ${
                 activeSection === 'messages'
@@ -269,6 +282,7 @@ export default function RestaurantSetupDashboard() {
               {activeSection === 'floorplan' && 'Floor Plan'}
               {activeSection === 'reservation' && 'Reservations'}
               {activeSection === 'subscription' && 'Subscription Plans'}
+              {activeSection === 'staff' && 'Staff Management'}
               {activeSection === 'messages' && 'Messages'}
             </h1>
             <p className="text-gray-500 mt-1">
@@ -415,6 +429,11 @@ export default function RestaurantSetupDashboard() {
           {activeSection === 'owner-profile' && (
             <div className="bg-white p-6 rounded-xl shadow-sm border border-[#F2F4F7]">
               <OwnerProfile />
+            </div>
+          )}
+          {activeSection === 'staff' && (
+            <div className="bg-white p-6 rounded-xl shadow-sm border border-[#F2F4F7]">
+              <StaffManagement restaurantId={restaurant?._id} />
             </div>
           )}
           {activeSection === 'messages' && (
