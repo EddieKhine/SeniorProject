@@ -224,6 +224,69 @@ export async function POST(request, { params }) {
         return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
     
+    // Calculate dynamic pricing for this booking
+    let pricingData = null;
+    try {
+      const { dynamicPricing } = await import('@/utils/dynamicPricing');
+      const pricingResult = await dynamicPricing.calculatePrice({
+        restaurantId,
+        tableId,
+        date: new Date(date),
+        time: startTime,
+        guestCount,
+        tableCapacity: guestCount <= 2 ? 2 : guestCount <= 4 ? 4 : 6,
+        tableLocation: 'center' // Default, could be enhanced with actual table location
+      });
+
+      if (pricingResult.success) {
+        pricingData = {
+          basePrice: pricingResult.basePrice,
+          finalPrice: pricingResult.finalPrice,
+          currency: pricingResult.currency,
+          factors: {
+            demandFactor: pricingResult.breakdown.demandFactor.value,
+            temporalFactor: pricingResult.breakdown.temporalFactor.value,
+            historicalFactor: pricingResult.breakdown.historicalFactor.value,
+            capacityFactor: pricingResult.breakdown.capacityFactor.value,
+            holidayFactor: pricingResult.breakdown.holidayFactor.value
+          },
+          context: {
+            occupancyRate: pricingResult.context?.occupancyRate || 0,
+            tableCapacity: pricingResult.context?.tableInfo?.capacity || guestCount,
+            tableLocation: pricingResult.context?.tableInfo?.location || 'center',
+            demandLevel: pricingResult.context?.demandLevel || 'medium',
+            holidayName: pricingResult.breakdown?.holidayFactor?.holiday?.name || null
+          },
+          confidence: pricingResult.confidence,
+          calculatedAt: new Date()
+        };
+      }
+    } catch (pricingError) {
+      console.error('Dynamic pricing calculation failed:', pricingError);
+      // Fallback pricing
+      pricingData = {
+        basePrice: 100,
+        finalPrice: 100,
+        currency: 'THB',
+        factors: {
+          demandFactor: 1.0,
+          temporalFactor: 1.0,
+          historicalFactor: 1.0,
+          capacityFactor: 1.0,
+          holidayFactor: 1.0
+        },
+        context: {
+          occupancyRate: 0,
+          tableCapacity: guestCount,
+          tableLocation: 'center',
+          demandLevel: 'medium',
+          holidayName: null
+        },
+        confidence: 0.5,
+        calculatedAt: new Date()
+      };
+    }
+
     // Create and save booking using the server-fetched user data
     const booking = new Booking({
       userId: currentUser._id,
@@ -237,7 +300,8 @@ export async function POST(request, { params }) {
       status: 'confirmed',
       customerName: `${currentUser.firstName} ${currentUser.lastName || ''}`.trim(),
       customerEmail: currentUser.email,
-      customerPhone: currentUser.contactNumber || 'Not provided' // Handle missing phone numbers
+      customerPhone: currentUser.contactNumber || 'Not provided',
+      pricing: pricingData
     });
 
     // Add initial history entry

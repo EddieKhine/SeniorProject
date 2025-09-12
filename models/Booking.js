@@ -69,6 +69,29 @@ const bookingSchema = new mongoose.Schema({
         type: String,
         default: ''
     },
+    
+    // Dynamic pricing information
+    pricing: {
+        basePrice: { type: Number, default: 100 },
+        finalPrice: { type: Number, required: true },
+        currency: { type: String, default: 'THB' },
+        factors: {
+            demandFactor: { type: Number, default: 1.0 },
+            temporalFactor: { type: Number, default: 1.0 },
+            historicalFactor: { type: Number, default: 1.0 },
+            capacityFactor: { type: Number, default: 1.0 },
+            holidayFactor: { type: Number, default: 1.0 }
+        },
+        context: {
+            occupancyRate: Number,
+            tableCapacity: Number,
+            tableLocation: String,
+            demandLevel: String,
+            holidayName: String
+        },
+        confidence: { type: Number, default: 0.8 },
+        calculatedAt: { type: Date, default: Date.now }
+    },
     history: [{
         action: {
             type: String,

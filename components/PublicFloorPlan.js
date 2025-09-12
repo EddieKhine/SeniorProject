@@ -607,9 +607,19 @@ export default function PublicFloorPlan({ floorplanData, floorplanId, restaurant
               (!Array.isArray(tableMesh.material) && tableMesh.material.color.getHex() === 0xff4f18)
             );
 
-            // Use the state values directly
+            // Use the state values directly and validate time format
             if (!dateRef.current || !timeRef.current) {
               toast.error("Please select a date and time first before choosing a table");
+              return;
+            }
+            
+            // Validate time format (accept both HH:MM and time slot formats)
+            const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
+            const timeSlotRegex = /^\d{1,2}:\d{2}\s(AM|PM)\s-\s\d{1,2}:\d{2}\s(AM|PM)$/;
+            
+            if (!timeRegex.test(timeRef.current) && !timeSlotRegex.test(timeRef.current)) {
+              toast.error("Please select a valid time slot before booking");
+              console.error('Invalid time format:', timeRef.current);
               return;
             }
 
@@ -989,10 +999,13 @@ export default function PublicFloorPlan({ floorplanData, floorplanId, restaurant
       root.render(
         <PaymentDialog
           bookingDetails={{
+            restaurantId,
             date: dateRef.current,
             time: timeRef.current,
             tableId,
-            guestCount: bookingDetails.guestCount
+            guestCount: bookingDetails.guestCount,
+            tableCapacity: table.userData?.capacity || (bookingDetails.guestCount <= 2 ? 2 : bookingDetails.guestCount <= 4 ? 4 : 6),
+            tableLocation: table.userData?.location || 'center'
           }}
           onClose={() => {
             root.unmount();
