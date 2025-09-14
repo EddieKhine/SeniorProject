@@ -10,6 +10,12 @@ const nextConfig = {
           { key: "Access-Control-Allow-Methods", value: "GET,DELETE,PATCH,POST,PUT" },
           { key: "Access-Control-Allow-Headers", value: "X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization" },
         ]
+      },
+      {
+        source: "/:path*",
+        headers: [
+          { key: "Content-Security-Policy", value: "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline' https://apis.google.com https://*.googleapis.com https://*.gstatic.com; style-src 'self' 'unsafe-inline' https://*.googleapis.com; img-src 'self' data: https: blob:; font-src 'self' data: https://*.gstatic.com; connect-src 'self' https: wss:; frame-src 'self' https://*.firebaseapp.com https://*.googleapis.com;" }
+        ]
       }
     ]
   },

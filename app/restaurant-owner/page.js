@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { FaUtensils, FaCheckCircle, FaSignInAlt, FaDoorOpen, FaTimes, FaArrowRight } from "react-icons/fa";
 import RestaurantOwnerLoginModal from "@/components/RestaurantOwnerLoginModal";
+import RestaurantOwnerSignupModal from "@/components/RestaurantOwnerSignupModal";
 import RestaurantOwnerNavbar from '@/components/RestaurantOwnerNavbar';
 import DemoVideoModal from "@/components/DemoVideoModal";
 
@@ -11,6 +12,7 @@ export default function RestaurantOwnerHome() {
   const router = useRouter();
   const [showDemo, setShowDemo] = useState(false); // Toggle Demo Section
   const [showLoginModal, setShowLoginModal] = useState(false);
+  const [showSignupModal, setShowSignupModal] = useState(false);
   const [showDemoModal, setShowDemoModal] = useState(false);
   const benefits = [  
     "Easy Drag & Drop 3D Layout Builder",
@@ -30,12 +32,35 @@ export default function RestaurantOwnerHome() {
   };
 
   const handleRegisterClick = () => {
-    router.push('/restaurant-owner/register');
+    setShowSignupModal(true);
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#141517] to-[#1C1D21]">
       <RestaurantOwnerNavbar onLoginClick={handleLoginClick} />
+      
+      {/* Login Modal */}
+      {showLoginModal && (
+        <RestaurantOwnerLoginModal 
+          isOpen={showLoginModal} 
+          onClose={() => setShowLoginModal(false)} 
+          onLoginSuccess={handleLoginSuccess}
+          onOpenSignupModal={() => {
+            setShowSignupModal(true);
+          }}
+        />
+      )}
+      
+      {/* Signup Modal */}
+      {showSignupModal && (
+        <RestaurantOwnerSignupModal 
+          isOpen={showSignupModal} 
+          onClose={() => setShowSignupModal(false)}
+          onOpenLoginModal={() => {
+            setShowLoginModal(true);
+          }}
+        />
+      )}
       
       {/* Enhanced Hero Section */}
       <section className="relative min-h-[90vh] overflow-hidden">
@@ -289,12 +314,7 @@ export default function RestaurantOwnerHome() {
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-[#FF4F18]/5 rounded-full blur-3xl -z-10" />
       </section>
 
-      {/* Rest of the components (Demo Modal, Login Modal) */}
-      <RestaurantOwnerLoginModal
-        isOpen={showLoginModal}
-        onClose={() => setShowLoginModal(false)}
-        onLoginSuccess={handleLoginSuccess}
-      />
+      {/* Rest of the components (Demo Modal) */}
       <DemoVideoModal 
         isOpen={showDemoModal} 
         onClose={() => setShowDemoModal(false)} 

@@ -430,4 +430,4 @@ function calculateEndTime(startTime) {
   endHours = (endHours + 2) % 24;
   
   return `${endHours === 0 ? 12 : endHours > 12 ? endHours - 12 : endHours}:${minutes.toString().padStart(2, '0')} ${endHours >= 12 ? 'PM' : 'AM'}`;
-} 
+}

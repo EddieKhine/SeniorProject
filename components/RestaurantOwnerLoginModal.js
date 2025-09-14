@@ -3,11 +3,14 @@
 import { useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faEnvelope, faLock, faUtensils, faArrowRight } from "@fortawesome/free-solid-svg-icons";
+import { faGoogle } from "@fortawesome/free-brands-svg-icons";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
+import { auth } from "@/lib/firebase-config";
+import { signInWithPopup, GoogleAuthProvider } from "firebase/auth";
 
-export default function RestaurantOwnerLoginModal({ isOpen, onClose, onLoginSuccess }) {
+export default function RestaurantOwnerLoginModal({ isOpen, onClose, onLoginSuccess, onOpenSignupModal }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -40,6 +43,66 @@ export default function RestaurantOwnerLoginModal({ isOpen, onClose, onLoginSucc
       localStorage.setItem("restaurantOwnerToken", data.token);
       
       if (data.user.hasRestaurant) {
+        router.push('/restaurant-owner/setup/dashboard');
+      } else {
+        router.push('/restaurant-owner/setup');
+      }
+      
+      onClose();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const provider = new GoogleAuthProvider();
+      const result = await signInWithPopup(auth, provider);
+      
+      // First, try to create/find restaurant owner profile
+      const signupResponse = await fetch("/api/restaurant-owner/signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: result.user.email,
+          firebaseUid: result.user.uid,
+          firstName: result.user.displayName?.split(' ')[0] || '',
+          lastName: result.user.displayName?.split(' ').slice(1).join(' ') || '',
+          profileImage: result.user.photoURL || '',
+        }),
+      });
+
+      if (!signupResponse.ok) {
+        const errorData = await signupResponse.json();
+        throw new Error(errorData.message || "Failed to sync restaurant owner profile");
+      }
+
+      const signupData = await signupResponse.json();
+      
+      // Now login with Firebase UID
+      const loginResponse = await fetch("/api/restaurant-owner/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ firebaseUid: result.user.uid }),
+      });
+
+      if (!loginResponse.ok) {
+        const errorData = await loginResponse.json();
+        throw new Error(errorData.error || "Login failed");
+      }
+
+      const loginData = await loginResponse.json();
+
+      localStorage.removeItem("customerUser");
+      localStorage.removeItem("customerToken");
+      localStorage.setItem("restaurantOwnerUser", JSON.stringify(loginData.user));
+      localStorage.setItem("restaurantOwnerToken", loginData.token);
+      
+      if (loginData.user.hasRestaurant) {
         router.push('/restaurant-owner/setup/dashboard');
       } else {
         router.push('/restaurant-owner/setup');
@@ -257,18 +320,36 @@ export default function RestaurantOwnerLoginModal({ isOpen, onClose, onLoginSucc
                 <div className="flex-grow border-t border-gray-200"></div>
               </motion.div>
 
+              <motion.button
+                type="button"
+                onClick={handleGoogleLogin}
+                disabled={loading}
+                className="w-full py-4 bg-white border border-gray-200 text-gray-700 font-semibold rounded-xl hover:shadow-lg hover:shadow-gray-200/50 transition-all transform disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:shadow-none flex items-center justify-center"
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.6 }}
+              >
+                <FontAwesomeIcon icon={faGoogle} className="text-red-500 mr-3" />
+                Continue with Google
+              </motion.button>
+
               <motion.p 
                 className="text-center text-gray-600 text-sm"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                transition={{ delay: 0.6 }}
+                transition={{ delay: 0.7 }}
               >
                 Don&apos;t have an account?{" "}
                 <button
                   type="button"
                   onClick={() => {
                     onClose();
-                    router.push('/restaurant-owner/register');
+                    // Open the signup modal instead of redirecting
+                    if (onOpenSignupModal) {
+                      onOpenSignupModal();
+                    }
                   }}
                   className="text-[#FF4F18] hover:text-[#FF4F18]/80 font-semibold transition-colors"
                 >

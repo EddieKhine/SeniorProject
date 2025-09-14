@@ -95,7 +95,7 @@ export function middleware(request) {
   // Add CSP header for additional security
   response.headers.set(
     'Content-Security-Policy',
-    "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https:;"
+    "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline' https://apis.google.com https://*.googleapis.com https://*.gstatic.com; style-src 'self' 'unsafe-inline' https://*.googleapis.com; img-src 'self' data: https: blob:; font-src 'self' data: https://*.gstatic.com; connect-src 'self' https: wss:; frame-src 'self' https://*.firebaseapp.com https://*.googleapis.com;"
   );
 
   return response;
@@ -106,4 +106,4 @@ export const config = {
     '/api/:path*',
     '/restaurant-owner/:path*',
   ],
-}; 
+};

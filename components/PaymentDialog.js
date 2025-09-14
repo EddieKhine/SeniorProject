@@ -457,4 +457,4 @@ export default function PaymentDialog({ bookingDetails, onClose, onSuccess }) {
       </div>
     </div>
   );
-} 
+}
