@@ -6,6 +6,10 @@ const bookingSchema = new mongoose.Schema({
         unique: true,
         // Will be auto-generated in pre-save
     },
+    version: {
+        type: Number,
+        default: 0
+    },
     restaurantId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Restaurant',
@@ -68,6 +72,13 @@ const bookingSchema = new mongoose.Schema({
     specialRequests: {
         type: String,
         default: ''
+    },
+    
+    // Lock information for reservation holds
+    lockInfo: {
+        lockId: { type: String, required: false },
+        lockedAt: { type: Date, required: false },
+        lockExpiresAt: { type: Date, required: false }
     },
     
     // Dynamic pricing information
@@ -149,6 +160,27 @@ bookingSchema.index({ restaurantId: 1, date: 1, status: 1 });
 bookingSchema.index({ tableId: 1, date: 1, status: 1 });
 bookingSchema.index({ userId: 1, date: -1 });
 bookingSchema.index({ status: 1, date: 1 });
+
+// Unique compound index to prevent double bookings (OCC constraint)
+bookingSchema.index(
+    { 
+        restaurantId: 1, 
+        tableId: 1, 
+        date: 1, 
+        startTime: 1, 
+        endTime: 1 
+    }, 
+    { 
+        unique: true,
+        partialFilterExpression: {
+            status: { $in: ['pending', 'confirmed'] }
+        }
+    }
+);
+
+// Index for lock management
+bookingSchema.index({ 'lockInfo.lockId': 1 });
+bookingSchema.index({ 'lockInfo.lockExpiresAt': 1 });
 
 // Method to check if table is available for a specific time
 bookingSchema.statics.isTableAvailable = async function(tableId, date, startTime, endTime) {
@@ -233,6 +265,14 @@ bookingSchema.statics.getUserBookings = async function(userId) {
         .sort({ date: -1, time: -1 });
 };
 
+// Pre-save middleware to increment version for OCC
+bookingSchema.pre('save', function(next) {
+    if (this.isModified() && !this.isNew) {
+        this.version += 1;
+    }
+    next();
+});
+
 // Add a method to record history
 bookingSchema.methods.addToHistory = function(action, details = {}) {
     // Check for duplicate recent entries (within last 5 seconds)
@@ -259,6 +299,27 @@ bookingSchema.methods.addToHistory = function(action, details = {}) {
             details
         });
     }
+};
+
+// OCC method to update booking with version check
+bookingSchema.methods.updateWithOCC = async function(updates, expectedVersion) {
+    if (this.version !== expectedVersion) {
+        throw new Error(`Optimistic concurrency control failed. Expected version ${expectedVersion}, but current version is ${this.version}`);
+    }
+    
+    // Apply updates
+    Object.assign(this, updates);
+    return await this.save();
+};
+
+// Static method to find and update with OCC
+bookingSchema.statics.findAndUpdateWithOCC = async function(filter, updates, expectedVersion) {
+    const booking = await this.findOne(filter);
+    if (!booking) {
+        throw new Error('Booking not found');
+    }
+    
+    return await booking.updateWithOCC(updates, expectedVersion);
 };
 
 const Booking = mongoose.models.Booking || mongoose.model('Booking', bookingSchema);

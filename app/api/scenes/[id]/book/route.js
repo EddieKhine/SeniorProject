@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import dbConnect from '@/lib/mongodb';
+import dbConnect, { startSession } from '@/lib/mongodb';
 import Floorplan from '@/models/Floorplan';
 import Booking from '@/models/Booking';
 import Restaurant from '@/models/Restaurants';
@@ -287,61 +287,128 @@ export async function POST(request, { params }) {
       };
     }
 
-    // Create and save booking using the server-fetched user data
-    const booking = new Booking({
+    // Start transaction for atomic booking creation
+    const session = await startSession();
+    
+    try {
+      await session.withTransaction(async () => {
+        // Double-check table availability within transaction
+        const isAvailable = await Booking.isTableAvailable(tableId, date, startTime, endTime);
+        if (!isAvailable) {
+          throw new Error('Table is no longer available for the selected time slot');
+        }
+
+        // Create and save booking using the server-fetched user data
+        const booking = new Booking({
+          userId: currentUser._id,
+          restaurantId,
+          floorplanId: id,
+          tableId: tableId,
+          date: new Date(date),
+          startTime,
+          endTime,
+          guestCount,
+          status: 'confirmed',
+          customerName: `${currentUser.firstName} ${currentUser.lastName || ''}`.trim(),
+          customerEmail: currentUser.email,
+          customerPhone: currentUser.contactNumber || 'Not provided',
+          pricing: pricingData
+        });
+
+        // Add initial history entry
+        booking.addToHistory('created', {
+          tableId,
+          guestCount,
+          startTime,
+          endTime
+        });
+
+        await booking.save({ session });
+
+        // Update the floorplan document using MongoDB's $set operator
+        await Floorplan.updateOne(
+          { _id: id, 'data.objects.objectId': tableId },
+          {
+            $set: {
+              'data.objects.$.userData.bookingStatus': 'booked',
+              'data.objects.$.userData.currentBooking': booking._id
+            }
+          },
+          { session }
+        );
+      });
+    } finally {
+      await session.endSession();
+    }
+
+    // Fetch the created booking for response
+    const createdBooking = await Booking.findOne({
       userId: currentUser._id,
       restaurantId,
-      floorplanId: id,
-      tableId: tableId,
+      tableId,
       date: new Date(date),
       startTime,
-      endTime,
-      guestCount,
-      status: 'confirmed',
-      customerName: `${currentUser.firstName} ${currentUser.lastName || ''}`.trim(),
-      customerEmail: currentUser.email,
-      customerPhone: currentUser.contactNumber || 'Not provided',
-      pricing: pricingData
-    });
-
-    // Add initial history entry
-    booking.addToHistory('created', {
-      tableId,
-      guestCount,
-      startTime,
       endTime
-    });
-
-    await booking.save();
-
-    // Update the floorplan document using MongoDB's $set operator
-    await Floorplan.updateOne(
-      { _id: id, 'data.objects.objectId': tableId },
-      {
-        $set: {
-          'data.objects.$.userData.bookingStatus': 'booked',
-          'data.objects.$.userData.currentBooking': booking._id
-        }
-      }
-    );
+    }).populate('restaurantId', 'restaurantName');
 
     return NextResponse.json({ 
       message: "Booking confirmed",
-      booking,
+      booking: {
+        _id: createdBooking._id,
+        bookingRef: createdBooking.bookingRef,
+        version: createdBooking.version,
+        restaurantId: createdBooking.restaurantId._id,
+        restaurantName: createdBooking.restaurantId.restaurantName,
+        tableId: createdBooking.tableId,
+        date: createdBooking.date,
+        startTime: createdBooking.startTime,
+        endTime: createdBooking.endTime,
+        guestCount: createdBooking.guestCount,
+        status: createdBooking.status,
+        customerName: createdBooking.customerName,
+        customerEmail: createdBooking.customerEmail,
+        pricing: createdBooking.pricing
+      },
       tableDetails: {
         friendlyId: tableId,
         bookingStatus: 'booked',
-        bookingId: booking._id
+        bookingId: createdBooking._id
       }
     });
   } catch (error) {
     console.error('Booking error:', error);
     
-    // Handle MongoDB duplicate key errors specifically
+    // Handle MongoDB duplicate key errors specifically (unique constraint violations)
     if (error.code === 11000) {
       return NextResponse.json({ 
-        error: "User account conflict. Please contact support." 
+        error: "This table is already booked for the selected time slot",
+        code: "DOUBLE_BOOKING_PREVENTED",
+        details: "Unique constraint prevented double booking"
       }, { status: 409 });
+    }
+
+    // Handle table availability errors
+    if (error.message.includes('Table is no longer available')) {
+      return NextResponse.json(
+        { 
+          error: "Table is no longer available for the selected time slot",
+          code: "TABLE_UNAVAILABLE",
+          details: error.message
+        },
+        { status: 409 }
+      );
+    }
+
+    // Handle transaction errors
+    if (error.message.includes('Transaction')) {
+      return NextResponse.json(
+        { 
+          error: "Booking transaction failed",
+          code: "TRANSACTION_FAILED",
+          details: "Please try again"
+        },
+        { status: 500 }
+      );
     }
     
     return NextResponse.json({ 
