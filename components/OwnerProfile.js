@@ -65,9 +65,48 @@ export default function OwnerProfile() {
     }
   }
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
-    // Handle form submission
+    
+    const token = localStorage.getItem("restaurantOwnerToken")
+    if (!token) {
+      console.error("No authentication token found")
+      return
+    }
+    
+    try {
+      // Prepare the updated profile data
+      const updatedProfile = {
+        name: `${formData.firstName} ${formData.lastName}`,
+        email: formData.email,
+        phoneNumber: formData.phone,
+        imageUrl: profileImage
+      }
+      
+      // Send the updated profile to the API
+      const response = await fetch("/api/restaurant-owner/profile", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify(updatedProfile)
+      })
+      
+      if (response.ok) {
+        // Update the local state with the new data
+        const updatedData = await response.json()
+        setOwnerData(updatedData)
+        alert("Profile updated successfully!")
+      } else {
+        const errorData = await response.json()
+        console.error("Failed to update profile:", errorData)
+        alert("Failed to update profile. Please try again.")
+      }
+    } catch (error) {
+      console.error("Error updating profile:", error)
+      alert("An error occurred while updating your profile.")
+    }
   }
 
   const handleChange = (e) => {
@@ -190,4 +229,4 @@ const FormField = ({ label, name, value, onChange, type = 'text', required = fal
       className="w-full px-4 py-2 rounded-lg border border-[#E2E8F0] focus:border-[#FF4F18] focus:ring-1 focus:ring-[#FF4F18] outline-none transition-all duration-200"
     />
   </div>
-) 
+)
