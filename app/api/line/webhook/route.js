@@ -273,7 +273,7 @@ async function handleEvent(event) {
           if (token.length >= 8) {
             try {
               // Verify the registration token
-              const verifyResponse = await fetch(`${process.env.NEXTAUTH_URL || 'https://822ebac2ac81.ngrok-free.app'}/api/staff/verify-qr`, {
+              const verifyResponse = await fetch(`${process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/staff/verify-qr`, {
                 method: 'POST',
                 headers: {
                   'Content-Type': 'application/json',
@@ -288,7 +288,7 @@ async function handleEvent(event) {
                 const profile = await client.getProfile(userId);
 
                 // Complete the registration
-                const completeResponse = await fetch(`${process.env.NEXTAUTH_URL || 'https://822ebac2ac81.ngrok-free.app'}/api/staff/complete-registration`, {
+                const completeResponse = await fetch(`${process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/staff/complete-registration`, {
                   method: 'POST',
                   headers: {
                     'Content-Type': 'application/json',
@@ -352,7 +352,7 @@ async function handleEvent(event) {
             try {
               const profile = await client.getProfile(userId);
 
-              const response = await fetch(`${process.env.NEXTAUTH_URL || 'https://822ebac2ac81.ngrok-free.app'}/api/staff`, {
+              const response = await fetch(`${process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/staff`, {
                 method: 'POST',
                 headers: {
                   'Content-Type': 'application/json',
@@ -784,7 +784,7 @@ async function handleEvent(event) {
           });
         }
 
-        const baseUrl = 'https://822ebac2ac81.ngrok-free.app';
+        const baseUrl = process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
         const fullImageUrl = floorplanData.imageUrl.startsWith('http') 
           ? floorplanData.imageUrl 
           : `${baseUrl}${floorplanData.imageUrl}`;

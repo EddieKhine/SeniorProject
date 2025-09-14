@@ -39,7 +39,7 @@ export async function POST(request) {
     });
 
     // Create registration URL that will be embedded in QR code
-    const registrationUrl = `${process.env.NEXTAUTH_URL || 'https://822ebac2ac81.ngrok-free.app'}/staff-register/${token}`;
+    const registrationUrl = `${process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/staff-register/${token}`;
 
     // Generate QR code
     const qrCodeDataURL = await QRCode.toDataURL(registrationUrl, {

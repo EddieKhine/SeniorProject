@@ -222,13 +222,119 @@ export class FileManager {
             this.ui.camera.lookAt(0, 0, 0);
             this.ui.camera.updateMatrixWorld();
             
-            // Render the scene
+            // CREATE TEMPORARY TABLE LABELS FOR SCREENSHOT
+            const tableLabels = [];
+            
+            // Create simple black text labels directly on table surfaces
+            let tableCounter = 1;
+            const processedTables = new Set(); // Avoid duplicate labels
+            console.log('Debug: Starting table label creation for screenshot');
+            
+            // First pass: find all table objects in the scene
+            const tableObjects = [];
+            this.ui.scene.traverse((object) => {
+                // Check for tables more thoroughly
+                if (object.userData?.isTable || 
+                    object.userData?.type === 'furniture' && object.userData?.isTable ||
+                    object.name?.toLowerCase().includes('table') ||
+                    (object.parent && object.parent.userData?.isTable)) {
+                    
+                    // Use the parent object if this is a child of a table group
+                    const tableObject = object.userData?.isTable ? object : 
+                                       (object.parent?.userData?.isTable ? object.parent : object);
+                    
+                    // Avoid duplicates
+                    const tableKey = `${tableObject.position.x}_${tableObject.position.y}_${tableObject.position.z}`;
+                    if (!processedTables.has(tableKey)) {
+                        processedTables.add(tableKey);
+                        tableObjects.push(tableObject);
+                        console.log('Debug: Found table object at:', tableObject.position, 'userData:', tableObject.userData);
+                    }
+                }
+            });
+            
+            console.log('Debug: Total unique tables found:', tableObjects.length);
+            
+            // Second pass: create labels for all found tables
+            tableObjects.forEach((tableObject) => {
+                // Try multiple ID sources, fallback to counter-based ID
+                const tableId = tableObject.userData?.objectId || 
+                               tableObject.userData?.friendlyId || 
+                               tableObject.userData?.id || 
+                               tableObject.userData?.name ||
+                               tableObject.userData?._id ||
+                               `T${tableCounter++}`;
+                
+                console.log('Debug: Creating label for table ID:', tableId, 'at position:', tableObject.position);
+                
+                // Create a small canvas for just the text
+                const canvas = document.createElement('canvas');
+                const context = canvas.getContext('2d');
+                canvas.width = 128;
+                canvas.height = 64;
+                
+                // Make background transparent
+                context.clearRect(0, 0, canvas.width, canvas.height);
+                
+                // Add black text only - make it bigger and bolder
+                context.fillStyle = 'black';
+                context.font = 'bold 32px Arial';
+                context.textAlign = 'center';
+                context.textBaseline = 'middle';
+                context.fillText(tableId, canvas.width / 2, canvas.height / 2);
+                
+                // Create 3D sprite from canvas
+                const texture = new THREE.CanvasTexture(canvas);
+                texture.needsUpdate = true;
+                const spriteMaterial = new THREE.SpriteMaterial({ 
+                    map: texture,
+                    transparent: true,
+                    alphaTest: 0.01,
+                    depthTest: false, // Ensure labels are always visible
+                    depthWrite: false
+                });
+                const sprite = new THREE.Sprite(spriteMaterial);
+                
+                // Position sprite directly on the table surface
+                sprite.position.copy(tableObject.position);
+                sprite.position.y += 1.0; // Raise higher to ensure visibility
+                sprite.scale.set(3, 1.5, 1); // Make even bigger for better visibility
+                
+                console.log('Debug: Created label sprite at position:', sprite.position);
+                
+                // Add to scene and track for cleanup
+                this.ui.scene.add(sprite);
+                tableLabels.push(sprite);
+            });
+            
+            console.log('Debug: Created', tableLabels.length, 'table labels');
+            
+            // Give time for sprites to be properly rendered
+            // Render multiple frames to ensure all sprites are loaded and visible
+            for (let i = 0; i < 10; i++) {
+                this.ui.renderer.render(this.ui.scene, this.ui.camera);
+                await new Promise(resolve => requestAnimationFrame(resolve));
+            }
+            
+            // Wait additional time for GPU to process all sprites
+            await new Promise(resolve => setTimeout(resolve, 2000)); // 2 second delay
+            
+            // Final render before screenshot
             this.ui.renderer.render(this.ui.scene, this.ui.camera);
             
             // Capture screenshot as blob
             const canvas = this.ui.renderer.domElement;
             const blob = await new Promise(resolve => {
                 canvas.toBlob(resolve, 'image/png', 0.9);
+            });
+            
+            // Clean up temporary table labels immediately
+            tableLabels.forEach(label => {
+                this.ui.scene.remove(label);
+                if (label.material.map) {
+                    label.material.map.dispose();
+                }
+                label.material.dispose();
             });
             
             // Restore camera position
