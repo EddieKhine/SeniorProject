@@ -287,6 +287,22 @@ export async function POST(request, { params }) {
       };
     }
 
+    // Create and save booking using the server-fetched user data
+    // Handle different user name formats
+    let customerName = '';
+    if (currentUser.firstName || currentUser.lastName) {
+      customerName = `${currentUser.firstName || ''} ${currentUser.lastName || ''}`.trim();
+    } else if (currentUser.displayName) {
+      customerName = currentUser.displayName;
+    } else if (currentUser.name) {
+      customerName = currentUser.name;
+    } else if (currentUser.email) {
+      // Fallback to email username
+      customerName = currentUser.email.split('@')[0];
+    } else {
+      customerName = 'Customer';
+    }
+
     // Start transaction for atomic booking creation
     const session = await startSession();
     
@@ -309,9 +325,9 @@ export async function POST(request, { params }) {
           endTime,
           guestCount,
           status: 'confirmed',
-          customerName: `${currentUser.firstName} ${currentUser.lastName || ''}`.trim(),
+          customerName: customerName,
           customerEmail: currentUser.email,
-          customerPhone: currentUser.contactNumber || 'Not provided',
+          customerPhone: currentUser.contactNumber || currentUser.phoneNumber || 'Not provided',
           pricing: pricingData
         });
 

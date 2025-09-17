@@ -21,7 +21,11 @@ export async function GET(request, { params }) {
       return NextResponse.json({ error: 'Restaurant not found' }, { status: 404 });
     }
 
-    return NextResponse.json({ floorplanId: restaurant.floorplanId });
+    return NextResponse.json({ 
+      floorplanId: restaurant.defaultFloorplanId,
+      floorplans: restaurant.floorplans,
+      defaultFloorplanId: restaurant.defaultFloorplanId
+    });
   } catch (error) {
     console.error('Error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

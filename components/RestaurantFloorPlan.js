@@ -6,6 +6,7 @@ import { createScene, createFloor } from '@/scripts/floor';
 import { chair, table, roundTable, sofa, create2SeaterTable, create8SeaterTable , plant01, plant02} from '@/scripts/asset';
 import { DoorManager} from '@/scripts/managers/DoorManager';
 import { WindowManager } from '@/scripts/managers/WindowManager';
+import FloorplanManager from './FloorplanManager';
 import '@/css/loading.css';
 
 export default function RestaurantFloorPlan({ token, restaurantId, isCustomerView = false }) {
@@ -86,6 +87,8 @@ export default function RestaurantFloorPlan({ token, restaurantId, isCustomerVie
   const [isInitialized, setIsInitialized] = useState(false);
   const [floorplanId, setFloorplanId] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [selectedFloorplan, setSelectedFloorplan] = useState(null);
+  const [showFloorplanManager, setShowFloorplanManager] = useState(false);
   const router = useRouter();
   const doorManagerRef = useRef(null);
   const windowManagerRef = useRef(null);
@@ -150,9 +153,9 @@ export default function RestaurantFloorPlan({ token, restaurantId, isCustomerVie
         const data = await response.json();
         console.log('Received restaurant data:', data);
         
-        if (data.floorplanId) {
-          console.log('Found floorplan ID:', data.floorplanId);
-          setFloorplanId(data.floorplanId);
+        if (data.defaultFloorplanId) {
+          console.log('Found default floorplan ID:', data.defaultFloorplanId);
+          setFloorplanId(data.defaultFloorplanId);
         }
       } catch (error) {
         console.error('Error fetching floorplan:', error);
@@ -163,6 +166,13 @@ export default function RestaurantFloorPlan({ token, restaurantId, isCustomerVie
       fetchFloorplanId();
     }
   }, [restaurantId, token]);
+
+  // Handle floorplan selection from manager
+  const handleFloorplanSelect = (floorplan) => {
+    setSelectedFloorplan(floorplan);
+    setFloorplanId(floorplan._id);
+    setShowFloorplanManager(false);
+  };
 
   useEffect(() => {
     console.log('Component mounted with floorplanId:', floorplanId);
@@ -523,36 +533,59 @@ export default function RestaurantFloorPlan({ token, restaurantId, isCustomerVie
   }, [floorplanId, isCustomerView]);
 
   return (
-    <div className="w-full">
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-semibold text-[#3A2E2B]">Restaurant Floor Plan</h2>
-        <div className="flex gap-4">
-          <button
-            onClick={() => {
-              const restaurantData = {
-                id: restaurantId,
-                floorplanId: floorplanId
-              };
-              localStorage.setItem("restaurantData", JSON.stringify(restaurantData));
-              if (floorplanId) {
-                router.push(`/floorplan/edit/${floorplanId}`);
-              } else {
-                router.push("/floorplan");
-              }
-            }}
-            className="px-4 py-2 bg-[#FF4F18] text-white rounded-lg hover:bg-[#FF4F18]/90 transition-all duration-200"
-          >
-            {floorplanId ? 'Edit Floor Plan' : 'Create Floor Plan'}
-          </button>
-        </div>
-      </div>
-      <div className="relative w-full h-[80vh] rounded-lg bg-gradient-to-b from-gray-50 to-gray-100 shadow-lg">
-        {isLoading && (
-          <div className="loading-overlay">
-            <img src="/loading/loading.gif" alt="Loading..." className="w-16 h-16" />
+    <div className="w-full space-y-6">
+      {/* Floorplan Manager */}
+      {!isCustomerView && (
+        <FloorplanManager
+          restaurantId={restaurantId}
+          token={token}
+          onFloorplanSelect={handleFloorplanSelect}
+        />
+      )}
+
+      {/* Current Floorplan Display */}
+      <div className="w-full">
+        <div className="flex justify-between items-center mb-4">
+          <div>
+            <h2 className="text-xl font-semibold text-[#3A2E2B]">
+              {selectedFloorplan ? selectedFloorplan.name : 'Restaurant Floor Plan'}
+            </h2>
+            {selectedFloorplan && (
+              <p className="text-sm text-gray-600 mt-1">
+                {selectedFloorplan.data?.objects?.length || 0} objects
+              </p>
+            )}
           </div>
-        )}
-      <div ref={containerRef} className="absolute inset-0" />
+          
+          {!isCustomerView && (
+            <div className="flex gap-3">
+              {floorplanId && (
+                <button
+                  onClick={() => {
+                    const restaurantData = {
+                      id: restaurantId,
+                      floorplanId: floorplanId
+                    };
+                    localStorage.setItem("restaurantData", JSON.stringify(restaurantData));
+                    router.push(`/floorplan/edit/${floorplanId}`);
+                  }}
+                  className="px-4 py-2 bg-[#FF4F18] text-white rounded-lg hover:bg-[#FF4F18]/90 transition-all duration-200"
+                >
+                  Edit Floor Plan
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+        
+        <div className="relative w-full h-[80vh] rounded-lg bg-gradient-to-b from-gray-50 to-gray-100 shadow-lg">
+          {isLoading && (
+            <div className="loading-overlay">
+              <img src="/loading/loading.gif" alt="Loading..." className="w-16 h-16" />
+            </div>
+          )}
+          <div ref={containerRef} className="absolute inset-0 rounded-lg" />
+        </div>
       </div>
     </div>
   );

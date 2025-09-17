@@ -152,13 +152,13 @@ async function getFloorplanImage() {
       return null;
     }
     
-    if (!restaurant.floorplanId) {
-      console.log('Restaurant has no floorplanId');
+    if (!restaurant.defaultFloorplanId) {
+      console.log('Restaurant has no defaultFloorplanId');
       return null;
     }
 
-    console.log('Looking for floorplan with ID:', restaurant.floorplanId);
-    const floorplan = await Floorplan.findById(restaurant.floorplanId);
+    console.log('Looking for floorplan with ID:', restaurant.defaultFloorplanId);
+    const floorplan = await Floorplan.findById(restaurant.defaultFloorplanId);
     
     console.log('Found floorplan:', floorplan ? 'Yes' : 'No');
     if (floorplan) {

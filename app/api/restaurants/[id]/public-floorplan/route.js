@@ -21,26 +21,50 @@ export async function GET(request, { params }) {
     console.log('Found restaurant:', {
       id: restaurant._id,
       name: restaurant.restaurantName,
-      floorplanId: restaurant.floorplanId
+      defaultFloorplanId: restaurant.defaultFloorplanId,
+      floorplansCount: restaurant.floorplans?.length || 0
     });
 
-    // Fetch floorplan data if it exists
-    let floorplanData = null;
-    if (restaurant.floorplanId) {
-      const floorplan = await Floorplan.findById(restaurant.floorplanId).lean();
-      if (floorplan) {
-        console.log('Found floorplan with objects:', floorplan.data.objects.length);
-        floorplanData = floorplan.data;
-      } else {
-        console.warn('Referenced floorplan not found:', restaurant.floorplanId);
+    // Fetch all floorplans for this restaurant
+    let allFloorplans = [];
+    let defaultFloorplanData = null;
+    
+    if (restaurant.floorplans && restaurant.floorplans.length > 0) {
+      // Get all floorplans
+      allFloorplans = await Floorplan.find({
+        _id: { $in: restaurant.floorplans }
+      }).lean();
+      
+      console.log(`Found ${allFloorplans.length} floorplans for restaurant`);
+      
+      // Get default floorplan data
+      if (restaurant.defaultFloorplanId) {
+        const defaultFloorplan = allFloorplans.find(fp => fp._id.toString() === restaurant.defaultFloorplanId.toString());
+        if (defaultFloorplan) {
+          console.log('Found default floorplan with objects:', defaultFloorplan.data.objects.length);
+          defaultFloorplanData = defaultFloorplan.data;
+        }
+      } else if (allFloorplans.length > 0) {
+        // If no default set, use the first one
+        defaultFloorplanData = allFloorplans[0].data;
+        console.log('Using first floorplan as default');
       }
     }
 
     // Prepare the response object - IMPORTANT: Include contactNumber here
     const responseData = {
       _id: restaurant._id,
-      floorplanId: restaurant.floorplanId,
-      floorplanData: floorplanData,
+      floorplanId: restaurant.defaultFloorplanId,
+      floorplanData: defaultFloorplanData,
+      // New: Include all floorplans for selection
+      allFloorplans: allFloorplans.map(fp => ({
+        _id: fp._id,
+        name: fp.name,
+        isDefault: fp._id.toString() === restaurant.defaultFloorplanId?.toString(),
+        data: fp.data,
+        screenshotUrl: fp.screenshotUrl
+      })),
+      defaultFloorplanId: restaurant.defaultFloorplanId,
       restaurantName: restaurant.restaurantName,
       description: restaurant.description,
       location: restaurant.location,

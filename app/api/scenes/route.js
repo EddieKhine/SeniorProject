@@ -64,9 +64,15 @@ export async function POST(request) {
       await floorplan.save();
 
       // Update restaurant with floorplan ID
+      const restaurant = await Restaurant.findById(data.restaurantId);
+      const isFirstFloorplan = !restaurant.floorplans || restaurant.floorplans.length === 0;
+      
       await Restaurant.findByIdAndUpdate(
         data.restaurantId,
-        { floorplanId: floorplan._id }
+        {
+          $push: { floorplans: floorplan._id },
+          ...(isFirstFloorplan && { defaultFloorplanId: floorplan._id })
+        }
       );
 
       return NextResponse.json({

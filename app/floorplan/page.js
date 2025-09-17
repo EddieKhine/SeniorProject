@@ -119,8 +119,8 @@ function FloorplanContent() {
               return baseObject;
             });
 
-            // Make sure to include the Bearer token in the request
-            const response = await fetch('/api/scenes', {
+            // Create floorplan using new multiple floorplan API
+            const response = await fetch(`/api/restaurants/${restaurantData.id}/floorplans`, {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
@@ -128,7 +128,6 @@ function FloorplanContent() {
               },
               body: JSON.stringify({
                 name: 'Restaurant Floor Plan',
-                restaurantId: restaurantData.id,
                 data: {
                   objects: objectsWithIds,
                   version: 2
@@ -144,35 +143,11 @@ function FloorplanContent() {
             const responseData = await response.json();
             console.log('API Response:', responseData);
 
-            // Update restaurant with new floorplanId
-            const updateResponse = await fetch(`/api/restaurants/${restaurantData.id}`, {
-              method: 'PUT',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-              },
-              body: JSON.stringify({
-                floorplanId: responseData.floorplan._id
-              }),
-            });
-
-            if (!updateResponse.ok) {
-              const updateError = await updateResponse.json();
-              throw new Error(updateError.error || 'Failed to update restaurant with floorplan');
-            }
-
-            // Get the updated restaurant data
-            const updatedRestaurantResponse = await fetch(`/api/restaurants/${restaurantData.id}`, {
-              headers: {
-                'Authorization': `Bearer ${token}`
-              }
-            });
-
-            if (!updatedRestaurantResponse.ok) {
-              throw new Error('Failed to fetch updated restaurant data');
-            }
-
-            const updatedRestaurantData = await updatedRestaurantResponse.json();
+            // Update localStorage with the new floorplan
+            const updatedRestaurantData = {
+              id: restaurantData.id,
+              floorplanId: responseData.floorplan._id
+            };
             localStorage.setItem("restaurantData", JSON.stringify(updatedRestaurantData));
 
             alert('New floor plan created successfully!');

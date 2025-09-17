@@ -223,7 +223,7 @@ export default function RestaurantOwnerOnboarding() {
                       // Only update necessary data in localStorage
                       localStorage.setItem("restaurantData", JSON.stringify({
                         id: freshRestaurantData._id || freshRestaurantData.id,
-                        floorplanId: freshRestaurantData.floorplanId
+                        floorplanId: freshRestaurantData.defaultFloorplanId
                       }));
 
                       // Navigate based on floorplan existence

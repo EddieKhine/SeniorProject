@@ -6,6 +6,7 @@ import RestaurantFloorPlan from '@/components/RestaurantFloorPlan';
 import { FaMapMarkerAlt, FaClock, FaPhone, FaStar, FaHome, FaShare, FaBookmark, FaUtensils, FaComments, FaChevronLeft, FaChevronRight } from 'react-icons/fa';
 import Image from 'next/image';
 import PublicFloorPlan from '@/components/PublicFloorPlan';
+import PublicFloorplanSelector from '@/components/PublicFloorplanSelector';
 import { GoogleMap, Marker } from '@react-google-maps/api';
 import ReviewSection from '@/components/ReviewSection';
 import CustomerChat from '@/components/CustomerChat';
@@ -454,18 +455,7 @@ export default function RestaurantFloorplanPage() {
           <div className="bg-white rounded-xl shadow-lg overflow-hidden mb-6 lg:mb-8">
             <h2 className="text-lg lg:text-xl font-bold p-3 lg:p-4 text-[#FF4F18] border-b">Floor Plan</h2>
             <div className="p-4 lg:p-6">
-              {restaurant.floorplanData ? (
-                <PublicFloorPlan 
-                  floorplanData={restaurant.floorplanData}
-                  floorplanId={restaurant.floorplanId}
-                  restaurantId={restaurant._id}
-                />
-              ) : (
-                <div className="h-full flex flex-col items-center justify-center py-8 lg:py-12">
-                  <FaUtensils className="text-3xl lg:text-4xl text-[#FF4F18] mb-3 lg:mb-4" />
-                  <p className="text-gray-500 text-sm lg:text-base">Floor plan is not available</p>
-                </div>
-              )}
+              <PublicFloorplanSelector restaurant={restaurant} />
             </div>
           </div>
 

@@ -19,6 +19,7 @@ import { performanceMonitor, measurePerformance } from '@/utils/performance';
 import { handleSceneError } from '@/utils/errorHandler';
 import { useFirebaseAuth } from '@/contexts/FirebaseAuthContext';
 import { auth } from "@/lib/firebase-config";
+import '@/css/loading.css';
 
 export default function PublicFloorPlan({ floorplanData, floorplanId, restaurantId }) {
   // Clean up any existing tooltips on component mount
@@ -34,6 +35,20 @@ export default function PublicFloorPlan({ floorplanData, floorplanId, restaurant
     
     cleanupExistingTooltips();
   }, []);
+
+  // Cleanup when floorplanId changes to prevent object carryover
+  useEffect(() => {
+    return () => {
+      // Cleanup on unmount or when floorplanId changes
+      const existingTooltips = document.querySelectorAll('.table-hover-tooltip, .restaurant-table-label');
+      existingTooltips.forEach(tooltip => {
+        if (document.body.contains(tooltip)) {
+          document.body.removeChild(tooltip);
+        }
+      });
+    };
+  }, [floorplanId]);
+
   const containerRef = useRef(null);
   const sceneRef = useRef(null);
   const rendererRef = useRef(null);
@@ -86,6 +101,7 @@ export default function PublicFloorPlan({ floorplanData, floorplanId, restaurant
   const { userProfile, isAuthenticated, loading: authLoading } = useFirebaseAuth(); // Use the centralized auth state
   const [authLoadingOverride, setAuthLoadingOverride] = useState(false);
   
+  
   // Debug auth state changes
   useEffect(() => {
     console.log('🔍 PublicFloorPlan auth state:', {
@@ -104,6 +120,7 @@ export default function PublicFloorPlan({ floorplanData, floorplanId, restaurant
       hasUserProfile: !!userProfile
     });
   }, []);
+
 
   // Override loading state after 3 seconds to prevent permanent blocking
   useEffect(() => {
@@ -166,37 +183,44 @@ export default function PublicFloorPlan({ floorplanData, floorplanId, restaurant
 
     // Cleanup function
     const cleanup = () => {
-      // Stop performance monitoring
-      if (process.env.NODE_ENV === 'development') {
-        performanceMonitor.stop();
-      }
+      // Clean up table labels
+      const existingLabels = document.querySelectorAll('.table-hover-tooltip');
+      existingLabels.forEach(label => {
+        if (document.body.contains(label)) {
+          document.body.removeChild(label);
+        }
+      });
 
-      // Cancel any pending animation frame
+      // Cancel animation frame
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
         animationFrameRef.current = null;
       }
 
-      // Dispose renderer
-      if (rendererRef.current) {
-        rendererRef.current.dispose();
-        rendererRef.current = null;
-      }
-
+      // Dispose of Three.js objects
       if (sceneRef.current) {
-        // Only dispose of non-essential geometries and materials
         sceneRef.current.traverse((object) => {
-          if (object.geometry && !object.userData?.isEssential) {
+          if (object.geometry) {
             object.geometry.dispose();
           }
           if (object.material) {
             if (Array.isArray(object.material)) {
-              object.material.forEach(material => !object.userData?.isEssential && material.dispose());
+              object.material.forEach(material => material.dispose());
             } else {
-              !object.userData?.isEssential && object.material.dispose();
+              object.material.dispose();
             }
           }
         });
+        
+        // Clear the scene
+        sceneRef.current.clear();
+      }
+
+      // Dispose renderer
+      if (rendererRef.current) {
+        rendererRef.current.dispose();
+        rendererRef.current.forceContextLoss();
+        rendererRef.current = null;
       }
       
       // Clear the container more safely
@@ -268,7 +292,7 @@ export default function PublicFloorPlan({ floorplanData, floorplanId, restaurant
         updateLoadingProgress('Setting up 3D environment...', 10);
 
         const renderer = new THREE.WebGLRenderer({ 
-          antialias: process.env.NODE_ENV === 'production',
+          antialias: true,
           powerPreference: "high-performance",
           alpha: true
         });
@@ -357,11 +381,11 @@ export default function PublicFloorPlan({ floorplanData, floorplanId, restaurant
         doorManagerRef.current = new DoorManager(scene, { walls: [] }, renderer);
         windowManagerRef.current = new WindowManager(scene, { walls: [] }, renderer);
 
-        // Process floorplan data with parallel loading
+        // Process floorplan data with optimized progressive loading
         if (floorplanData.objects) {
           console.log('Processing floorplan data with', floorplanData.objects.length, 'objects');
           const wallMap = new Map();
-
+          
           // Create walls (fast, no loading needed)
           console.log("Loading walls...");
           updateLoadingProgress('Creating walls...', 65);
@@ -390,8 +414,8 @@ export default function PublicFloorPlan({ floorplanData, floorplanId, restaurant
             wallMap.set(objData.userData.uuid, wall);
           }
 
-          // Load all furniture models in parallel
-          console.log("Loading furniture in parallel...");
+          // Load furniture progressively for better performance
+          console.log("Loading furniture progressively...");
           updateLoadingProgress('Loading furniture...', 70);
           
           const tableObjects = floorplanData.objects.filter(obj => obj.userData?.isTable);
@@ -530,10 +554,12 @@ export default function PublicFloorPlan({ floorplanData, floorplanId, restaurant
                 }
                 setIsLoading(false);
                 setSceneLoaded(true);
+                
+                
                 setShowInstructions(true);
                 setTimeout(() => {
                   setShowInstructions(false);
-                }, 8000);
+                }, 6000); // Reduced from 8 seconds
               }
             });
           }
@@ -1796,7 +1822,7 @@ export default function PublicFloorPlan({ floorplanData, floorplanId, restaurant
               exit={{ opacity: 0, y: -20 }}
               transition={{ delay: 0.5 }}
               className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 
-                bg-black/80 text-white px-6 py-4 rounded-xl shadow-xl z-50 text-center"
+                bg-black/80 text-white px-6 py-4 rounded-xl shadow-xl z-20 text-center"
             >
               {/* Close button */}
               <button
@@ -1835,6 +1861,7 @@ export default function PublicFloorPlan({ floorplanData, floorplanId, restaurant
           )}
         </AnimatePresence>
       </div>
+      
     </div>
   );
 };

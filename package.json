@@ -2,12 +2,16 @@
   "name": "foodloft",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "scripts": {
     "dev": "next dev",
     "build": "next build --no-lint",
     "start": "next start",
     "lint": "next lint",
-    "cleanup-history": "node scripts/cleanup-duplicate-history.js"
+    "cleanup-history": "node scripts/cleanup-duplicate-history.js",
+    "migrate:floorplans": "node scripts/migrate-floorplans.js",
+    "test:public-floorplan": "node scripts/test-public-floorplan.js",
+    "cleanup:floorplan-fields": "node scripts/cleanup-old-floorplan-fields.js"
   },
   "dependencies": {
     "@aws-sdk/s3-request-presigner": "^3.744.0",
@@ -28,7 +32,7 @@
     "cors": "^2.8.5",
     "date-fns": "^4.1.0",
     "date-fns-tz": "^3.2.0",
-    "dotenv": "^17.2.0",
+    "dotenv": "^16.3.1",
     "express": "^4.21.2",
     "firebase": "^12.0.0",
     "firebase-admin": "^13.4.0",

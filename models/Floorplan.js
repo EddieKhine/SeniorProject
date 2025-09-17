@@ -11,6 +11,10 @@ const floorplanSchema = new mongoose.Schema({
         required: [true, 'Please provide a name for the floorplan'],
         trim: true
     },
+    isDefault: {
+        type: Boolean,
+        default: false
+    },
     screenshotUrl: {
         type: String,
         required: false,
