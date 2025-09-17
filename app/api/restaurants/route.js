@@ -28,6 +28,32 @@ export async function POST(req) {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const ownerId = decoded.userId;
 
+    // Get owner with subscription to check SaaS limits
+    const RestaurantOwner = require('@/models/restaurant-owner');
+    const Subscription = require('@/models/Subscription');
+    
+    const owner = await RestaurantOwner.findById(ownerId).populate('subscriptionId');
+    if (!owner) {
+      return NextResponse.json({ message: "Owner not found" }, { status: 404 });
+    }
+
+    // Check SaaS restaurant limit
+    if (owner.subscriptionId) {
+      const currentRestaurants = await Restaurant.countDocuments({ ownerId });
+      const limit = owner.subscriptionId.usage.restaurantsLimit;
+      
+      if (currentRestaurants >= limit && limit !== -1) { // -1 means unlimited
+        return NextResponse.json({ 
+          error: 'Restaurant limit reached',
+          message: `You have reached your limit of ${limit} restaurants. Please upgrade your plan to add more restaurants.`,
+          currentPlan: owner.subscriptionId.planType,
+          upgradeRequired: true,
+          currentUsage: currentRestaurants,
+          limit: limit
+        }, { status: 403 });
+      }
+    }
+
     // Check if owner already has a restaurant
     const existingRestaurant = await Restaurant.findOne({ ownerId });
     if (existingRestaurant) {
@@ -84,6 +110,12 @@ export async function POST(req) {
 
     // Update owner with restaurant reference
     await RestaurantOwner.findByIdAndUpdate(ownerId, { restaurantId: restaurant._id });
+
+    // Update SaaS usage tracking
+    if (owner.subscriptionId) {
+      await owner.subscriptionId.incrementUsage('restaurantsUsed', 1);
+      await owner.subscriptionId.incrementUsage('apiCallsThisMonth', 1);
+    }
 
     return NextResponse.json({ message: "Profile created successfully!", restaurant }, { status: 201 });
   } catch (error) {

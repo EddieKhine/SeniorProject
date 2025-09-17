@@ -7,6 +7,7 @@ import RestaurantOwnerLoginModal from "@/components/RestaurantOwnerLoginModal";
 import RestaurantOwnerSignupModal from "@/components/RestaurantOwnerSignupModal";
 import RestaurantOwnerNavbar from '@/components/RestaurantOwnerNavbar';
 import DemoVideoModal from "@/components/DemoVideoModal";
+import EnhancedSubscriptionPlans from "@/components/EnhancedSubscriptionPlans";
 
 export default function RestaurantOwnerHome() {
   const router = useRouter();
@@ -192,124 +193,12 @@ export default function RestaurantOwnerHome() {
         <div className="absolute -top-32 -right-32 w-96 h-96 bg-[#FF4F18]/10 rounded-full blur-[100px] z-20" />
       </section>
 
-      {/* Pricing Section - Modern Stacked Cards */}
+      {/* Enhanced SaaS Subscription Plans */}
       <section className="py-24 relative bg-gray-50">
         <div className="container mx-auto px-6">
-          <div className="text-center mb-16">
-            <motion.h2 
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              className="text-4xl font-bold text-gray-900"
-            >
-              SUBSCRIPTIONS
-            </motion.h2>
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-8 max-w-7xl mx-auto">
-            {/* Basic Plan */}
-            <motion.div
-              whileHover={{ y: -8 }}
-              className="bg-white rounded-2xl p-8 relative group shadow-lg hover:shadow-xl transition-all"
-            >
-              <h3 className="text-2xl font-bold text-gray-900 mb-4">Basic Plan</h3>
-              <div className="mb-6">
-                <span className="text-3xl font-bold text-gray-900">THB 1,200</span>
-                <span className="text-gray-500">/month</span>
-              </div>
-              
-              <div className="space-y-4">
-                <h4 className="text-lg font-semibold text-gray-900">Features:</h4>
-                <ul className="space-y-3">
-                  {[
-                    "Restaurant profile listing on the platform",
-                    "1 floor plan for customization",
-                    "Real-time table reservation management",
-                    "Custom table and chair sizing",
-                    "Email notifications for reservations",
-                    "Basic customer support"
-                  ].map((feature, index) => (
-                    <li key={index} className="flex items-start gap-3 text-gray-600">
-                      <FaCheckCircle className="text-[#FF4F18] mt-1 flex-shrink-0" />
-                      <span>{feature}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </motion.div>
-
-            {/* Professional Plan */}
-            <motion.div
-              whileHover={{ y: -8 }}
-              className="bg-[#FF4F18] rounded-2xl p-8 relative group shadow-xl"
-            >
-              <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-white px-4 py-1 rounded-full shadow-lg">
-                <span className="text-[#FF4F18] text-sm font-medium">Most Popular</span>
-              </div>
-              
-              <h3 className="text-2xl font-bold text-white mb-4">Professional Plan</h3>
-              <div className="mb-6">
-                <span className="text-3xl font-bold text-white">THB 2,800</span>
-                <span className="text-white/80">/month</span>
-              </div>
-
-              <div className="space-y-4">
-                <h4 className="text-lg font-semibold text-white">Features:</h4>
-                <ul className="space-y-3">
-                  {[
-                    "Up to 3 floor plans (perfect for multi-floor or larger restaurants)",
-                    "Real-time reservations with visual seat management",
-                    "Table grouping feature (for large parties)",
-                    "Multi-floor support (dropdown to switch between floors)",
-                    "Google Maps integration for customer convenience",
-                    "Customer reviews and ratings display",
-                    "SMS and email notifications for customers",
-                    "Priority email support"
-                  ].map((feature, index) => (
-                    <li key={index} className="flex items-start gap-3 text-white/90">
-                      <FaCheckCircle className="text-white mt-1 flex-shrink-0" />
-                      <span>{feature}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </motion.div>
-
-            {/* Business Plan */}
-            <motion.div
-              whileHover={{ y: -8 }}
-              className="bg-white rounded-2xl p-8 relative group shadow-lg hover:shadow-xl transition-all"
-            >
-              <h3 className="text-2xl font-bold text-gray-900 mb-4">Business Plan</h3>
-              <div className="mb-6">
-                <span className="text-3xl font-bold text-gray-900">THB 5,500</span>
-                <span className="text-gray-500">/month</span>
-              </div>
-
-              <div className="space-y-4">
-                <h4 className="text-lg font-semibold text-gray-900">Features:</h4>
-                <ul className="space-y-3">
-                  {[
-                    "Unlimited floor plans (suitable for large restaurants, cruise ships, or chains)",
-                    "Advanced real-time seat management",
-                    "Dynamic table arrangement feature (easily adjust table sizes)",
-                    "Integration with third-party services (e.g., LINE, WhatsApp)",
-                    "Custom branding (logo, colors) on the platform",
-                    "Customizable menus for reservations (seasonal, VIP access)",
-                    "Automated reservation reminders and waitlist management",
-                    "Advanced reporting (reservation trends, revenue, and customer behavior)",
-                    "Priority support (response within 2 hours)"
-                  ].map((feature, index) => (
-                    <li key={index} className="flex items-start gap-3 text-gray-600">
-                      <FaCheckCircle className="text-[#FF4F18] mt-1 flex-shrink-0" />
-                      <span>{feature}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </motion.div>
-          </div>
+          <EnhancedSubscriptionPlans />
         </div>
-
+        
         {/* Background Elements */}
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-[#FF4F18]/5 rounded-full blur-3xl -z-10" />
       </section>

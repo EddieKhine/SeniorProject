@@ -5,7 +5,8 @@ import { useRouter } from 'next/navigation'
 import RestaurantInformation from '@/components/RestaurantInformation'
 import RestaurantProfileForm from '@/components/RestaurantProfileForm'
 import SubscriptionPlans from '@/components/SubscriptionPlans'
-import { RiRestaurantLine, RiLayoutLine, RiCalendarLine, RiVipCrownLine, RiUserLine, RiMessage2Line, RiTeamLine } from 'react-icons/ri'
+import SubscriptionManagement from '@/components/SubscriptionManagement'
+import { RiRestaurantLine, RiLayoutLine, RiCalendarLine, RiVipCrownLine, RiUserLine, RiMessage2Line, RiTeamLine, RiBarChartLine } from 'react-icons/ri'
 import { motion } from 'framer-motion'
 import OwnerProfile from '@/components/OwnerProfile'
 import RestaurantFloorPlan from '@/components/RestaurantFloorPlan'
@@ -217,7 +218,19 @@ export default function RestaurantSetupDashboard() {
               }`}
             >
               <RiVipCrownLine className="text-xl" />
-              <span>Subscription</span>
+              <span>Upgrade Plan</span>
+            </button>
+            
+            <button
+              onClick={() => setActiveSection('subscription-management')}
+              className={`flex items-center space-x-3 w-full p-3 rounded-lg transition-all duration-200 ${
+                activeSection === 'subscription-management'
+                  ? 'bg-[#FF4F18] text-white font-medium shadow-lg'
+                  : 'text-gray-600 hover:bg-gray-50 hover:text-[#FF4F18]'
+              }`}
+            >
+              <RiBarChartLine className="text-xl" />
+              <span>Usage & Limits</span>
             </button>
             
             <button
@@ -281,7 +294,8 @@ export default function RestaurantSetupDashboard() {
               {activeSection === 'profile' && 'Restaurant Profile'}
               {activeSection === 'floorplan' && 'Floor Plan'}
               {activeSection === 'reservation' && 'Reservations'}
-              {activeSection === 'subscription' && 'Subscription Plans'}
+              {activeSection === 'subscription' && 'Upgrade Plan'}
+              {activeSection === 'subscription-management' && 'Usage & Limits'}
               {activeSection === 'staff' && 'Staff Management'}
               {activeSection === 'messages' && 'Messages'}
             </h1>
@@ -424,6 +438,11 @@ export default function RestaurantSetupDashboard() {
           {activeSection === 'subscription' && (
             <div className="bg-white p-6 rounded-xl shadow-sm border border-[#F2F4F7] mt-4">
               <SubscriptionPlans />
+            </div>
+          )}
+          {activeSection === 'subscription-management' && (
+            <div className="bg-white p-6 rounded-xl shadow-sm border border-[#F2F4F7] mt-4">
+              <SubscriptionManagement ownerId={restaurantId} />
             </div>
           )}
           {activeSection === 'owner-profile' && (

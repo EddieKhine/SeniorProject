@@ -49,6 +49,32 @@ export async function POST(request) {
         );
       }
 
+      // Find restaurant with subscription for SaaS limits
+      const restaurant = await Restaurant.findById(data.restaurantId).populate('subscriptionId');
+      if (!restaurant) {
+        return NextResponse.json(
+          { error: 'Restaurant not found' },
+          { status: 404 }
+        );
+      }
+
+      // Check SaaS floorplan limit
+      if (restaurant.subscriptionId) {
+        const currentFloorPlans = await Floorplan.countDocuments({ restaurantId: data.restaurantId });
+        const limit = restaurant.subscriptionId.usage.floorPlansLimit;
+        
+        if (currentFloorPlans >= limit && limit !== -1) { // -1 means unlimited
+          return NextResponse.json({ 
+            error: 'Floor plan limit reached',
+            message: `You have reached your limit of ${limit} floor plans. Please upgrade your plan to add more.`,
+            currentPlan: restaurant.subscriptionId.planType,
+            upgradeRequired: true,
+            currentUsage: currentFloorPlans,
+            limit: limit
+          }, { status: 403 });
+        }
+      }
+
       // Create floorplan with minimal required data
       const floorplan = new Floorplan({
         name: data.name || "Restaurant Floor Plan",
@@ -64,7 +90,6 @@ export async function POST(request) {
       await floorplan.save();
 
       // Update restaurant with floorplan ID
-      const restaurant = await Restaurant.findById(data.restaurantId);
       const isFirstFloorplan = !restaurant.floorplans || restaurant.floorplans.length === 0;
       
       await Restaurant.findByIdAndUpdate(
@@ -74,6 +99,12 @@ export async function POST(request) {
           ...(isFirstFloorplan && { defaultFloorplanId: floorplan._id })
         }
       );
+
+      // Update SaaS usage tracking
+      if (restaurant.subscriptionId) {
+        await restaurant.subscriptionId.incrementUsage('floorPlansUsed', 1);
+        await restaurant.subscriptionId.incrementUsage('apiCallsThisMonth', 1);
+      }
 
       return NextResponse.json({
         message: "Floorplan created successfully",

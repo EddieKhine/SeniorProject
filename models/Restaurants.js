@@ -59,8 +59,146 @@ const restaurantSchema = new mongoose.Schema({
   totalReviews: {
     type: Number,
     default: 0
+  },
+  
+  // SaaS Integration
+  subscriptionId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Subscription'
+  },
+  organizationId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Organization'
+  },
+  
+  // SaaS Status
+  saasStatus: {
+    type: String,
+    enum: ['active', 'inactive', 'suspended', 'trial'],
+    default: 'active'
+  },
+  
+  // Feature flags
+  features: {
+    floorPlan3D: {
+      type: Boolean,
+      default: true
+    },
+    realTimeReservations: {
+      type: Boolean,
+      default: true
+    },
+    emailNotifications: {
+      type: Boolean,
+      default: true
+    },
+    basicAnalytics: {
+      type: Boolean,
+      default: true
+    },
+    custom3DModels: {
+      type: Boolean,
+      default: false
+    },
+    arSupport: {
+      type: Boolean,
+      default: false
+    },
+    advancedAnalytics: {
+      type: Boolean,
+      default: false
+    },
+    prioritySupport: {
+      type: Boolean,
+      default: false
+    },
+    apiAccess: {
+      type: Boolean,
+      default: false
+    },
+    whiteLabel: {
+      type: Boolean,
+      default: false
+    },
+    customIntegrations: {
+      type: Boolean,
+      default: false
+    }
+  },
+  
+  // Usage limits
+  limits: {
+    floorPlansLimit: {
+      type: Number,
+      default: 1
+    },
+    tablesLimit: {
+      type: Number,
+      default: 20
+    },
+    staffLimit: {
+      type: Number,
+      default: 5
+    },
+    bookingsLimit: {
+      type: Number,
+      default: 1000
+    },
+    apiCallsLimit: {
+      type: Number,
+      default: 10000
+    },
+    storageLimit: {
+      type: Number,
+      default: 1000
+    }
   }
 }, { timestamps: true });
+
+// Indexes for SaaS functionality
+restaurantSchema.index({ subscriptionId: 1 });
+restaurantSchema.index({ organizationId: 1 });
+restaurantSchema.index({ saasStatus: 1 });
+
+// Method to check if feature is available
+restaurantSchema.methods.hasFeature = function(featureName) {
+  return this.features[featureName] === true;
+};
+
+// Method to check usage limits
+restaurantSchema.methods.isWithinLimit = function(usageType) {
+  return this.limits[`${usageType}Limit`] === -1 || this.limits[`${usageType}Limit`] > 0;
+};
+
+// Method to get plan type from subscription
+restaurantSchema.methods.getPlanType = async function() {
+  if (this.subscriptionId) {
+    const Subscription = mongoose.model('Subscription');
+    const subscription = await Subscription.findById(this.subscriptionId);
+    return subscription ? subscription.planType : 'free';
+  }
+  return 'free';
+};
+
+// Method to update features based on plan
+restaurantSchema.methods.updateFeaturesFromPlan = async function(planType) {
+  const Subscription = mongoose.model('Subscription');
+  const planLimits = Subscription.getPlanLimits(planType);
+  
+  // Update features
+  Object.keys(planLimits.features).forEach(feature => {
+    this.features[feature] = planLimits.features[feature];
+  });
+  
+  // Update limits
+  Object.keys(planLimits).forEach(limit => {
+    if (limit !== 'features' && this.limits[limit] !== undefined) {
+      this.limits[limit] = planLimits[limit];
+    }
+  });
+  
+  return this.save();
+};
 
 const Restaurant = mongoose.models.Restaurant || mongoose.model("Restaurant", restaurantSchema);
 

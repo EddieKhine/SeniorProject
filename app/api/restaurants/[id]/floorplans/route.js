@@ -60,8 +60,8 @@ export async function POST(request, { params }) {
       return NextResponse.json({ error: 'Floorplan name is required' }, { status: 400 });
     }
 
-    // Find restaurant
-    const restaurant = await Restaurant.findById(id);
+    // Find restaurant with subscription
+    const restaurant = await Restaurant.findById(id).populate('subscriptionId');
     if (!restaurant) {
       return NextResponse.json({ error: 'Restaurant not found' }, { status: 404 });
     }
@@ -69,6 +69,23 @@ export async function POST(request, { params }) {
     // Verify ownership
     if (restaurant.ownerId.toString() !== decoded.userId) {
       return NextResponse.json({ error: 'Unauthorized - Not restaurant owner' }, { status: 403 });
+    }
+
+    // Check SaaS floorplan limit
+    if (restaurant.subscriptionId) {
+      const currentFloorPlans = await Floorplan.countDocuments({ restaurantId: id });
+      const limit = restaurant.subscriptionId.usage.floorPlansLimit;
+      
+      if (currentFloorPlans >= limit && limit !== -1) { // -1 means unlimited
+        return NextResponse.json({ 
+          error: 'Floor plan limit reached',
+          message: `You have reached your limit of ${limit} floor plans. Please upgrade your plan to add more.`,
+          currentPlan: restaurant.subscriptionId.planType,
+          upgradeRequired: true,
+          currentUsage: currentFloorPlans,
+          limit: limit
+        }, { status: 403 });
+      }
     }
 
     // Check if this is the first floorplan (should be default)
@@ -93,6 +110,12 @@ export async function POST(request, { params }) {
       $push: { floorplans: floorplan._id },
       ...(isFirstFloorplan && { defaultFloorplanId: floorplan._id })
     });
+
+    // Update SaaS usage tracking
+    if (restaurant.subscriptionId) {
+      await restaurant.subscriptionId.incrementUsage('floorPlansUsed', 1);
+      await restaurant.subscriptionId.incrementUsage('apiCallsThisMonth', 1);
+    }
 
     return NextResponse.json({
       message: "Floorplan created successfully",

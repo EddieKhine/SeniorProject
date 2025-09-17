@@ -88,6 +88,73 @@ export async function POST(req) {
 
     await owner.save();
     console.log("✅ [API] New restaurant owner saved in MongoDB:", owner);
+
+    // Create default organization and subscription for new owner
+    const Organization = require('@/models/Organization');
+    const Subscription = require('@/models/Subscription');
+    
+    const organization = new Organization({
+      name: `${firstName} ${lastName}'s Organization`,
+      description: 'Default organization for restaurant owner',
+      type: 'restaurant',
+      email: email,
+      members: [{
+        userId: owner._id,
+        role: 'owner',
+        permissions: [
+          'manage_organization',
+          'manage_subscription',
+          'manage_restaurants',
+          'manage_staff',
+          'manage_bookings',
+          'view_analytics',
+          'manage_settings'
+        ],
+        joinedAt: new Date(),
+        isActive: true
+      }],
+      status: 'active'
+    });
+    
+    await organization.save();
+    
+    // Create default free subscription
+    const freePlanLimits = Subscription.getPlanLimits('free');
+    const subscription = new Subscription({
+      restaurantId: null, // Will be set when first restaurant is created
+      ownerId: owner._id,
+      organizationId: organization._id,
+      planType: 'free',
+      billingCycle: 'monthly',
+      price: 0,
+      currency: 'THB',
+      status: 'active',
+      startDate: new Date(),
+      endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
+      usage: {
+        restaurantsUsed: 0,
+        restaurantsLimit: freePlanLimits.restaurantsLimit,
+        floorPlansUsed: 0,
+        floorPlansLimit: freePlanLimits.floorPlansLimit,
+        tablesUsed: 0,
+        tablesLimit: freePlanLimits.tablesLimit,
+        staffUsed: 0,
+        staffLimit: freePlanLimits.staffLimit,
+        bookingsUsed: 0,
+        bookingsLimit: freePlanLimits.bookingsLimit,
+        apiCallsUsed: 0,
+        apiCallsLimit: freePlanLimits.apiCallsLimit,
+        storageUsed: 0,
+        storageLimit: freePlanLimits.storageLimit
+      },
+      features: freePlanLimits.features
+    });
+    
+    await subscription.save();
+    
+    // Update organization with subscription reference
+    organization.subscriptionId = subscription._id;
+    await organization.save();
     
     const ownerData = {
       userId: owner._id,

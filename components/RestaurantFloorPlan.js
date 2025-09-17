@@ -95,11 +95,11 @@ export default function RestaurantFloorPlan({ token, restaurantId, isCustomerVie
 
   // Cleanup function to properly dispose of Three.js resources
   const cleanup = () => {
-    // Clean up table labels
-    const existingLabels = document.querySelectorAll('.restaurant-table-label');
+    // Clean up table labels from this component only
+    const existingLabels = document.querySelectorAll('.restaurant-table-label[data-component="restaurant-floorplan"]');
     existingLabels.forEach(label => {
-      if (document.body.contains(label)) {
-        document.body.removeChild(label);
+      if (label.parentNode) {
+        label.parentNode.removeChild(label);
       }
     });
 
@@ -444,37 +444,64 @@ export default function RestaurantFloorPlan({ token, restaurantId, isCustomerVie
         const createRestaurantTableLabels = () => {
           // Clear existing labels
           tableLabels.forEach(label => {
-            if (document.body.contains(label)) {
-              document.body.removeChild(label);
+            if (label.parentNode) {
+              label.parentNode.removeChild(label);
             }
           });
           tableLabels.length = 0;
 
+          // Track processed table IDs to avoid duplicates
+          const processedTableIds = new Set();
+
           // Create labels for all tables
           sceneRef.current.traverse((object) => {
             if (object.userData?.isTable) {
-              const tableId = object.userData.objectId || object.userData.friendlyId || object.userData.id || 'T';
+              // Generate a unique table ID
+              let tableId = object.userData.objectId || object.userData.friendlyId || object.userData.id;
               
-              // Create label element
+              // If no ID exists, generate one based on position
+              if (!tableId) {
+                const pos = object.position;
+                tableId = `T${Math.round(pos.x)}${Math.round(pos.z)}`;
+              }
+              
+              // Ensure uniqueness by adding a counter if needed
+              let uniqueTableId = tableId;
+              let counter = 1;
+              while (processedTableIds.has(uniqueTableId)) {
+                uniqueTableId = `${tableId}_${counter}`;
+                counter++;
+              }
+              processedTableIds.add(uniqueTableId);
+              
+              // Create label element with unique identifier for this component
               const label = document.createElement('div');
               label.className = 'restaurant-table-label';
-              label.innerHTML = `<span class="table-number">${tableId}</span>`;
+              label.setAttribute('data-table-id', uniqueTableId);
+              label.setAttribute('data-component', 'restaurant-floorplan');
+              label.innerHTML = `<span class="table-number">${uniqueTableId}</span>`;
               label.style.position = 'absolute';
               label.style.pointerEvents = 'none';
               label.style.zIndex = '1000';
+              label.style.transform = 'translate(-50%, -50%)';
               
               // Store reference to the table object for positioning
               label.tableObject = object;
               
-              document.body.appendChild(label);
+              // Append to the container instead of document.body
+              if (containerRef.current) {
+                containerRef.current.appendChild(label);
+              } else {
+                document.body.appendChild(label);
+              }
               tableLabels.push(label);
             }
           });
         };
 
         const updateRestaurantTableLabelPositions = () => {
-          const rect = containerRef.current?.getBoundingClientRect();
-          if (!rect) return;
+          const container = containerRef.current;
+          if (!container) return;
           
           tableLabels.forEach(label => {
             if (label.tableObject) {
@@ -485,25 +512,38 @@ export default function RestaurantFloorPlan({ token, restaurantId, isCustomerVie
               // Convert to screen coordinates
               const screenPosition = worldPosition.clone().project(camera);
               
-              // Convert to pixel coordinates
-              const x = (screenPosition.x * 0.5 + 0.5) * rect.width + rect.left;
-              const y = (screenPosition.y * -0.5 + 0.5) * rect.height + rect.top;
-              
-              // Position label
-              label.style.left = x + 'px';
-              label.style.top = (y - 15) + 'px'; // Slightly above table center
+              // Only show labels that are in front of the camera (z < 1)
+              if (screenPosition.z < 1) {
+                // Convert to pixel coordinates relative to the container
+                const x = (screenPosition.x * 0.5 + 0.5) * container.clientWidth;
+                const y = (screenPosition.y * -0.5 + 0.5) * container.clientHeight;
+                
+                // Position label relative to the container
+                label.style.position = 'absolute';
+                label.style.left = x + 'px';
+                label.style.top = (y - 15) + 'px'; // Slightly above table center
+                label.style.transform = 'translate(-50%, -50%)';
+                label.style.display = 'block';
+              } else {
+                // Hide labels that are behind the camera
+                label.style.display = 'none';
+              }
             }
           });
         };
 
         // Animation Loop
+        let frameCount = 0;
         const animate = () => {
           animationFrameRef.current = requestAnimationFrame(animate);
           controls.update();
           renderer.render(scene, camera);
           
-          // Update table label positions on each frame
-          updateRestaurantTableLabelPositions();
+          // Update table label positions every 3rd frame to avoid FPS drops
+          frameCount++;
+          if (frameCount % 3 === 0) {
+            updateRestaurantTableLabelPositions();
+          }
         };
         animate();
 

@@ -7,6 +7,7 @@ import { createScene, createFloor } from '@/scripts/floor';
 import { chair, table, roundTable, sofa, create2SeaterTable, create8SeaterTable, plant01, plant02 } from '@/scripts/asset';
 import { DoorManager } from '@/scripts/managers/DoorManager';
 import { WindowManager } from '@/scripts/managers/WindowManager';
+import FloorplanManager from './FloorplanManager';
 import '@/css/booking.css';
 import '@/css/loading.css';
 import { toast, Toaster } from 'react-hot-toast';
@@ -16,6 +17,74 @@ import gsap from 'gsap';
 import { motion, AnimatePresence } from "framer-motion";
 
 export default function RestaurantBookingManager({ floorplanData, floorplanId, restaurantId }) {
+  // Restaurant table label styles - professional and clear for staff
+  const restaurantTableLabelStyles = `
+    .restaurant-table-label {
+      position: absolute;
+      z-index: 1000;
+      background: linear-gradient(135deg, #3A2E2B 0%, #4A3C39 100%);
+      color: white;
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 700;
+      box-shadow: 0 3px 8px rgba(58, 46, 43, 0.4);
+      pointer-events: none;
+      transform: translate(-50%, -50%);
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      backdrop-filter: blur(5px);
+      min-width: 32px;
+      text-align: center;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+    }
+
+    .restaurant-table-label .table-number {
+      font-weight: 800;
+      font-size: 13px;
+      letter-spacing: 0.5px;
+    }
+
+    /* Add a subtle glow effect for better visibility */
+    .restaurant-table-label::before {
+      content: '';
+      position: absolute;
+      top: -2px;
+      left: -2px;
+      right: -2px;
+      bottom: -2px;
+      background: linear-gradient(135deg, #FF4F18, #3A2E2B);
+      border-radius: 10px;
+      z-index: -1;
+      opacity: 0.7;
+    }
+
+    /* Responsive sizing */
+    @media (max-width: 768px) {
+      .restaurant-table-label {
+        font-size: 12px;
+        padding: 4px 8px;
+      }
+      
+      .restaurant-table-label .table-number {
+        font-size: 11px;
+      }
+    }
+  `;
+
+  // Add restaurant table label styles to the document
+  useEffect(() => {
+    const styleElement = document.createElement('style');
+    styleElement.textContent = restaurantTableLabelStyles;
+    document.head.appendChild(styleElement);
+    
+    return () => {
+      if (document.head.contains(styleElement)) {
+        document.head.removeChild(styleElement);
+      }
+    };
+  }, []);
+
   // State for WebGL context management
   const [webglError, setWebglError] = useState(null);
   const [webglSupported, setWebglSupported] = useState(true); // Start optimistic
@@ -25,6 +94,8 @@ export default function RestaurantBookingManager({ floorplanData, floorplanId, r
   const animationFrameRef = useRef(null);
   const doorManagerRef = useRef(null);
   const windowManagerRef = useRef(null);
+  const [selectedFloorplan, setSelectedFloorplan] = useState(null);
+  const [showFloorplanManager, setShowFloorplanManager] = useState(false);
   const [selectedDate, setSelectedDate] = useState(() => {
     const today = new Date();
     // Adjust for local timezone
@@ -116,6 +187,27 @@ export default function RestaurantBookingManager({ floorplanData, floorplanId, r
 
     // Cleanup function
     const cleanup = () => {
+      // Clean up table labels from this component only
+      const existingLabels = document.querySelectorAll('.restaurant-table-label[data-component="restaurant-booking-manager"]');
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Cleaning up', existingLabels.length, 'existing table labels from restaurant-booking-manager');
+      }
+      existingLabels.forEach(label => {
+        if (label.parentNode) {
+          label.parentNode.removeChild(label);
+        }
+      });
+      
+      // Also clean up any labels that might be in the container
+      if (containerRef.current) {
+        const containerLabels = containerRef.current.querySelectorAll('.restaurant-table-label[data-component="restaurant-booking-manager"]');
+        containerLabels.forEach(label => {
+          if (label.parentNode) {
+            label.parentNode.removeChild(label);
+          }
+        });
+      }
+
       // Cancel any pending animation frame
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
@@ -308,29 +400,17 @@ export default function RestaurantBookingManager({ floorplanData, floorplanId, r
                 objData.rotation.z
               );
               model.scale.fromArray(objData.scale);
+              // Ensure table has a unique ID
+              const tableId = objData.objectId || objData.userData?.objectId || objData.userData?.friendlyId || objData.userData?.id || `T${Math.round(objData.position[0])}${Math.round(objData.position[2])}`;
+              
               model.userData = {
                 ...objData.userData,
-                objectId: objData.objectId
+                objectId: tableId,
+                isTable: true,
+                id: tableId
               };
 
-              // Make model initially transparent
-              model.traverse((child) => {
-                if (child.material) {
-                  if (Array.isArray(child.material)) {
-                    child.material.forEach(mat => {
-                      mat.transparent = true;
-                      mat.opacity = 0;
-                    });
-                  } else {
-                    child.material.transparent = true;
-                    child.material.opacity = 0;
-                  }
-                }
-              });
-
-              scene.add(model);
-
-              // Set full opacity immediately
+              // Set table opacity to full visibility immediately
               model.traverse((child) => {
                 if (child.material) {
                   if (Array.isArray(child.material)) {
@@ -344,6 +424,8 @@ export default function RestaurantBookingManager({ floorplanData, floorplanId, r
                   }
                 }
               });
+
+              scene.add(model);
             }
           }
           // Removed pause for faster loading
@@ -420,37 +502,22 @@ export default function RestaurantBookingManager({ floorplanData, floorplanId, r
               model.scale.fromArray(objData.scale);
               model.userData = objData.userData;
 
-              // Make chair initially transparent
+              // Set chair opacity to full visibility immediately
               model.traverse((child) => {
                 if (child.material) {
                   if (Array.isArray(child.material)) {
                     child.material.forEach(mat => {
-                      mat.transparent = true;
-                      mat.opacity = 0;
+                      mat.transparent = false;
+                      mat.opacity = 1;
                     });
                   } else {
-                    child.material.transparent = true;
-                    child.material.opacity = 0;
+                    child.material.transparent = false;
+                    child.material.opacity = 1;
                   }
                 }
               });
 
               scene.add(model);
-
-              // Faster chair fade-in
-              // Removed fade-in loop for faster loading - set opacity immediately
-              if (false) { // Skip this loop
-                model.traverse((child) => {
-                  if (child.material) {
-                    if (Array.isArray(child.material)) {
-                      child.material.forEach(mat => mat.opacity = i);
-                    } else {
-                      child.material.opacity = i;
-                    }
-                  }
-                });
-                // Removed delay for faster loading
-              }
             }
           }
 
@@ -485,17 +552,17 @@ export default function RestaurantBookingManager({ floorplanData, floorplanId, r
               model.scale.fromArray(objData.scale);
               model.userData = objData.userData;
 
-              // Make plant initially transparent
+              // Set plant opacity to full visibility immediately
               model.traverse((child) => {
                 if (child.material) {
                   if (Array.isArray(child.material)) {
                     child.material.forEach(mat => {
-                      mat.transparent = true;
-                      mat.opacity = 0;
+                      mat.transparent = false;
+                      mat.opacity = 1;
                     });
                   } else {
-                    child.material.transparent = true;
-                    child.material.opacity = 0;
+                    child.material.transparent = false;
+                    child.material.opacity = 1;
                   }
                 }
               });
@@ -506,21 +573,6 @@ export default function RestaurantBookingManager({ floorplanData, floorplanId, r
               // Optimize plant rendering
               model.matrixAutoUpdate = false;
               model.updateMatrix();
-
-              // Faster plant fade-in
-              // Removed fade-in loop for faster loading - set opacity immediately
-              if (false) { // Skip this loop
-                model.traverse((child) => {
-                  if (child.material) {
-                    if (Array.isArray(child.material)) {
-                      child.material.forEach(mat => mat.opacity = i);
-                    } else {
-                      child.material.opacity = i;
-                    }
-                  }
-                });
-                // Removed delay for faster loading
-              }
             } else {
               console.error("Failed to load plant model");
             }
@@ -533,14 +585,133 @@ export default function RestaurantBookingManager({ floorplanData, floorplanId, r
           setIsLoading(false);
           setSceneLoaded(true);
 
-          // Animation loop
-          console.log('Starting animation loop');
+          // Table label functionality for restaurant staff
+          const tableLabels = [];
+
+          const createRestaurantTableLabels = () => {
+            // Clear existing labels more aggressively
+            tableLabels.forEach(label => {
+              if (label.parentNode) {
+                label.parentNode.removeChild(label);
+              }
+            });
+            tableLabels.length = 0;
+            
+            // Also clear any existing labels from the entire document (but only from this component)
+            const existingLabels = document.querySelectorAll('.restaurant-table-label[data-component="restaurant-booking-manager"]');
+            if (process.env.NODE_ENV === 'development') {
+              console.log('Removing', existingLabels.length, 'existing labels from restaurant-booking-manager before creating new ones');
+            }
+            existingLabels.forEach(label => {
+              if (label.parentNode) {
+                label.parentNode.removeChild(label);
+              }
+            });
+
+            // Track processed table IDs to avoid duplicates
+            const processedTableIds = new Set();
+
+            // Create labels for all tables
+            sceneRef.current.traverse((object) => {
+              if (object.userData?.isTable) {
+                // Generate a unique table ID
+                let tableId = object.userData.objectId || object.userData.friendlyId || object.userData.id;
+                
+                // If no ID exists, generate one based on position
+                if (!tableId) {
+                  const pos = object.position;
+                  tableId = `T${Math.round(pos.x)}${Math.round(pos.z)}`;
+                }
+                
+                // Ensure uniqueness by adding a counter if needed
+                let uniqueTableId = tableId;
+                let counter = 1;
+                while (processedTableIds.has(uniqueTableId)) {
+                  uniqueTableId = `${tableId}_${counter}`;
+                  counter++;
+                }
+                processedTableIds.add(uniqueTableId);
+                
+                // Create label element with unique identifier
+                const label = document.createElement('div');
+                label.className = 'restaurant-table-label';
+                label.setAttribute('data-table-id', uniqueTableId);
+                label.setAttribute('data-component', 'restaurant-booking-manager');
+                label.innerHTML = `<span class="table-number">${uniqueTableId}</span>`;
+                label.style.position = 'absolute';
+                label.style.pointerEvents = 'none';
+                label.style.zIndex = '1000';
+                label.style.transform = 'translate(-50%, -50%)';
+                
+                // Store reference to the table object for positioning
+                label.tableObject = object;
+                
+                // Append to the container instead of document.body
+                if (containerRef.current) {
+                  containerRef.current.appendChild(label);
+                } else {
+                  document.body.appendChild(label);
+                }
+                tableLabels.push(label);
+              }
+            });
+          };
+
+          const updateRestaurantTableLabelPositions = () => {
+            const container = containerRef.current;
+            if (!container) return;
+            
+            tableLabels.forEach(label => {
+              if (label.tableObject) {
+                // Get world position of table
+                const worldPosition = new THREE.Vector3();
+                label.tableObject.getWorldPosition(worldPosition);
+                
+                // Convert to screen coordinates
+                const screenPosition = worldPosition.clone().project(camera);
+                
+                // Only show labels that are in front of the camera (z < 1)
+                if (screenPosition.z < 1) {
+                  // Convert to pixel coordinates relative to the container
+                  const x = (screenPosition.x * 0.5 + 0.5) * container.clientWidth;
+                  const y = (screenPosition.y * -0.5 + 0.5) * container.clientHeight;
+                  
+                  // Position label relative to the container
+                  label.style.position = 'absolute';
+                  label.style.left = x + 'px';
+                  label.style.top = (y - 15) + 'px'; // Slightly above table center
+                  label.style.transform = 'translate(-50%, -50%)';
+                  label.style.display = 'block';
+                } else {
+                  // Hide labels that are behind the camera
+                  label.style.display = 'none';
+                }
+              }
+            });
+          };
+
+          // Optimized animation loop with throttled label updates
+          console.log('Starting optimized animation loop');
+          let frameCount = 0;
           const animate = () => {
             animationFrameRef.current = requestAnimationFrame(animate);
+            
+            // Update controls and render every frame
             controls.update();
             renderer.render(scene, camera);
+            
+            // Update label positions every 3rd frame to avoid FPS drops
+            frameCount++;
+            if (frameCount % 3 === 0) {
+              updateRestaurantTableLabelPositions();
+            }
           };
           animate();
+
+          // Create table labels after scene is loaded
+          setTimeout(() => {
+            createRestaurantTableLabels();
+          }, 500);
 
           // Handle window resize
           const handleResize = () => {
@@ -832,82 +1003,129 @@ export default function RestaurantBookingManager({ floorplanData, floorplanId, r
   const updateTableColors = () => {
     if (!sceneRef.current) return;
     
-    console.log('Updating table colors with booking data');
+    // Reduce console logging in production
+    if (process.env.NODE_ENV === 'development') {
+      console.log('=== UPDATING TABLE COLORS ===');
+      console.log('Table bookings data:', tableBookings);
+      console.log('Selected time:', selectedTime);
+    }
+    
+    let tableCount = 0;
+    let availableCount = 0;
+    let bookedCount = 0;
+    
+    // Cache color calculations to avoid repeated work
+    const colorCache = new Map();
     
     sceneRef.current.traverse((object) => {
       if (object.userData?.isTable) {
+        tableCount++;
         // Check all possible ID properties
         const tableId = object.userData.id || object.userData.objectId || object.userData.tableId;
         
         // Check if table has any bookings and they're valid
         const isBooked = tableId && tableBookings[tableId] && tableBookings[tableId].length > 0;
         
-        console.log('Table check:', {
-          tableId,
-          isBooked,
-          bookings: isBooked ? tableBookings[tableId].length : 0
-        });
+        if (process.env.NODE_ENV === 'development') {
+          console.log(`Table ${tableCount}:`, {
+            tableId,
+            isBooked,
+            bookings: isBooked ? tableBookings[tableId].length : 0,
+            userData: object.userData
+          });
+        }
 
-        // For restaurant manager view, use different color scheme
-        let color;
-        if (isBooked) {
-          // Check if table is booked for the selected time
-          if (selectedTime && tableBookings[tableId]) {
-            // Parse selected time range
-            const [selectedStartTime, selectedEndTime] = selectedTime.split(' - ');
-            
-            // Function to convert time string to minutes since midnight for comparison
-            const timeToMinutes = (timeStr) => {
-              const [time, period] = timeStr.trim().split(' ');
-              let [hours, minutes] = time.split(':').map(Number);
-              if (period === 'PM' && hours !== 12) hours += 12;
-              if (period === 'AM' && hours === 12) hours = 0;
-              return hours * 60 + minutes;
-            };
-            
-            const selectedStart = timeToMinutes(selectedStartTime);
-            const selectedEnd = timeToMinutes(selectedEndTime);
-            
-            // Check if any booking overlaps with the selected time
-            const isBookedForSelectedTime = tableBookings[tableId].some(booking => {
-              const bookingStart = timeToMinutes(booking.startTime);
-              const bookingEnd = timeToMinutes(booking.endTime);
+        // For restaurant manager view, use different color scheme with caching
+        const cacheKey = `${tableId}-${selectedTime}-${isBooked}`;
+        let color = colorCache.get(cacheKey);
+        
+        if (color === undefined) {
+          if (isBooked) {
+            // Check if table is booked for the selected time
+            if (selectedTime && tableBookings[tableId]) {
+              // Parse selected time range
+              const [selectedStartTime, selectedEndTime] = selectedTime.split(' - ');
               
-              // Time periods overlap if one starts before the other ends
-              return bookingStart < selectedEnd && bookingEnd > selectedStart;
-            });
-            
-            color = isBookedForSelectedTime ? 0xFF0000 : 0x00FF00; // Red if booked for this time, green if available
+              // Function to convert time string to minutes since midnight for comparison
+              const timeToMinutes = (timeStr) => {
+                const [time, period] = timeStr.trim().split(' ');
+                let [hours, minutes] = time.split(':').map(Number);
+                if (period === 'PM' && hours !== 12) hours += 12;
+                if (period === 'AM' && hours === 12) hours = 0;
+                return hours * 60 + minutes;
+              };
+              
+              const selectedStart = timeToMinutes(selectedStartTime);
+              const selectedEnd = timeToMinutes(selectedEndTime);
+              
+              // Check if any booking overlaps with the selected time
+              const isBookedForSelectedTime = tableBookings[tableId].some(booking => {
+                const bookingStart = timeToMinutes(booking.startTime);
+                const bookingEnd = timeToMinutes(booking.endTime);
+                
+                // Time periods overlap if one starts before the other ends
+                return bookingStart < selectedEnd && bookingEnd > selectedStart;
+              });
+              
+              color = isBookedForSelectedTime ? 0xFF0000 : 0x00FF00; // Red if booked for this time, green if available
+            } else {
+              color = 0xFF4F18; // Orange if has bookings for the day but no specific time selected
+            }
           } else {
-            color = 0xFF4F18; // Orange if has bookings for the day but no specific time selected
+            color = 0x808080; // Gray for no bookings
           }
-        } else {
-          color = 0x808080; // Gray for no bookings
+          
+          // Cache the color calculation
+          colorCache.set(cacheKey, color);
         }
         
         colorTable(object, color);
+        
+        // Count available vs booked tables
+        if (color === 0x00FF00 || color === 0x808080) {
+          availableCount++;
+        } else {
+          bookedCount++;
+        }
       }
     });
+    
+    if (process.env.NODE_ENV === 'development') {
+      console.log('=== TABLE COLOR UPDATE SUMMARY ===');
+      console.log('Total tables processed:', tableCount);
+      console.log('Available tables:', availableCount);
+      console.log('Booked tables:', bookedCount);
+      console.log('===================================');
+    }
   };
 
-  // Add useEffect to trigger color updates
+  // Optimized useEffect with debouncing
   useEffect(() => {
     if (sceneRef.current) {
-      updateTableColors();
+      // Debounce color updates to prevent excessive calls
+      const timeoutId = setTimeout(() => {
+        updateTableColors();
+      }, 100);
+      
+      return () => clearTimeout(timeoutId);
     }
   }, [selectedTime, tableBookings]);
 
-  // Fix the state monitoring useEffect
+  // Optimized state monitoring useEffect (only in development)
   useEffect(() => {
-    console.log('Current state:', {
-      selectedDate,
-      selectedTime,
-      tableBookings: Object.keys(tableBookings).length
-    });
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Current state:', {
+        selectedDate,
+        selectedTime,
+        tableBookings: Object.keys(tableBookings).length
+      });
+    }
   }, [selectedDate, selectedTime, tableBookings]);
 
   const handleTimeSlotSelection = (slot) => {
-    console.log('Setting time to:', slot);
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Setting time to:', slot);
+    }
     setSelectedTime(slot);
   };
 
@@ -1227,6 +1445,7 @@ export default function RestaurantBookingManager({ floorplanData, floorplanId, r
     
     // Get all table IDs from the scene
     const sceneTableIds = new Set();
+    const sceneTableDetails = [];
     
     // Count total tables in the scene and collect their IDs
     if (sceneRef.current) {
@@ -1234,6 +1453,11 @@ export default function RestaurantBookingManager({ floorplanData, floorplanId, r
         if (object.userData && object.userData.isTable) {
           totalTables++;
           const tableId = object.userData.id || object.userData.objectId || object.userData.tableId;
+          sceneTableDetails.push({
+            id: tableId,
+            userData: object.userData,
+            position: object.position
+          });
           if (tableId) {
             sceneTableIds.add(tableId);
           }
@@ -1251,13 +1475,16 @@ export default function RestaurantBookingManager({ floorplanData, floorplanId, r
     // Ensure we don't have negative available tables
     const availableTables = Math.max(0, totalTables - validBookedTables);
     
-    console.log('Booking stats:', {
-      totalTables,
-      validBookedTables,
-      availableTables,
-      sceneTableIds: Array.from(sceneTableIds),
-      bookingTableIds: Object.keys(bookingsByTable)
-    });
+    if (process.env.NODE_ENV === 'development') {
+      console.log('=== BOOKING STATS DEBUG ===');
+      console.log('Total tables found in scene:', totalTables);
+      console.log('Scene table details:', sceneTableDetails);
+      console.log('Scene table IDs:', Array.from(sceneTableIds));
+      console.log('Bookings by table:', bookingsByTable);
+      console.log('Valid booked tables:', validBookedTables);
+      console.log('Available tables:', availableTables);
+      console.log('===========================');
+    }
     
     setBookingStats({
       totalTables,
@@ -1281,7 +1508,7 @@ export default function RestaurantBookingManager({ floorplanData, floorplanId, r
       // Use a more noticeable toast for no bookings
       toast.custom(
         <div className="bg-white shadow-lg rounded-lg p-4 max-w-md" style={{ zIndex: 9999 }}>
-          <h3 className="font-bold text-lg mb-2 text-gray-700">Table {table.userData.name || tableId}</h3>
+          <h3 className="font-bold text-lg mb-2 text-black">Table {table.userData.name || tableId}</h3>
           <p className="text-orange-500">No bookings for this table on {selectedDate}</p>
         </div>,
         { duration: 4000, position: 'top-center' }
@@ -1300,8 +1527,8 @@ export default function RestaurantBookingManager({ floorplanData, floorplanId, r
     // Create a custom toast with higher z-index to ensure it's visible
     toast.custom(
       <div className="bg-white shadow-lg rounded-lg p-4 max-w-md mx-auto" style={{ zIndex: 9999 }}>
-        <h3 className="font-bold text-lg mb-2 text-[#FF4F18]">Table {table.userData.name || tableId}</h3>
-        <p className="text-sm text-gray-600 mb-3">{formattedDate}</p>
+        <h3 className="font-bold text-lg mb-2 text-black">Table {table.userData.name || tableId}</h3>
+        <p className="text-sm text-black mb-3">{formattedDate}</p>
         <div className="border-t border-gray-200 pt-2">
           <ul className="space-y-3 max-h-60 overflow-y-auto">
             {bookings.map((booking, idx) => (
@@ -1323,7 +1550,7 @@ export default function RestaurantBookingManager({ floorplanData, floorplanId, r
                     <div>Customer: {booking.customerData.name || 'Unknown'}</div>
                   )}
                   {booking.bookingRef && (
-                    <div className="text-xs text-gray-500 mt-1">Ref: {booking.bookingRef}</div>
+                    <div className="text-xs text-black mt-1">Ref: {booking.bookingRef}</div>
                   )}
                 </div>
               </li>
@@ -1447,13 +1674,13 @@ export default function RestaurantBookingManager({ floorplanData, floorplanId, r
         <div className="flex-1 flex items-center justify-center bg-gradient-to-b from-gray-50 to-gray-100 rounded-lg">
           <div className="text-center p-8">
             <div className="text-6xl mb-4">🏪</div>
-            <h3 className="text-xl font-semibold text-gray-700 mb-2">3D View Unavailable</h3>
-            <p className="text-gray-600 mb-4 max-w-md">
+            <h3 className="text-xl font-semibold text-black mb-2">3D View Unavailable</h3>
+            <p className="text-black mb-4 max-w-md">
               {webglError || 'Your browser does not support 3D graphics (WebGL). Please use a modern browser or enable hardware acceleration.'}
             </p>
             <div className="bg-white p-4 rounded-lg shadow-sm">
-              <h4 className="font-semibold text-gray-700 mb-2">Booking Management Available</h4>
-              <p className="text-sm text-gray-600">
+              <h4 className="font-semibold text-black mb-2">Booking Management Available</h4>
+              <p className="text-sm text-black">
                 You can still manage bookings using the date and time controls above.
               </p>
             </div>
@@ -1469,25 +1696,42 @@ export default function RestaurantBookingManager({ floorplanData, floorplanId, r
     );
   }
 
+  // Handle floor plan selection
+  const handleFloorplanSelect = (floorplan) => {
+    setSelectedFloorplan(floorplan);
+    setShowFloorplanManager(false);
+    // You can add logic here to reload the scene with the new floorplan
+    console.log('Selected floorplan:', floorplan);
+  };
+
   return (
-    <div className="relative w-full h-[600px] flex flex-col">
-      {/* Toaster component for displaying notifications */}
-      <Toaster 
-        position="top-center"
-        toastOptions={{
-          duration: 5000,
-          style: {
-            background: '#ffffff',
-            color: '#333333',
-            zIndex: 9999,
-            boxShadow: '0 8px 16px rgba(0, 0, 0, 0.1)',
-            borderRadius: '8px',
-            padding: '16px',
-          },
-        }}
+    <div className="w-full space-y-6">
+      {/* Floorplan Manager */}
+      <FloorplanManager
+        restaurantId={restaurantId}
+        token={null} // You may need to pass the token if available
+        onFloorplanSelect={handleFloorplanSelect}
       />
-      
-      <div className="flex flex-col md:flex-row h-full">
+
+      {/* Current Floorplan Display */}
+      <div className="relative w-full h-[600px] flex flex-col">
+        {/* Toaster component for displaying notifications */}
+        <Toaster 
+          position="top-center"
+          toastOptions={{
+            duration: 5000,
+            style: {
+              background: '#ffffff',
+              color: '#333333',
+              zIndex: 9999,
+              boxShadow: '0 8px 16px rgba(0, 0, 0, 0.1)',
+              borderRadius: '8px',
+              padding: '16px',
+            },
+          }}
+        />
+        
+        <div className="flex flex-col md:flex-row h-full">
         {/* 3D Floor Plan View - Keep this from the original component */}
         <div 
           ref={containerRef} 
@@ -1498,11 +1742,11 @@ export default function RestaurantBookingManager({ floorplanData, floorplanId, r
 
         {/* Restaurant Management UI - Replace the customer booking panel */}
         <div className="w-full md:w-80 bg-white p-4 border-l border-gray-200 flex flex-col h-full overflow-auto">
-          <h2 className="text-xl font-bold text-[#FF4F18] mb-4">Booking Manager</h2>
+          <h2 className="text-xl font-bold text-black mb-4">Booking Manager</h2>
           
           {/* Date Selector */}
           <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
+            <label className="block text-sm font-medium text-black mb-1">Date</label>
             <input
               type="date"
               value={selectedDate}
@@ -1513,7 +1757,7 @@ export default function RestaurantBookingManager({ floorplanData, floorplanId, r
 
           {/* Time Slots */}
           <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-1">Time Slot</label>
+            <label className="block text-sm font-medium text-black mb-1">Time Slot</label>
             <div className="time-slots-container grid grid-cols-2 gap-2 max-h-40 overflow-y-auto">
               {timeSlots.map((slot) => (
                 <button
@@ -1522,7 +1766,7 @@ export default function RestaurantBookingManager({ floorplanData, floorplanId, r
                   className={`py-2 px-3 text-xs rounded-md transition-colors ${
                     selectedTime === slot
                       ? 'bg-[#FF4F18] text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      : 'bg-gray-100 text-black hover:bg-gray-200'
                   }`}
                 >
                   {slot}
@@ -1533,18 +1777,18 @@ export default function RestaurantBookingManager({ floorplanData, floorplanId, r
 
           {/* Booking Statistics */}
           <div className="bg-gray-50 p-4 rounded-lg mb-4">
-            <h3 className="font-semibold text-gray-700 mb-2">Booking Statistics</h3>
+            <h3 className="font-semibold text-black mb-2">Booking Statistics</h3>
             <div className="grid grid-cols-3 gap-2 text-center">
               <div className="bg-white p-2 rounded shadow-sm">
-                <p className="text-xs text-gray-500">Total</p>
-                <p className="text-xl font-bold">{bookingStats.totalTables}</p>
+                <p className="text-xs text-black">Total</p>
+                <p className="text-xl font-bold text-black">{bookingStats.totalTables}</p>
               </div>
               <div className="bg-white p-2 rounded shadow-sm">
-                <p className="text-xs text-gray-500">Booked</p>
+                <p className="text-xs text-black">Booked</p>
                 <p className="text-xl font-bold text-red-500">{bookingStats.bookedTables}</p>
               </div>
               <div className="bg-white p-2 rounded shadow-sm">
-                <p className="text-xs text-gray-500">Available</p>
+                <p className="text-xs text-black">Available</p>
                 <p className="text-xl font-bold text-green-500">{bookingStats.availableTables}</p>
               </div>
             </div>
@@ -1552,37 +1796,37 @@ export default function RestaurantBookingManager({ floorplanData, floorplanId, r
 
           {/* Table Status Legend */}
           <div className="mb-4">
-            <h3 className="font-semibold text-gray-700 mb-2">Table Status</h3>
+            <h3 className="font-semibold text-black mb-2">Table Status</h3>
             <div className="space-y-2">
               <div className="flex items-center">
                 <div className="w-4 h-4 bg-gray-500 rounded-full mr-2"></div>
-                <span className="text-sm">Available (No Bookings)</span>
+                <span className="text-sm text-black">Available (No Bookings)</span>
               </div>
               <div className="flex items-center">
                 <div className="w-4 h-4 bg-[#FF4F18] rounded-full mr-2"></div>
-                <span className="text-sm">Has Bookings Today</span>
+                <span className="text-sm text-black">Has Bookings Today</span>
               </div>
               <div className="flex items-center">
                 <div className="w-4 h-4 bg-green-500 rounded-full mr-2"></div>
-                <span className="text-sm">Available at Selected Time</span>
+                <span className="text-sm text-black">Available at Selected Time</span>
               </div>
               <div className="flex items-center">
                 <div className="w-4 h-4 bg-red-500 rounded-full mr-2"></div>
-                <span className="text-sm">Booked at Selected Time</span>
+                <span className="text-sm text-black">Booked at Selected Time</span>
               </div>
             </div>
           </div>
 
           {/* Table Bookings Overview */}
           <div className="mt-4 mb-4">
-            <h3 className="font-semibold text-gray-700 mb-2">Quick View Bookings</h3>
+            <h3 className="font-semibold text-black mb-2">Quick View Bookings</h3>
             <div className="max-h-60 overflow-y-auto bg-gray-50 p-3 rounded-lg">
               {Object.entries(tableBookings).length > 0 ? (
                 Object.entries(tableBookings).map(([tableId, bookings]) => (
                   bookings.length > 0 && (
                     <div key={tableId} className="mb-2 p-2 bg-white rounded border border-gray-200">
-                      <p className="font-medium">Table {tableId}</p>
-                      <p className="text-xs text-gray-500">{bookings.length} booking(s)</p>
+                      <p className="font-medium text-black">Table {tableId}</p>
+                      <p className="text-xs text-black">{bookings.length} booking(s)</p>
                       <button 
                         className="mt-1 px-2 py-1 bg-[#FF4F18] text-white text-xs rounded hover:bg-[#e63900] transition-colors"
                         onClick={() => {
@@ -1600,19 +1844,20 @@ export default function RestaurantBookingManager({ floorplanData, floorplanId, r
                   )
                 ))
               ) : (
-                <p className="text-gray-500 text-sm">No bookings for this date</p>
+                <p className="text-black text-sm">No bookings for this date</p>
               )}
             </div>
           </div>
 
           {/* Instructions */}
           <div className="mt-auto bg-blue-50 p-3 rounded-lg">
-            <p className="text-sm text-blue-800">
+            <p className="text-sm text-black">
               <strong>Tip:</strong> Click on a table to view booking details.
             </p>
           </div>
         </div>
       </div>
     </div>
+    </div>
   );
-} 
+}

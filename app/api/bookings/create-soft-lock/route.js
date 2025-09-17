@@ -27,6 +27,34 @@ export async function POST(request) {
             );
         }
 
+        // Check SaaS booking limits
+        const Restaurant = require('@/models/Restaurants');
+        const restaurant = await Restaurant.findById(restaurantId).populate('subscriptionId');
+        if (restaurant && restaurant.subscriptionId) {
+            const currentMonth = new Date().getMonth();
+            const currentYear = new Date().getFullYear();
+            const monthlyBookings = await Booking.countDocuments({
+                restaurantId,
+                createdAt: {
+                    $gte: new Date(currentYear, currentMonth, 1),
+                    $lt: new Date(currentYear, currentMonth + 1, 1)
+                }
+            });
+            
+            const limit = restaurant.subscriptionId.usage.bookingsLimit;
+            
+            if (monthlyBookings >= limit && limit !== -1) { // -1 means unlimited
+                return NextResponse.json({ 
+                    error: 'Monthly booking limit reached',
+                    message: `You have reached your monthly limit of ${limit} bookings. Please upgrade your plan to accept more bookings.`,
+                    currentPlan: restaurant.subscriptionId.planType,
+                    upgradeRequired: true,
+                    currentUsage: monthlyBookings,
+                    limit: limit
+                }, { status: 403 });
+            }
+        }
+
         // Verify authentication
         const authResult = await verifyFirebaseAuth(request);
         if (!authResult.success) {

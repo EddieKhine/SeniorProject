@@ -68,12 +68,32 @@ export async function POST(request) {
       }, { status: 400 });
     }
 
-    // Verify restaurant exists
-    const restaurant = await Restaurant.findById(restaurantId);
+    // Verify restaurant exists with subscription
+    const restaurant = await Restaurant.findById(restaurantId).populate('subscriptionId');
     if (!restaurant) {
       return NextResponse.json({ 
         error: 'Restaurant not found' 
       }, { status: 404 });
+    }
+
+    // Check SaaS staff limit
+    if (restaurant.subscriptionId) {
+      const currentStaff = await Staff.countDocuments({ 
+        restaurantId, 
+        isActive: true 
+      });
+      const limit = restaurant.subscriptionId.usage.staffLimit;
+      
+      if (currentStaff >= limit && limit !== -1) { // -1 means unlimited
+        return NextResponse.json({ 
+          error: 'Staff limit reached',
+          message: `You have reached your limit of ${limit} staff members. Please upgrade your plan to add more staff.`,
+          currentPlan: restaurant.subscriptionId.planType,
+          upgradeRequired: true,
+          currentUsage: currentStaff,
+          limit: limit
+        }, { status: 403 });
+      }
     }
 
     // Check if staff member with this Line ID already exists
@@ -104,6 +124,12 @@ export async function POST(request) {
     await newStaff.save();
     console.log('✅ Staff member saved successfully');
     await newStaff.populate('restaurantId', 'restaurantName');
+
+    // Update SaaS usage tracking
+    if (restaurant.subscriptionId) {
+      await restaurant.subscriptionId.incrementUsage('staffUsed', 1);
+      await restaurant.subscriptionId.incrementUsage('apiCallsThisMonth', 1);
+    }
 
     return NextResponse.json({ 
       success: true,

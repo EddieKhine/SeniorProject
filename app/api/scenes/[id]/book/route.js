@@ -80,10 +80,36 @@ export async function POST(request, { params }) {
     
     console.log('Looking for table:', tableId); // Debug log
 
-    // Get restaurant operating hours
-    const restaurant = await Restaurant.findById(restaurantId);
+    // Get restaurant operating hours with subscription
+    const restaurant = await Restaurant.findById(restaurantId).populate('subscriptionId');
     if (!restaurant) {
       return NextResponse.json({ error: "Restaurant not found" }, { status: 404 });
+    }
+
+    // Check SaaS booking limits
+    if (restaurant.subscriptionId) {
+      const currentMonth = new Date().getMonth();
+      const currentYear = new Date().getFullYear();
+      const monthlyBookings = await Booking.countDocuments({
+        restaurantId,
+        createdAt: {
+          $gte: new Date(currentYear, currentMonth, 1),
+          $lt: new Date(currentYear, currentMonth + 1, 1)
+        }
+      });
+      
+      const limit = restaurant.subscriptionId.usage.bookingsLimit;
+      
+      if (monthlyBookings >= limit && limit !== -1) { // -1 means unlimited
+        return NextResponse.json({ 
+          error: 'Monthly booking limit reached',
+          message: `You have reached your monthly limit of ${limit} bookings. Please upgrade your plan to accept more bookings.`,
+          currentPlan: restaurant.subscriptionId.planType,
+          upgradeRequired: true,
+          currentUsage: monthlyBookings,
+          limit: limit
+        }, { status: 403 });
+      }
     }
 
     // Get the scene and find the table
@@ -352,6 +378,12 @@ export async function POST(request, { params }) {
           },
           { session }
         );
+
+        // Update SaaS usage tracking
+        if (restaurant.subscriptionId) {
+          await restaurant.subscriptionId.incrementUsage('bookingsThisMonth', 1);
+          await restaurant.subscriptionId.incrementUsage('apiCallsThisMonth', 1);
+        }
       });
     } finally {
       await session.endSession();
