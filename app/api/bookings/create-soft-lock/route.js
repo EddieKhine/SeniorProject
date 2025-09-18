@@ -4,6 +4,7 @@ import TableLock from '@/models/TableLock';
 import Booking from '@/models/Booking';
 import { verifyFirebaseAuth } from '@/lib/firebase-admin';
 import User from '@/models/user';
+import Restaurant from '@/models/Restaurants';
 
 export async function POST(request) {
     try {
@@ -28,7 +29,6 @@ export async function POST(request) {
         }
 
         // Check SaaS booking limits
-        const Restaurant = require('@/models/Restaurants');
         const restaurant = await Restaurant.findById(restaurantId).populate('subscriptionId');
         if (restaurant && restaurant.subscriptionId) {
             const currentMonth = new Date().getMonth();

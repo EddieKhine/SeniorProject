@@ -10,7 +10,7 @@ import {
   RiUserLine,
   RiTimeLine,
   RiTrophyLine,
-  RiTrendingUpLine,
+  RiLineChartLine,
   RiStarLine,
   RiMapPinLine,
   RiRefreshLine
@@ -206,7 +206,7 @@ export default function TymeAnalyticsPage() {
                 <p className="text-3xl font-bold text-gray-900">{pricing.minPrice}-{pricing.maxPrice}</p>
                 <p className="text-sm text-gray-500 mt-1">THB per table</p>
               </div>
-              <RiTrendingUpLine className="w-8 h-8 text-orange-500" />
+              <RiLineChartLine className="w-8 h-8 text-orange-500" />
             </div>
           </div>
         </div>
@@ -327,7 +327,7 @@ export default function TymeAnalyticsPage() {
         {algorithmTest && (
           <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
             <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
-              <RiTrendingUpLine className="w-5 h-5 text-orange-500 mr-2" />
+              <RiLineChartLine className="w-5 h-5 text-orange-500 mr-2" />
               Live Algorithm Test
             </h3>
             <div className="bg-gray-50 rounded-lg p-4">
