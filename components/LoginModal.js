@@ -15,11 +15,21 @@ export default function LoginModal({ isOpen, onClose, openSignupModal, onLoginSu
   const [loading, setLoading] = useState(false);
 
   // Sync or fetch MongoDB profile after Firebase login
-  const syncProfile = async (firebaseUid, email) => {
+  const syncProfile = async (firebaseUid, email, displayName = null, photoURL = null) => {
+    const requestBody = { email, firebaseUid };
+    
+    // If Google login, extract name and profile image
+    if (displayName || photoURL) {
+      const [firstName, ...rest] = (displayName || "").split(" ");
+      requestBody.firstName = firstName || "";
+      requestBody.lastName = rest.join(" ") || "";
+      requestBody.profileImage = photoURL || "";
+    }
+    
     const res = await fetch("/api/signup", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, firebaseUid }),
+      body: JSON.stringify(requestBody),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.message || "Failed to sync profile");
@@ -50,7 +60,20 @@ export default function LoginModal({ isOpen, onClose, openSignupModal, onLoginSu
     try {
       const provider = new GoogleAuthProvider();
       const result = await signInWithPopup(auth, provider);
-      const userProfile = await syncProfile(result.user.uid, result.user.email);
+      
+      // Extract Google user information
+      const { uid, email, displayName, photoURL } = result.user;
+      
+      console.log('Google login - User info:', {
+        uid,
+        email,
+        displayName,
+        photoURL
+      });
+      
+      // Sync profile with complete Google information
+      const userProfile = await syncProfile(uid, email, displayName, photoURL);
+      
       if (onLoginSuccess) onLoginSuccess(userProfile);
       onClose();
     } catch (error) {
