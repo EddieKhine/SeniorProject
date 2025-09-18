@@ -523,7 +523,9 @@ async function handleCustomerPostback(event, userId, client, postbackData) {
         }
         
         if (postbackData.startsWith("action=booking_payment_process&date=")) {
+          console.log("Payment process postback data:", postbackData);
           const params = parseBookingParams(postbackData);
+          console.log("Parsed payment params:", params);
           return await handleBookingPaymentProcess(event, userId, client, customer, params.date, params.time, params.guests, params.table, params.amount);
         }
         
@@ -1286,6 +1288,33 @@ async function handleBookingTableSelection(event, userId, client, customer, sele
       });
     }
 
+    // Send floorplan image first
+    try {
+      const floorplanData = await getFloorplanImage();
+      if (floorplanData && floorplanData.imageUrl) {
+        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+        const fullImageUrl = floorplanData.imageUrl.startsWith('http') 
+          ? floorplanData.imageUrl 
+          : `${baseUrl}${floorplanData.imageUrl}`;
+        
+        // Send floorplan image
+        await client.replyMessage(event.replyToken, {
+          type: "image",
+          originalContentUrl: fullImageUrl,
+          previewImageUrl: fullImageUrl,
+        });
+        
+        // Send a text message explaining the floorplan
+        await client.pushMessage(userId, {
+          type: "text",
+          text: `📍 Restaurant Floorplan\n\nPlease refer to the floorplan above to see table locations. Select your preferred table from the options below:`,
+        });
+      }
+    } catch (floorplanError) {
+      console.error('Error sending floorplan image:', floorplanError);
+      // Continue with table selection even if floorplan fails
+    }
+
     const dateObj = new Date(selectedDate);
     const dateStr = dateObj.toLocaleDateString("en-GB", { 
       weekday: 'short', 
@@ -1334,7 +1363,8 @@ async function handleBookingTableSelection(event, userId, client, customer, sele
       }
     }));
 
-    return client.replyMessage(event.replyToken, {
+    // Send table selection options (use pushMessage since reply token was used for floorplan)
+    return client.pushMessage(userId, {
       type: "flex",
       altText: "Select Table",
       contents: {
@@ -1345,10 +1375,19 @@ async function handleBookingTableSelection(event, userId, client, customer, sele
 
   } catch (error) {
     console.error('Error in table selection:', error);
-    return client.replyMessage(event.replyToken, {
-      type: "text",
-      text: "Sorry, there was an error. Please try again later.",
-    });
+    // Try to send error message, but if reply token is already used, use pushMessage
+    try {
+      return client.replyMessage(event.replyToken, {
+        type: "text",
+        text: "Sorry, there was an error. Please try again later.",
+      });
+    } catch (replyError) {
+      // If reply token is already used, send via pushMessage
+      return client.pushMessage(userId, {
+        type: "text",
+        text: "Sorry, there was an error. Please try again later.",
+      });
+    }
   }
 }
 
@@ -1641,14 +1680,16 @@ async function handleBookingPaymentProcess(event, userId, client, customer, sele
     await dbConnect();
     
     console.log(`Processing payment of ${amount} THB for booking...`);
+    console.log(`Amount type: ${typeof amount}, Amount value: ${amount}`);
     console.log(`Booking details: ${selectedDate} ${selectedTime}, ${guestCount} guests, table ${tableId}`);
     
     // Validate amount
     if (!amount || isNaN(amount) || amount <= 0) {
-      console.error("Invalid amount:", amount);
+      console.error("Invalid amount:", amount, "Type:", typeof amount);
+      console.error("Full postback data:", event.postback?.data);
       return client.replyMessage(event.replyToken, {
         type: "text",
-        text: "Invalid payment amount. Please try booking again.",
+        text: `Invalid payment amount: ${amount}. Please try booking again.`,
       });
     }
     
@@ -1661,7 +1702,20 @@ async function handleBookingPaymentProcess(event, userId, client, customer, sele
     if (paymentSuccess) {
       console.log("Payment successful, proceeding to booking completion");
       // Payment successful, proceed to booking completion
-      return await handleBookingCompletion(event, userId, client, customer, selectedDate, selectedTime, guestCount, tableId);
+      // Create pricing data object to pass to booking completion
+      const pricingData = {
+        basePrice: 100, // Default base price, should match your pricing API
+        finalPrice: amount,
+        currency: 'THB',
+        breakdown: {
+          demandFactor: { value: 1, reason: 'Standard demand' },
+          temporalFactor: { value: 1, reason: 'Regular timing' },
+          historicalFactor: { value: 1, reason: 'Standard historical data' },
+          capacityFactor: { value: 1, reason: 'Standard capacity' },
+          holidayFactor: { value: 1, reason: 'No holiday' }
+        }
+      };
+      return await handleBookingCompletion(event, userId, client, customer, selectedDate, selectedTime, guestCount, tableId, pricingData);
     } else {
       console.log("Payment failed");
       // Payment failed
@@ -1909,7 +1963,7 @@ async function handleBookingConfirmation(event, userId, client, customer, select
   }
 }
 
-async function handleBookingCompletion(event, userId, client, customer, selectedDate, selectedTime, guestCount, tableId) {
+async function handleBookingCompletion(event, userId, client, customer, selectedDate, selectedTime, guestCount, tableId, pricingData = null) {
   try {
     await dbConnect();
     
@@ -1944,7 +1998,8 @@ async function handleBookingCompletion(event, userId, client, customer, selected
         firstName: customer.firstName,
         lastName: customer.lastName,
         contactNumber: customer.contactNumber || 'Not provided'
-      }
+      },
+      pricingData: pricingData
     };
 
     // Use existing booking creation logic
@@ -2014,6 +2069,8 @@ function parseBookingParams(postbackData) {
       params.table = part.split('table=')[1];
     } else if (part.includes('page=')) {
       params.page = parseInt(part.split('page=')[1]);
+    } else if (part.includes('amount=')) {
+      params.amount = parseFloat(part.split('amount=')[1]);
     }
   });
   
@@ -2208,7 +2265,7 @@ async function getAvailableTables(selectedDate, selectedTime, guestCount) {
 async function createBookingFromLine(bookingData, floorplanId) {
   try {
     // This function replicates the booking creation logic from your existing API
-    const { tableId, date, startTime, endTime, guestCount, restaurantId, customerData } = bookingData;
+    const { tableId, date, startTime, endTime, guestCount, restaurantId, customerData, pricingData } = bookingData;
     
     // Check table availability
     const isAvailable = await Booking.isTableAvailable(tableId, date, startTime, endTime);
@@ -2230,6 +2287,18 @@ async function createBookingFromLine(bookingData, floorplanId) {
       customerName: `${customerData.firstName} ${customerData.lastName}`.trim(),
       customerEmail: customerData.email,
       customerPhone: customerData.contactNumber,
+      pricing: pricingData || {
+        basePrice: 100,
+        finalPrice: 100,
+        currency: 'THB',
+        breakdown: {
+          demandFactor: { value: 1, reason: 'Standard demand' },
+          temporalFactor: { value: 1, reason: 'Regular timing' },
+          historicalFactor: { value: 1, reason: 'Standard historical data' },
+          capacityFactor: { value: 1, reason: 'Standard capacity' },
+          holidayFactor: { value: 1, reason: 'No holiday' }
+        }
+      }
     });
     
     // Add initial history entry
