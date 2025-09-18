@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import dbConnect from "@/lib/mongodb";
 import RestaurantOwner from "@/models/restaurant-owner";
 import Restaurant from "@/models/Restaurants";
+import Organization from "@/models/Organization";
+import Subscription from "@/models/Subscription";
 
 export async function POST(req) {
   try {
@@ -90,8 +92,6 @@ export async function POST(req) {
     console.log("✅ [API] New restaurant owner saved in MongoDB:", owner);
 
     // Create default organization and subscription for new owner
-    const Organization = require('@/models/Organization');
-    const Subscription = require('@/models/Subscription');
     
     const organization = new Organization({
       name: `${firstName} ${lastName}'s Organization`,

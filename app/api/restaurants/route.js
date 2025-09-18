@@ -3,6 +3,7 @@ import dbConnect from "@/lib/mongodb";
 import Restaurant from "@/models/Restaurants";
 import jwt from "jsonwebtoken";
 import RestaurantOwner from "@/models/restaurant-owner"; // Import restaurant owner model
+import Subscription from "@/models/Subscription";
 
 // Add a verifyToken function if you don't have it imported
 const verifyToken = (token) => {
@@ -28,25 +29,28 @@ export async function POST(req) {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const ownerId = decoded.userId;
 
-    // Get owner with subscription to check SaaS limits
-    const RestaurantOwner = require('@/models/restaurant-owner');
-    const Subscription = require('@/models/Subscription');
-    
-    const owner = await RestaurantOwner.findById(ownerId).populate('subscriptionId');
+    // Get owner and check SaaS limits through organization
+    const owner = await RestaurantOwner.findById(ownerId);
     if (!owner) {
       return NextResponse.json({ message: "Owner not found" }, { status: 404 });
     }
 
-    // Check SaaS restaurant limit
-    if (owner.subscriptionId) {
+    // Find organization that this owner belongs to and populate subscription
+    const Organization = await import('@/models/Organization').then(mod => mod.default);
+    const organization = await Organization.findOne({ 
+      'members.userId': ownerId 
+    }).populate('subscriptionId');
+
+    // Check SaaS restaurant limit if organization and subscription exist
+    if (organization && organization.subscriptionId) {
       const currentRestaurants = await Restaurant.countDocuments({ ownerId });
-      const limit = owner.subscriptionId.usage.restaurantsLimit;
+      const limit = organization.subscriptionId.usage?.restaurantsLimit || -1;
       
       if (currentRestaurants >= limit && limit !== -1) { // -1 means unlimited
         return NextResponse.json({ 
           error: 'Restaurant limit reached',
           message: `You have reached your limit of ${limit} restaurants. Please upgrade your plan to add more restaurants.`,
-          currentPlan: owner.subscriptionId.planType,
+          currentPlan: organization.subscriptionId.planType,
           upgradeRequired: true,
           currentUsage: currentRestaurants,
           limit: limit
