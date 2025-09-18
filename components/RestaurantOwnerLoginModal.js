@@ -60,6 +60,13 @@ export default function RestaurantOwnerLoginModal({ isOpen, onClose, onLoginSucc
     setLoading(true);
     setError("");
     try {
+      // Clear any existing customer session first
+      localStorage.removeItem("customerUser");
+      localStorage.removeItem("customerToken");
+      
+      // Set a flag to indicate restaurant owner flow is starting
+      localStorage.setItem("restaurantOwnerFlow", "true");
+      
       const provider = new GoogleAuthProvider();
       const result = await signInWithPopup(auth, provider);
       
@@ -71,14 +78,19 @@ export default function RestaurantOwnerLoginModal({ isOpen, onClose, onLoginSucc
           email: result.user.email,
           firebaseUid: result.user.uid,
           firstName: result.user.displayName?.split(' ')[0] || '',
-          lastName: result.user.displayName?.split(' ').slice(1).join(' ') || '',
+          lastName: result.user.displayName?.split(' ').slice(1).join(' ') || 'User',
           profileImage: result.user.photoURL || '',
         }),
       });
 
       if (!signupResponse.ok) {
         const errorData = await signupResponse.json();
-        throw new Error(errorData.message || "Failed to sync restaurant owner profile");
+        console.error('Restaurant owner signup/sync failed:', {
+          status: signupResponse.status,
+          statusText: signupResponse.statusText,
+          errorData
+        });
+        throw new Error(errorData.message || `Failed to sync restaurant owner profile (${signupResponse.status})`);
       }
 
       const signupData = await signupResponse.json();
@@ -97,8 +109,10 @@ export default function RestaurantOwnerLoginModal({ isOpen, onClose, onLoginSucc
 
       const loginData = await loginResponse.json();
 
+      // Clear customer data and set restaurant owner data
       localStorage.removeItem("customerUser");
       localStorage.removeItem("customerToken");
+      localStorage.removeItem("restaurantOwnerFlow");
       localStorage.setItem("restaurantOwnerUser", JSON.stringify(loginData.user));
       localStorage.setItem("restaurantOwnerToken", loginData.token);
       
@@ -110,6 +124,8 @@ export default function RestaurantOwnerLoginModal({ isOpen, onClose, onLoginSucc
       
       onClose();
     } catch (err) {
+      // Clean up flow flag on error
+      localStorage.removeItem("restaurantOwnerFlow");
       setError(err.message);
     } finally {
       setLoading(false);

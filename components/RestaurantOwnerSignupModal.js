@@ -105,6 +105,13 @@ export default function RestaurantOwnerSignupModal({ isOpen, onClose, onOpenLogi
     setLoading(true);
     setError("");
     try {
+      // Clear any existing customer session first
+      localStorage.removeItem("customerUser");
+      localStorage.removeItem("customerToken");
+      
+      // Set a flag to indicate restaurant owner flow is starting
+      localStorage.setItem("restaurantOwnerFlow", "true");
+      
       const provider = new GoogleAuthProvider();
       const result = await signInWithPopup(auth, provider);
       
@@ -116,15 +123,36 @@ export default function RestaurantOwnerSignupModal({ isOpen, onClose, onOpenLogi
           email: result.user.email,
           firebaseUid: result.user.uid,
           firstName: result.user.displayName?.split(' ')[0] || '',
-          lastName: result.user.displayName?.split(' ').slice(1).join(' ') || '',
+          lastName: result.user.displayName?.split(' ').slice(1).join(' ') || 'User',
           profileImage: result.user.photoURL || '',
           contactNumber: "Not provided" // Default for Google users
         }),
       });
 
       if (!signupResponse.ok) {
-        const errorData = await signupResponse.json();
-        throw new Error(errorData.message || "Failed to create restaurant owner profile");
+        let errorData;
+        try {
+          errorData = await signupResponse.json();
+        } catch (e) {
+          console.error('Failed to parse error response as JSON:', e);
+          errorData = { message: `HTTP ${signupResponse.status}: ${signupResponse.statusText}` };
+        }
+        
+        console.error('Restaurant owner signup failed:', {
+          status: signupResponse.status,
+          statusText: signupResponse.statusText,
+          url: signupResponse.url,
+          errorData,
+          requestBody: {
+            email: result.user.email,
+            firebaseUid: result.user.uid,
+            firstName: result.user.displayName?.split(' ')[0] || '',
+            lastName: result.user.displayName?.split(' ').slice(1).join(' ') || '',
+            profileImage: result.user.photoURL || '',
+            contactNumber: "Not provided"
+          }
+        });
+        throw new Error(errorData.message || `Failed to create restaurant owner profile (${signupResponse.status})`);
       }
 
       const signupData = await signupResponse.json();
@@ -138,8 +166,10 @@ export default function RestaurantOwnerSignupModal({ isOpen, onClose, onOpenLogi
 
       if (loginResponse.ok) {
         const loginData = await loginResponse.json();
+        // Clear customer data and set restaurant owner data
         localStorage.removeItem("customerUser");
         localStorage.removeItem("customerToken");
+        localStorage.removeItem("restaurantOwnerFlow");
         localStorage.setItem("restaurantOwnerUser", JSON.stringify(loginData.user));
         localStorage.setItem("restaurantOwnerToken", loginData.token);
         
@@ -149,6 +179,8 @@ export default function RestaurantOwnerSignupModal({ isOpen, onClose, onOpenLogi
         throw new Error("Failed to login after Google signup");
       }
     } catch (err) {
+      // Clean up flow flag on error
+      localStorage.removeItem("restaurantOwnerFlow");
       setError(err.message);
     } finally {
       setLoading(false);

@@ -61,50 +61,66 @@ export const FirebaseAuthProvider = ({ children }) => {
           console.log('✅ Firebase user found:', firebaseUser.uid);
           setUser(firebaseUser);
           
-          // Create a basic user profile from Firebase data
-          const basicProfile = {
-            firebaseUid: firebaseUser.uid,
-            email: firebaseUser.email,
-            firstName: firebaseUser.displayName?.split(' ')[0] || '',
-            lastName: firebaseUser.displayName?.split(' ').slice(1).join(' ') || '',
-            profileImage: firebaseUser.photoURL || '',
-            role: 'customer'
-          };
+          // Check if user is currently in restaurant owner flow
+          const isRestaurantOwnerFlow = (typeof window !== 'undefined') && (
+            localStorage.getItem('restaurantOwnerToken') || 
+            localStorage.getItem('restaurantOwnerUser') ||
+            localStorage.getItem('restaurantOwnerFlow') ||
+            window.location.pathname.includes('/restaurant-owner')
+          );
           
-          // Set the basic profile immediately to unblock the UI
-          setUserProfile(basicProfile);
-          console.log('✅ Basic user profile set, UI should be unblocked now');
-          
-          // Clear loading immediately after setting basic profile
-          clearTimeout(loadingTimeout);
-          setLoading(false);
-          console.log('🏁 Loading set to false (basic profile ready)');
-          
-          // Fetch full profile in background (non-blocking)
-          setTimeout(async () => {
-            try {
-              console.log('🔄 Fetching full profile in background...');
-              const token = await firebaseUser.getIdToken();
-              const response = await fetch('/api/customer/profile', {
-                method: 'GET',
-                headers: {
-                  'Authorization': `Bearer ${token}`,
-                  'Content-Type': 'application/json',
-                },
-              });
-              
-              if (response.ok) {
-                const userData = await response.json();
-                setUserProfile(userData.user);
-                console.log('✅ Full user profile loaded from server');
-              } else {
-                console.log('ℹ️ Full profile fetch failed, keeping basic profile');
+          // Skip customer profile creation if in restaurant owner flow
+          if (isRestaurantOwnerFlow) {
+            console.log('🏢 Restaurant owner flow detected, skipping customer profile creation');
+            clearTimeout(loadingTimeout);
+            setLoading(false);
+            return;
+          } else {
+            // Create a basic user profile from Firebase data (customer flow only)
+            const basicProfile = {
+              firebaseUid: firebaseUser.uid,
+              email: firebaseUser.email,
+              firstName: firebaseUser.displayName?.split(' ')[0] || '',
+              lastName: firebaseUser.displayName?.split(' ').slice(1).join(' ') || '',
+              profileImage: firebaseUser.photoURL || '',
+              role: 'customer'
+            };
+            
+            // Set the basic profile immediately to unblock the UI
+            setUserProfile(basicProfile);
+            console.log('✅ Basic user profile set, UI should be unblocked now');
+            
+            // Clear loading immediately after setting basic profile
+            clearTimeout(loadingTimeout);
+            setLoading(false);
+            console.log('🏁 Loading set to false (basic profile ready)');
+            
+            // Fetch full profile in background (non-blocking)
+            setTimeout(async () => {
+              try {
+                console.log('🔄 Fetching full profile in background...');
+                const token = await firebaseUser.getIdToken();
+                const response = await fetch('/api/customer/profile', {
+                  method: 'GET',
+                  headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                  },
+                });
+                
+                if (response.ok) {
+                  const userData = await response.json();
+                  setUserProfile(userData.user);
+                  console.log('✅ Full user profile loaded from server');
+                } else {
+                  console.log('ℹ️ Full profile fetch failed, keeping basic profile');
+                }
+              } catch (error) {
+                console.error('Background profile fetch failed:', error);
+                // Don't affect the UI, we already have basic profile
               }
-            } catch (error) {
-              console.error('Background profile fetch failed:', error);
-              // Don't affect the UI, we already have basic profile
-            }
-          }, 100);
+            }, 100);
+          }
           
         } else {
           // User is signed out

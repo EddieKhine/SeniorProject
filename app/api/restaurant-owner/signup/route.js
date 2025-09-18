@@ -93,8 +93,23 @@ export async function POST(req) {
 
     // Create default organization and subscription for new owner
     
+    // Generate a unique slug for the organization
+    const orgName = `${firstName} ${lastName}`.trim();
+    const baseSlug = orgName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+    let slug = baseSlug || 'restaurant-owner';
+    
+    // Ensure slug is unique by checking existing organizations
+    let counter = 1;
+    let existingOrg = await Organization.findOne({ slug });
+    while (existingOrg) {
+      slug = `${baseSlug}-${counter}`;
+      existingOrg = await Organization.findOne({ slug });
+      counter++;
+    }
+    
     const organization = new Organization({
-      name: `${firstName} ${lastName}'s Organization`,
+      name: `${orgName}'s Organization`,
+      slug: slug,
       description: 'Default organization for restaurant owner',
       type: 'restaurant',
       email: email,
