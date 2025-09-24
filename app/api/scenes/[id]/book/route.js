@@ -5,6 +5,7 @@ import Floorplan from '@/models/Floorplan';
 import Booking from '@/models/Booking';
 import Restaurant from '@/models/Restaurants';
 import User from '@/models/user'; // Import the User model
+import { notifyStaffOfNewBooking } from '@/lib/lineNotificationService';
 import Subscription from '@/models/Subscription'; // Import the Subscription model
 import { verifyFirebaseAuth } from "@/lib/firebase-admin";
 
@@ -315,20 +316,30 @@ export async function POST(request, { params }) {
     }
 
     // Create and save booking using the server-fetched user data
-    // Handle different user name formats
+    // Handle different user name formats with better logging
     let customerName = '';
+    console.log('🔍 User data for booking:', {
+      firstName: currentUser.firstName,
+      lastName: currentUser.lastName,
+      displayName: currentUser.displayName,
+      name: currentUser.name,
+      email: currentUser.email
+    });
+
     if (currentUser.firstName || currentUser.lastName) {
       customerName = `${currentUser.firstName || ''} ${currentUser.lastName || ''}`.trim();
-    } else if (currentUser.displayName) {
+    } else if (currentUser.displayName && currentUser.displayName !== 'immediate test') {
       customerName = currentUser.displayName;
-    } else if (currentUser.name) {
+    } else if (currentUser.name && currentUser.name !== 'immediate test') {
       customerName = currentUser.name;
     } else if (currentUser.email) {
-      // Fallback to email username
+      // Fallback to email username (better than "immediate test")
       customerName = currentUser.email.split('@')[0];
     } else {
       customerName = 'Customer';
     }
+    
+    console.log('📝 Final customer name for booking:', customerName);
 
     // Start transaction for atomic booking creation
     const session = await startSession();
@@ -367,6 +378,21 @@ export async function POST(request, { params }) {
         });
 
         await booking.save({ session });
+
+        // Send notification to staff about new pending booking (outside transaction)
+        setImmediate(async () => {
+          try {
+            if (booking && restaurantId) {
+              await notifyStaffOfNewBooking(booking, restaurantId);
+              console.log('✅ Staff notification sent for web booking:', booking.bookingRef);
+            } else {
+              console.log('⚠️ Missing booking or restaurantId for web notification');
+            }
+          } catch (notificationError) {
+            console.error('❌ Failed to send staff notification for web booking:', notificationError);
+            console.error('❌ Web notification error details:', notificationError.stack);
+          }
+        });
 
         // Update the floorplan document using MongoDB's $set operator
         await Floorplan.updateOne(

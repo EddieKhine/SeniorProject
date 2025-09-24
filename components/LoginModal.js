@@ -1,18 +1,57 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faEnvelope, faLock, faUtensils } from "@fortawesome/free-solid-svg-icons";
 import { faGoogle } from "@fortawesome/free-brands-svg-icons";
 import { motion, AnimatePresence } from "framer-motion";
 import { auth } from "@/lib/firebase-config";
-import { signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider } from "firebase/auth";
+import { signInWithEmailAndPassword, signInWithPopup, signInWithRedirect, getRedirectResult, GoogleAuthProvider } from "firebase/auth";
 
 export default function LoginModal({ isOpen, onClose, openSignupModal, onLoginSuccess }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  // Handle redirect result from Google login
+  useEffect(() => {
+    const handleRedirectResult = async () => {
+      if (localStorage.getItem('googleLoginAttempt') === 'true') {
+        try {
+          const result = await getRedirectResult(auth);
+          if (result) {
+            // Extract Google user information
+            const { uid, email, displayName, photoURL } = result.user;
+            
+            console.log('Google login redirect - User info:', {
+              uid,
+              email,
+              displayName,
+              photoURL
+            });
+            
+            // Sync profile with complete Google information
+            const userProfile = await syncProfile(uid, email, displayName, photoURL);
+            
+            if (onLoginSuccess) onLoginSuccess(userProfile);
+            onClose();
+            
+            // Clean up
+            localStorage.removeItem('googleLoginAttempt');
+            localStorage.removeItem('currentUrl');
+          }
+        } catch (error) {
+          console.error('Redirect result error:', error);
+          setError(error.message);
+        } finally {
+          localStorage.removeItem('googleLoginAttempt');
+        }
+      }
+    };
+
+    handleRedirectResult();
+  }, [onLoginSuccess, onClose]);
 
   // Sync or fetch MongoDB profile after Firebase login
   const syncProfile = async (firebaseUid, email, displayName = null, photoURL = null) => {
@@ -59,7 +98,32 @@ export default function LoginModal({ isOpen, onClose, openSignupModal, onLoginSu
     setError("");
     try {
       const provider = new GoogleAuthProvider();
-      const result = await signInWithPopup(auth, provider);
+      
+      // Add custom parameters to handle CORS issues
+      provider.setCustomParameters({
+        prompt: 'select_account'
+      });
+
+      let result;
+      try {
+        // Try popup first
+        result = await signInWithPopup(auth, provider);
+      } catch (popupError) {
+        console.log('Popup blocked, trying redirect method...');
+        // If popup is blocked, fall back to redirect
+        if (popupError.code === 'auth/popup-blocked' || 
+            popupError.code === 'auth/popup-closed-by-user' ||
+            popupError.message.includes('Cross-Origin-Opener-Policy')) {
+          
+          // Store current state before redirect
+          localStorage.setItem('googleLoginAttempt', 'true');
+          localStorage.setItem('currentUrl', window.location.href);
+          
+          await signInWithRedirect(auth, provider);
+          return; // Function will complete after redirect
+        }
+        throw popupError;
+      }
       
       // Extract Google user information
       const { uid, email, displayName, photoURL } = result.user;
@@ -77,7 +141,12 @@ export default function LoginModal({ isOpen, onClose, openSignupModal, onLoginSu
       if (onLoginSuccess) onLoginSuccess(userProfile);
       onClose();
     } catch (error) {
-      setError(error.message);
+      console.error('Google login error:', error);
+      if (error.message.includes('Cross-Origin-Opener-Policy')) {
+        setError('Popup blocked by browser. Please allow popups for this site or try refreshing the page.');
+      } else {
+        setError(error.message);
+      }
     } finally {
       setLoading(false);
     }

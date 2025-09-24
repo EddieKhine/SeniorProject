@@ -5,7 +5,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faEnvelope, faLock, faUtensils } from "@fortawesome/free-solid-svg-icons";
 import { faGoogle } from "@fortawesome/free-brands-svg-icons";
 import { auth } from "@/lib/firebase-config";
-import { createUserWithEmailAndPassword, signInWithPopup, GoogleAuthProvider } from "firebase/auth";
+import { createUserWithEmailAndPassword, signInWithPopup, signInWithRedirect, GoogleAuthProvider } from "firebase/auth";
 
 export default function SignupModal({ isOpen, onClose, openLoginModal }) {
   const [email, setEmail] = useState("");
@@ -86,7 +86,25 @@ export default function SignupModal({ isOpen, onClose, openLoginModal }) {
     setMessage("");
     try {
       const provider = new GoogleAuthProvider();
-      const result = await signInWithPopup(auth, provider);
+      provider.setCustomParameters({
+        prompt: 'select_account'
+      });
+
+      let result;
+      try {
+        result = await signInWithPopup(auth, provider);
+      } catch (popupError) {
+        if (popupError.code === 'auth/popup-blocked' || 
+            popupError.code === 'auth/popup-closed-by-user' ||
+            popupError.message.includes('Cross-Origin-Opener-Policy')) {
+          
+          localStorage.setItem('googleSignupAttempt', 'true');
+          localStorage.setItem('currentUrl', window.location.href);
+          await signInWithRedirect(auth, provider);
+          return;
+        }
+        throw popupError;
+      }
       // Extract displayName and photoURL
       const displayName = result.user.displayName || "";
       const [firstName, ...rest] = displayName.split(" ");

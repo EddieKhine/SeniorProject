@@ -8,6 +8,7 @@ import Floorplan from "@/models/Floorplan";
 import Staff from "@/models/Staff";
 import Booking from "@/models/Booking";
 import User from "@/models/user";
+import { notifyStaffOfNewBooking, notifyCustomerOfBookingConfirmation, notifyCustomerOfBookingRejection, getBookingDetailsForStaff } from "@/lib/lineNotificationService";
 
 const config = {
   channelAccessToken: process.env.LINE_CHANNEL_ACCESS_TOKEN,
@@ -547,16 +548,18 @@ async function handleCustomerPostback(event, userId, client, postbackData) {
           return await handleBookingTableSelection(event, userId, client, customer, params.date, params.time, params.guests, params.page || 0);
         }
         
+        // Skip payment processing - go directly to booking completion for staff confirmation workflow
         if (postbackData.startsWith("action=booking_confirm&date=")) {
+          console.log("Booking confirm - skipping payment, going directly to completion");
           const params = parseBookingParams(postbackData);
-          return await handleBookingPayment(event, userId, client, customer, params.date, params.time, params.guests, params.table);
+          return await handleBookingCompletion(event, userId, client, customer, params.date, params.time, params.guests, params.table);
         }
         
+        // Payment processing disabled - using staff confirmation workflow instead
         if (postbackData.startsWith("action=booking_payment_process&date=")) {
-          console.log("Payment process postback data:", postbackData);
+          console.log("Payment process disabled - redirecting to booking completion");
           const params = parseBookingParams(postbackData);
-          console.log("Parsed payment params:", params);
-          return await handleBookingPaymentProcess(event, userId, client, customer, params.date, params.time, params.guests, params.table, params.amount);
+          return await handleBookingCompletion(event, userId, client, customer, params.date, params.time, params.guests, params.table);
         }
         
         if (postbackData.startsWith("action=booking_complete&date=")) {
@@ -1484,8 +1487,13 @@ async function handleBookingPayment(event, userId, client, customer, selectedDat
 
     let pricingData;
     if (pricingResponse.ok) {
-      pricingData = await pricingResponse.json();
-      console.log("Pricing API response:", pricingData);
+      try {
+        pricingData = await pricingResponse.json();
+        console.log("Pricing API response:", pricingData);
+      } catch (jsonError) {
+        console.error('Error parsing pricing response JSON:', jsonError);
+        pricingData = null;
+      }
     } else {
       console.error("Pricing API error:", pricingResponse.status);
       // Fallback pricing
@@ -2066,20 +2074,20 @@ async function handleBookingCompletion(event, userId, client, customer, selected
 
       return client.replyMessage(event.replyToken, {
         type: "template",
-        altText: "Booking Confirmed",
+        altText: "Booking Request Submitted",
         template: {
           type: "buttons",
-          text: `Booking Confirmed!\n\nReference: ${booking.bookingRef}\n${restaurant.restaurantName}\n${dateStr}\n${selectedTime} - ${endTimeStr}\n${guestCount} guests\nTable ${tableId}\n\nYour reservation has been confirmed!`,
+          text: `📝 Booking Submitted!\n\nRef: ${booking.bookingRef}\n${dateStr}\n${selectedTime} - ${endTimeStr}\n${guestCount} guests, Table ${tableId}\n\n⏳ PENDING CONFIRMATION`,
           actions: [
             {
               type: "postback",
-              label: "View My Bookings",
+              label: "📋 My Bookings",
               data: "action=customer_bookings",
               displayText: "View all bookings",
             },
             {
               type: "postback",
-              label: "Make Another Booking",
+              label: "📅 Make Another Booking",
               data: "action=customer_book",
               displayText: "Make another booking",
             }
@@ -2322,7 +2330,7 @@ async function createBookingFromLine(bookingData, floorplanId) {
       return { success: false, error: 'Table is no longer available' };
     }
     
-    // Create booking
+    // Create booking with PENDING status for staff confirmation
     const booking = new Booking({
       userId: customerData._id,
       restaurantId: restaurantId,
@@ -2332,7 +2340,7 @@ async function createBookingFromLine(bookingData, floorplanId) {
       startTime: startTime,
       endTime: endTime,
       guestCount: guestCount,
-      status: 'confirmed',
+      status: 'pending', // Changed to pending for staff confirmation
       customerName: `${customerData.firstName} ${customerData.lastName}`.trim(),
       customerEmail: customerData.email,
       customerPhone: customerData.contactNumber,
@@ -2360,6 +2368,24 @@ async function createBookingFromLine(bookingData, floorplanId) {
     });
     
     await booking.save();
+    
+    // Send notification to staff about new pending booking
+    try {
+      if (booking && restaurantId) {
+        await notifyStaffOfNewBooking(booking, restaurantId);
+        console.log('✅ Staff notification sent for booking:', booking.bookingRef);
+      } else {
+        console.log('⚠️ Missing booking or restaurantId for notification');
+      }
+    } catch (notificationError) {
+      console.error('❌ Failed to send staff notification:', notificationError);
+      console.error('❌ Notification error details:', notificationError.stack);
+      // Don't fail the booking creation if notification fails
+    }
+
+    // Note: LINE customer confirmation is handled in the booking completion flow
+    // to avoid reply token conflicts. The confirmation message is sent as a reply
+    // in the handleBookingCompletion function.
     
     // Update floorplan table status
     await Floorplan.updateOne(
@@ -2487,7 +2513,16 @@ async function handleEvent(event) {
               console.log('🔍 Token verification response:', verifyResponse.status);
 
               if (verifyResponse.ok) {
-                const tokenData = await verifyResponse.json();
+                let tokenData;
+                try {
+                  tokenData = await verifyResponse.json();
+                } catch (jsonError) {
+                  console.error('Error parsing verify response JSON:', jsonError);
+                  return client.replyMessage(event.replyToken, {
+                    type: "text",
+                    text: "❌ System error during registration. Please contact your manager.",
+                  });
+                }
                 const profile = await client.getProfile(userId);
 
                 // Complete the registration
@@ -2504,13 +2539,28 @@ async function handleEvent(event) {
                 });
 
                 if (completeResponse.ok) {
-                  const registrationResult = await completeResponse.json();
+                  let registrationResult;
+                  try {
+                    registrationResult = await completeResponse.json();
+                  } catch (jsonError) {
+                    console.error('Error parsing complete response JSON:', jsonError);
+                    return client.replyMessage(event.replyToken, {
+                      type: "text",
+                      text: "❌ Registration completed but system error occurred. Please contact your manager.",
+                    });
+                  }
                   return client.replyMessage(event.replyToken, {
                     type: "text",
                     text: `✅ Registration successful!\n\nWelcome ${tokenData.registrationData.displayName}!\nRole: ${tokenData.registrationData.role}\n\nYou can now use staff commands. Type anything to see the staff menu.`,
                   });
                 } else {
-                  const error = await completeResponse.json();
+                  let error;
+                  try {
+                    error = await completeResponse.json();
+                  } catch (jsonError) {
+                    console.error('Error parsing error response JSON:', jsonError);
+                    error = { error: 'Unknown error occurred' };
+                  }
                   return client.replyMessage(event.replyToken, {
                     type: "text",
                     text: `❌ Registration failed: ${error.error}\n\nPlease try again or contact your manager.`,
@@ -2575,7 +2625,13 @@ async function handleEvent(event) {
                   text: `✅ Registration successful!\n\nWelcome ${nickname}!\nYou are now registered as a staff member.\n\nYou can now use the staff commands. Type anything to see the staff menu.`,
                 });
               } else {
-                const error = await response.json();
+                let error;
+                try {
+                  error = await response.json();
+                } catch (jsonError) {
+                  console.error('Error parsing response JSON:', jsonError);
+                  error = { error: 'System error occurred' };
+                }
                 return client.replyMessage(event.replyToken, {
                   type: "text",
                   text: `❌ Registration failed: ${error.error}\n\nPlease try again or contact your manager.`,
@@ -2896,6 +2952,223 @@ async function handleEvent(event) {
       }
     }
     
+    // New notification system handlers
+    else if (postbackData.startsWith("action=confirm_booking&bookingId=")) {
+      if (!staffMember.permissions.canUpdateBookings) {
+        return client.replyMessage(event.replyToken, {
+          type: "text",
+          text: "You don't have permission to confirm bookings.",
+        });
+      }
+
+      // Parse parameters manually from postback data
+      const bookingIdMatch = postbackData.match(/bookingId=([^&]+)/);
+      const staffIdMatch = postbackData.match(/staffId=([^&]+)/);
+      const bookingId = bookingIdMatch ? bookingIdMatch[1] : null;
+      const staffId = staffIdMatch ? staffIdMatch[1] : null;
+
+      try {
+        await dbConnect();
+        const booking = await Booking.findById(bookingId).populate('restaurantId', 'restaurantName');
+        
+        if (!booking) {
+          return client.replyMessage(event.replyToken, {
+            type: "text",
+            text: "❌ Booking not found.",
+          });
+        }
+
+        if (booking.status !== 'pending') {
+          return client.replyMessage(event.replyToken, {
+            type: "text",
+            text: `❌ This booking has already been ${booking.status}.`,
+          });
+        }
+
+        // Update booking status to confirmed
+        booking.status = 'confirmed';
+        booking.addToHistory('confirmed', {
+          staffId: staffMember._id,
+          staffName: staffMember.displayName,
+          confirmedAt: new Date()
+        });
+        await booking.save();
+
+        // Send confirmation to customer
+        try {
+          await notifyCustomerOfBookingConfirmation(booking, staffMember);
+          console.log('✅ Customer confirmation sent successfully');
+        } catch (notificationError) {
+          console.error('❌ Failed to send customer confirmation:', notificationError);
+        }
+
+        const bookingDate = new Date(booking.date).toLocaleDateString('en-US', {
+          weekday: 'long',
+          month: 'long',
+          day: 'numeric'
+        });
+
+        return client.replyMessage(event.replyToken, {
+          type: "text",
+          text: `✅ Booking Confirmed!\n\n📋 Ref: ${booking.bookingRef}\n👤 Customer: ${booking.customerName}\n📅 Date: ${bookingDate}\n🕐 Time: ${booking.startTime}\n👥 Guests: ${booking.guestCount}\n🪑 Table: ${booking.tableId}\n\n✨ Customer has been notified of the confirmation!`,
+        });
+
+      } catch (error) {
+        console.error('Error confirming booking:', error);
+        return client.replyMessage(event.replyToken, {
+          type: "text",
+          text: "❌ Error confirming booking. Please try again.",
+        });
+      }
+    }
+    
+    else if (postbackData.startsWith("action=reject_booking&bookingId=")) {
+      if (!staffMember.permissions.canCancelBookings) {
+        return client.replyMessage(event.replyToken, {
+          type: "text",
+          text: "You don't have permission to reject bookings.",
+        });
+      }
+
+      // Parse parameters manually from postback data
+      const bookingIdMatch = postbackData.match(/bookingId=([^&]+)/);
+      const staffIdMatch = postbackData.match(/staffId=([^&]+)/);
+      const bookingId = bookingIdMatch ? bookingIdMatch[1] : null;
+      const staffId = staffIdMatch ? staffIdMatch[1] : null;
+
+      try {
+        await dbConnect();
+        const booking = await Booking.findById(bookingId).populate('restaurantId', 'restaurantName');
+        
+        if (!booking) {
+          return client.replyMessage(event.replyToken, {
+            type: "text",
+            text: "❌ Booking not found.",
+          });
+        }
+
+        if (booking.status !== 'pending') {
+          return client.replyMessage(event.replyToken, {
+            type: "text",
+            text: `❌ This booking has already been ${booking.status}.`,
+          });
+        }
+
+        // Update booking status to cancelled
+        booking.status = 'cancelled';
+        booking.addToHistory('rejected', {
+          staffId: staffMember._id,
+          staffName: staffMember.displayName,
+          rejectedAt: new Date(),
+          reason: 'Rejected by staff'
+        });
+        await booking.save();
+
+        // Send rejection notification to customer
+        try {
+          await notifyCustomerOfBookingRejection(booking, staffMember, 'Table not available at requested time');
+        } catch (notificationError) {
+          console.error('Failed to send customer rejection notification:', notificationError);
+        }
+
+        const bookingDate = new Date(booking.date).toLocaleDateString('en-US', {
+          weekday: 'long',
+          month: 'long',
+          day: 'numeric'
+        });
+
+        return client.replyMessage(event.replyToken, {
+          type: "text",
+          text: `❌ Booking Rejected\n\n📋 Ref: ${booking.bookingRef}\n👤 Customer: ${booking.customerName}\n📅 Date: ${bookingDate}\n🕐 Time: ${booking.startTime}\n\n📤 Customer has been notified of the rejection.`,
+        });
+
+      } catch (error) {
+        console.error('Error rejecting booking:', error);
+        return client.replyMessage(event.replyToken, {
+          type: "text",
+          text: "❌ Error rejecting booking. Please try again.",
+        });
+      }
+    }
+    
+    else if (postbackData.startsWith("action=booking_details&bookingId=")) {
+      // Parse parameters manually from postback data
+      const bookingIdMatch = postbackData.match(/bookingId=([^&]+)/);
+      const bookingId = bookingIdMatch ? bookingIdMatch[1] : null;
+
+      try {
+        const bookingDetails = await getBookingDetailsForStaff(bookingId);
+        
+        const detailsText = `📋 BOOKING DETAILS\n\n` +
+          `📋 Reference: ${bookingDetails.bookingRef}\n` +
+          `👤 Customer: ${bookingDetails.customerName}\n` +
+          `📧 Email: ${bookingDetails.customerEmail}\n` +
+          `📱 Phone: ${bookingDetails.customerPhone}\n` +
+          `📅 Date: ${bookingDetails.date}\n` +
+          `🕐 Time: ${bookingDetails.startTime} - ${bookingDetails.endTime}\n` +
+          `👥 Guests: ${bookingDetails.guestCount}\n` +
+          `🪑 Table: ${bookingDetails.tableId}\n` +
+          `📍 Restaurant: ${bookingDetails.restaurantName}\n` +
+          `⏰ Created: ${bookingDetails.createdAt}\n` +
+          `💰 Price: ${bookingDetails.pricing?.finalPrice || 'N/A'} THB\n` +
+          `📱 LINE Customer: ${bookingDetails.isLineCustomer ? 'Yes' : 'No'}\n` +
+          `📊 Status: ${bookingDetails.status.toUpperCase()}`;
+
+        const actions = [];
+        
+        if (bookingDetails.status === 'pending' && staffMember.permissions.canUpdateBookings) {
+          actions.push({
+            type: "postback",
+            label: "✅ Confirm",
+            data: `action=confirm_booking&bookingId=${bookingId}&staffId=${staffMember._id}`,
+            displayText: `Confirm booking ${bookingDetails.bookingRef}`,
+          });
+        }
+
+        if (bookingDetails.status === 'pending' && staffMember.permissions.canCancelBookings) {
+          actions.push({
+            type: "postback",
+            label: "❌ Reject",
+            data: `action=reject_booking&bookingId=${bookingId}&staffId=${staffMember._id}`,
+            displayText: `Reject booking ${bookingDetails.bookingRef}`,
+          });
+        }
+
+        actions.push({
+          type: "postback",
+          label: "📋 Show Bookings",
+          data: "action=show_bookings",
+          displayText: "Show all bookings",
+        });
+
+        if (actions.length > 0) {
+          return client.replyMessage(event.replyToken, {
+            type: "template",
+            altText: `Booking details - ${bookingDetails.bookingRef}`,
+            template: {
+              type: "buttons",
+              text: detailsText.length > 160 ? 
+                `📋 ${bookingDetails.bookingRef}\n👤 ${bookingDetails.customerName}\n📅 ${bookingDetails.date}\n🕐 ${bookingDetails.startTime}\n👥 ${bookingDetails.guestCount}\n📊 ${bookingDetails.status.toUpperCase()}` :
+                detailsText,
+              actions: actions.slice(0, 4), // LINE limit is 4 actions
+            },
+          });
+        } else {
+          return client.replyMessage(event.replyToken, {
+            type: "text",
+            text: detailsText,
+          });
+        }
+
+      } catch (error) {
+        console.error('Error getting booking details:', error);
+        return client.replyMessage(event.replyToken, {
+          type: "text",
+          text: "❌ Error fetching booking details. Please try again.",
+        });
+      }
+    }
+    
     else if (postbackData.startsWith("action=complete_booking&id=")) {
       if (!staffMember.permissions.canUpdateBookings) {
         return client.replyMessage(event.replyToken, {
@@ -3016,7 +3289,20 @@ export async function POST(req) {
       return new Response("Invalid signature", { status: 401 });
     }
 
-    const events = JSON.parse(body).events;
+    let events;
+    try {
+      const parsedBody = JSON.parse(body);
+      events = parsedBody.events;
+      if (!events || !Array.isArray(events)) {
+        console.error("Invalid webhook body structure:", parsedBody);
+        return new Response("Invalid webhook body", { status: 400 });
+      }
+    } catch (parseError) {
+      console.error("JSON parsing error:", parseError);
+      console.error("Body content:", body.substring(0, 200) + "...");
+      return new Response("Invalid JSON in webhook body", { status: 400 });
+    }
+
     console.log("Processing events:", events.length);
 
     for (const event of events) {

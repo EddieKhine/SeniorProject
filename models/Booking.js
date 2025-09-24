@@ -106,7 +106,7 @@ const bookingSchema = new mongoose.Schema({
     history: [{
         action: {
             type: String,
-            enum: ['created', 'modified', 'cancelled', 'completed'],
+            enum: ['created', 'modified', 'cancelled', 'completed', 'confirmed', 'rejected'],
             required: true
         },
         timestamp: {
