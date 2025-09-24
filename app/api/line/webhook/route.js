@@ -23,6 +23,19 @@ const client = new Client(config);
 
 let mongoClient;
 
+// Event deduplication cache to prevent processing same events multiple times
+const processedEvents = new Map();
+
+// Clean up old events every 5 minutes to prevent memory leaks
+setInterval(() => {
+  const fiveMinutesAgo = Date.now() - 5 * 60 * 1000;
+  for (const [eventId, timestamp] of processedEvents.entries()) {
+    if (timestamp < fiveMinutesAgo) {
+      processedEvents.delete(eventId);
+    }
+  }
+}, 5 * 60 * 1000);
+
 async function getBookings(restaurantId = null) {
   try {
     await dbConnect();
@@ -257,6 +270,14 @@ async function createCustomerAccount(lineUserId, displayName, pictureUrl) {
 
 async function handleCustomerMode(event, userId, client) {
   try {
+    // Check if this is a repeat access - prevent spam
+    const accessKey = `customer_mode_${userId}_${event.timestamp}`;
+    if (processedEvents.has(accessKey)) {
+      console.log("Duplicate customer mode access detected, skipping");
+      return;
+    }
+    processedEvents.set(accessKey, Date.now());
+    
     const profile = await client.getProfile(userId);
     const restaurantId = await getRestaurantId();
     
@@ -3302,6 +3323,7 @@ async function handleEvent(event) {
 
 export async function POST(req) {
   try {
+    const startTime = Date.now();
     const body = await req.text();
     const signature = req.headers.get("x-line-signature");
 
@@ -3334,7 +3356,21 @@ export async function POST(req) {
 
     for (const event of events) {
       try {
+        // Create unique event ID for deduplication
+        const eventId = `${event.source.userId}_${event.timestamp}_${event.type}_${event.replyToken}`;
+        
+        // Check if we've already processed this event
+        if (processedEvents.has(eventId)) {
+          console.log(`⚠️ Duplicate event detected and skipped: ${eventId}`);
+          continue;
+        }
+        
+        // Mark event as processed
+        processedEvents.set(eventId, Date.now());
+        console.log(`🔄 Processing new event: ${eventId}`);
+        
         await handleEvent(event);
+        
       } catch (eventError) {
         console.error("Error handling event:", eventError);
         console.error("Event data:", JSON.stringify(event, null, 2));
@@ -3342,10 +3378,15 @@ export async function POST(req) {
       }
     }
     
+    const processingTime = Date.now() - startTime;
+    console.log(`✅ Webhook processing completed in ${processingTime}ms`);
+    
     return NextResponse.json({ success: true });
   } catch (error) {
+    const processingTime = Date.now() - startTime;
     console.error("Webhook error:", error);
     console.error("Error stack:", error.stack);
+    console.error(`❌ Webhook failed after ${processingTime}ms`);
     return new Response(`Error: ${error.message}`, { status: 500 });
   }
 } 
