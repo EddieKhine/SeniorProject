@@ -57,6 +57,40 @@ AWS_REGION=your_aws_region
 AWS_S3_BUCKET=your_s3_bucket_name
 ```
 
+### Email Configuration (for booking notifications)
+```
+EMAIL_USER=official@foodloft.me
+EMAIL_PASS=your_email_password
+EMAIL_FROM=official@foodloft.me
+```
+
+## Email Setup Instructions
+
+### Namecheap Email Setup (for booking notifications)
+
+1. **Access your Namecheap email account**:
+   - Go to [webmail.privateemail.com](https://webmail.privateemail.com)
+   - Sign in with `official@foodloft.me` and your email password
+
+2. **Environment Variables**:
+   ```
+   EMAIL_USER=official@foodloft.me
+   EMAIL_PASS=your_email_password
+   EMAIL_FROM=official@foodloft.me
+   ```
+
+3. **SMTP Configuration**:
+   - **Host**: `mail.privateemail.com`
+   - **Port**: `587` (TLS)
+   - **Security**: TLS/STARTTLS
+   - **Authentication**: Required
+
+### Email Features
+- **Automatic notifications** when restaurant owners confirm/cancel bookings
+- **HTML email templates** with booking details and restaurant branding
+- **Fallback text versions** for email clients that don't support HTML
+- **Non-blocking email sending** (API responses aren't delayed by email sending)
+
 ## How to Set Environment Variables in Vercel
 
 1. Go to your Vercel dashboard

@@ -3,6 +3,7 @@ import dbConnect from '@/lib/mongodb';
 import Booking from '@/models/Booking';
 import Restaurant from '@/models/Restaurants';
 import jwt from 'jsonwebtoken';
+import { sendBookingStatusNotification } from '@/lib/email/bookingNotifications';
 
 export async function PATCH(request, { params }) {
   try {
@@ -87,6 +88,41 @@ export async function PATCH(request, { params }) {
 
     booking.status = status;
     await booking.save();
+
+    // 🚀 Send email notification for status changes
+    try {
+      const emailData = {
+        customerName: booking.customerName,
+        customerEmail: booking.customerEmail,
+        restaurantName: restaurant.restaurantName,
+        date: booking.date,
+        startTime: booking.startTime,
+        endTime: booking.endTime,
+        guestCount: booking.guestCount,
+        tableId: booking.tableId,
+        bookingRef: booking.bookingRef,
+        createdAt: booking.createdAt
+      };
+
+      console.log('📧 Sending email notification to:', booking.customerEmail);
+      console.log('📧 Email data:', emailData);
+
+      // Send email notification (don't wait for it to complete to avoid blocking the API response)
+      sendBookingStatusNotification(emailData, status, previousStatus)
+        .then(result => {
+          if (result.success) {
+            console.log('✅ Email notification sent successfully:', result.messageId || result.message);
+          } else {
+            console.error('❌ Email notification failed:', result.error);
+          }
+        })
+        .catch(error => {
+          console.error('❌ Email notification error:', error);
+        });
+    } catch (emailError) {
+      console.error('❌ Email preparation failed:', emailError);
+      // Continue with booking update even if email fails
+    }
 
     return NextResponse.json({ 
       message: 'Booking status updated successfully',
