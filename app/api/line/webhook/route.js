@@ -1340,33 +1340,6 @@ async function handleBookingTableSelection(event, userId, client, customer, sele
       });
     }
 
-    // Send floorplan image first
-    try {
-      const floorplanData = await getFloorplanImage();
-      if (floorplanData && floorplanData.imageUrl) {
-        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
-        const fullImageUrl = floorplanData.imageUrl.startsWith('http') 
-          ? floorplanData.imageUrl 
-          : `${baseUrl}${floorplanData.imageUrl}`;
-        
-        // Send floorplan image
-        await client.replyMessage(event.replyToken, {
-          type: "image",
-          originalContentUrl: fullImageUrl,
-          previewImageUrl: fullImageUrl,
-        });
-        
-        // Send a text message explaining the floorplan
-        await client.pushMessage(userId, {
-          type: "text",
-          text: `📍 Restaurant Floorplan\n\nPlease refer to the floorplan above to see table locations. Select your preferred table from the options below:`,
-        });
-      }
-    } catch (floorplanError) {
-      console.error('Error sending floorplan image:', floorplanError);
-      // Continue with table selection even if floorplan fails
-    }
-
     const dateObj = new Date(selectedDate);
     const dateStr = dateObj.toLocaleDateString("en-GB", { 
       weekday: 'short', 
@@ -1415,30 +1388,84 @@ async function handleBookingTableSelection(event, userId, client, customer, sele
       }
     }));
 
-    // Send table selection options (use pushMessage since reply token was used for floorplan)
-    return client.pushMessage(userId, {
+    // Use reply message for main table selection to avoid duplication
+    const tableSelectionMessage = {
       type: "flex",
       altText: "Select Table",
       contents: {
         type: "carousel",
         contents: tableBubbles
       }
-    });
+    };
+
+    // Send floorplan image and table selection as separate messages using pushMessage
+    // to avoid reply token conflicts and prevent looping
+    try {
+      const floorplanData = await getFloorplanImage();
+      if (floorplanData && floorplanData.imageUrl) {
+        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+        const fullImageUrl = floorplanData.imageUrl.startsWith('http') 
+          ? floorplanData.imageUrl 
+          : `${baseUrl}${floorplanData.imageUrl}`;
+        
+        // Send floorplan image using reply message
+        await client.replyMessage(event.replyToken, {
+          type: "image",
+          originalContentUrl: fullImageUrl,
+          previewImageUrl: fullImageUrl,
+        });
+        
+        // Send explanatory text
+        await client.pushMessage(userId, {
+          type: "text",
+          text: `📍 Restaurant Floorplan\n\nPlease refer to the floorplan above to see table locations. Select your preferred table from the options below:`,
+        });
+        
+        // Send table selection options
+        await client.pushMessage(userId, tableSelectionMessage);
+        
+      } else {
+        // No floorplan available - send table selection directly with reply token
+        await client.replyMessage(event.replyToken, {
+          type: "text",
+          text: `📋 Available Tables for ${dateStr} at ${selectedTime}\n${guestCount} guests\n\nSelect your preferred table:`,
+        });
+        
+        // Send table selection options  
+        await client.pushMessage(userId, tableSelectionMessage);
+      }
+    } catch (floorplanError) {
+      console.error('Error sending floorplan image:', floorplanError);
+      // If floorplan fails, send table selection directly using reply token
+      try {
+        await client.replyMessage(event.replyToken, {
+          type: "text", 
+          text: `📋 Available Tables for ${dateStr} at ${selectedTime}\n${guestCount} guests\n\nSelect your preferred table:`,
+        });
+        
+        // Send table selection options
+        await client.pushMessage(userId, tableSelectionMessage);
+      } catch (replyError) {
+        console.error('Error with reply message, using push only:', replyError);
+        // Last resort - use push message only
+        await client.pushMessage(userId, {
+          type: "text",
+          text: `📋 Available Tables for ${dateStr} at ${selectedTime}\n${guestCount} guests\n\nSelect your preferred table:`,
+        });
+        await client.pushMessage(userId, tableSelectionMessage);
+      }
+    }
 
   } catch (error) {
     console.error('Error in table selection:', error);
-    // Try to send error message, but if reply token is already used, use pushMessage
+    // Send error message using push to avoid reply token conflicts
     try {
-      return client.replyMessage(event.replyToken, {
+      await client.pushMessage(userId, {
         type: "text",
-        text: "Sorry, there was an error. Please try again later.",
+        text: "Sorry, there was an error loading tables. Please try again later.",
       });
-    } catch (replyError) {
-      // If reply token is already used, send via pushMessage
-      return client.pushMessage(userId, {
-        type: "text",
-        text: "Sorry, there was an error. Please try again later.",
-      });
+    } catch (pushError) {
+      console.error('Error sending error message:', pushError);
     }
   }
 }
