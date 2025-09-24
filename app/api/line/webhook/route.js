@@ -348,7 +348,7 @@ async function handleCustomerMode(event, userId, client) {
                   color: "#0084FF",
                   action: {
                     type: "uri",
-                    uri: `https://line.me/R/app/2007787204-zGYZn1ZE?restaurantId=${restaurantId}`,
+                    uri: `https://liff.line.me/2007787204-zGYZn1ZE?restaurantId=${restaurantId}`,
                     label: "Open Restaurant App"
                   },
                   margin: "sm"
@@ -449,7 +449,7 @@ async function handleCustomerMode(event, userId, client) {
                 color: "#0084FF",
                 action: {
                   type: "uri",
-                  uri: `https://line.me/R/app/2007787204-zGYZn1ZE?restaurantId=${restaurantId}`,
+                  uri: `https://liff.line.me/2007787204-zGYZn1ZE?restaurantId=${restaurantId}`,
                   label: "Open Restaurant App"
                 },
                 margin: "sm"
@@ -827,7 +827,7 @@ async function handleCustomerFloorplan(event, userId, client, customer) {
       `Tip: Use "Make Booking" to see real-time availability and select your preferred table!`;
 
     // Create LIFF URL with restaurant ID parameter
-    const liffUrl = `https://line.me/R/app/2007787204-zGYZn1ZE?restaurantId=${restaurantId}`;
+    const liffUrl = `https://liff.line.me/2007787204-zGYZn1ZE?restaurantId=${restaurantId}`;
     
     console.log("🔗 User requesting floorplan with LIFF link:");
     console.log("   LINE User ID:", userId);
@@ -893,7 +893,7 @@ async function handleCustomerInfo(event, userId, client, customer) {
       `${restaurant.description || 'Welcome to our restaurant!'}`;
 
     // Create LIFF URL with restaurant ID parameter
-    const liffUrl = `https://line.me/R/app/2007787204-zGYZn1ZE?restaurantId=${restaurantId}`;
+    const liffUrl = `https://liff.line.me/2007787204-zGYZn1ZE?restaurantId=${restaurantId}`;
 
     return client.replyMessage(event.replyToken, {
       type: "template",
