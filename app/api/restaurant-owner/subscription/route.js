@@ -32,16 +32,53 @@ export async function GET(req) {
     }
     
     // Get owner's subscription
-    const subscription = await Subscription.findOne({ ownerId }).populate('restaurantId', 'restaurantName');
+    let subscription = await Subscription.findOne({ ownerId }).populate('restaurantId', 'restaurantName');
     
     if (!subscription) {
-      return NextResponse.json({
-        success: true,
-        data: {
-          hasSubscription: false,
-          message: 'No subscription found. You are on the free plan.'
-        }
-      });
+      // Check if subscription info is stored in the restaurant owner document
+      if (owner.subscriptionPlan) {
+        // Create a mock subscription object from the owner's subscriptionPlan
+        subscription = {
+          planType: owner.subscriptionPlan.toLowerCase() === 'basic' ? 'free' : owner.subscriptionPlan.toLowerCase(),
+          price: 0, // Free plan
+          status: 'active',
+          billingCycle: 'monthly',
+          currency: 'THB',
+          startDate: owner.createdAt,
+          endDate: null,
+          features: Subscription.getPlanLimits('free').features
+        };
+      } else {
+        return NextResponse.json({
+          success: true,
+          data: {
+            hasSubscription: false,
+            message: 'No subscription found. You are on the free plan.'
+          }
+        });
+      }
+    }
+
+    // Handle legacy plan types - convert to 'free' for free plans
+    if (subscription.planType === 'basic' && subscription.price === 0) {
+      subscription.planType = 'free';
+      subscription.price = 0;
+      // Update the subscription in the database if it exists
+      if (subscription._id) {
+        await Subscription.findByIdAndUpdate(subscription._id, { 
+          planType: 'free',
+          price: 0
+        });
+      }
+    } else if (subscription.planType === 'business' && subscription.price === 0) {
+      subscription.planType = 'free';
+      subscription.price = 0;
+      if (subscription._id) {
+        await Subscription.findByIdAndUpdate(subscription._id, { 
+          planType: 'free',
+          price: 0
+        });
+      }
     }
     
     // Get current usage data
@@ -71,10 +108,35 @@ export async function GET(req) {
         restaurantId: { $in: restaurantIds } 
       }),
       
-      // Tables count (from floorplans)
+      // Tables count (from floorplans - count objects with isTable: true)
       Floorplan.aggregate([
         { $match: { restaurantId: { $in: restaurantIds } } },
-        { $unwind: '$tables' },
+        { $unwind: '$data.objects' },
+        { 
+          $match: { 
+            'data.objects.type': { $in: ['furniture', 'table'] },
+            'data.objects.userData': { $exists: true, $ne: null }
+          }
+        },
+        {
+          $addFields: {
+            'userDataObj': {
+              $cond: {
+                if: { $eq: [{ $type: '$data.objects.userData' }, 'object'] },
+                then: '$data.objects.userData',
+                else: { $objectToArray: '$data.objects.userData' }
+              }
+            }
+          }
+        },
+        {
+          $match: {
+            $or: [
+              { 'userDataObj.isTable': true },
+              { 'userDataObj.k': 'isTable', 'userDataObj.v': true }
+            ]
+          }
+        },
         { $count: 'totalTables' }
       ]).then(result => result[0]?.totalTables || 0),
       
@@ -95,11 +157,6 @@ export async function GET(req) {
     };
     
     const usageData = {
-      restaurants: {
-        used: restaurants.length,
-        limit: subscription.usage.restaurantsLimit,
-        percentage: calculatePercentage(restaurants.length, subscription.usage.restaurantsLimit)
-      },
       staff: {
         used: totalStaff,
         limit: subscription.usage.staffLimit,

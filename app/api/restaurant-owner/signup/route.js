@@ -133,13 +133,13 @@ export async function POST(req) {
     
     await organization.save();
     
-    // Create default free subscription
-    const freePlanLimits = Subscription.getPlanLimits('free');
+    // Create default basic subscription (free)
+    const basicPlanLimits = Subscription.getPlanLimits('basic');
     const subscription = new Subscription({
       restaurantId: null, // Will be set when first restaurant is created
       ownerId: owner._id,
       organizationId: organization._id,
-      planType: 'free',
+      planType: 'basic',
       billingCycle: 'monthly',
       price: 0,
       currency: 'THB',
@@ -148,21 +148,21 @@ export async function POST(req) {
       endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
       usage: {
         restaurantsUsed: 0,
-        restaurantsLimit: freePlanLimits.restaurantsLimit,
+        restaurantsLimit: basicPlanLimits.restaurantsLimit,
         floorPlansUsed: 0,
-        floorPlansLimit: freePlanLimits.floorPlansLimit,
+        floorPlansLimit: basicPlanLimits.floorPlansLimit,
         tablesUsed: 0,
-        tablesLimit: freePlanLimits.tablesLimit,
+        tablesLimit: basicPlanLimits.tablesLimit,
         staffUsed: 0,
-        staffLimit: freePlanLimits.staffLimit,
+        staffLimit: basicPlanLimits.staffLimit,
         bookingsUsed: 0,
-        bookingsLimit: freePlanLimits.bookingsLimit,
+        bookingsLimit: basicPlanLimits.bookingsLimit,
         apiCallsUsed: 0,
-        apiCallsLimit: freePlanLimits.apiCallsLimit,
+        apiCallsLimit: basicPlanLimits.apiCallsLimit,
         storageUsed: 0,
-        storageLimit: freePlanLimits.storageLimit
+        storageLimit: basicPlanLimits.storageLimit
       },
-      features: freePlanLimits.features
+      features: basicPlanLimits.features
     });
     
     await subscription.save();

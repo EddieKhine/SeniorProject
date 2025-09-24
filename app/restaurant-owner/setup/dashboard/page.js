@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import RestaurantInformation from '@/components/RestaurantInformation'
 import RestaurantProfileForm from '@/components/RestaurantProfileForm'
-import SubscriptionPlans from '@/components/SubscriptionPlans'
 import SubscriptionManagement from '@/components/SubscriptionManagement'
 import { RiRestaurantLine, RiLayoutLine, RiCalendarLine, RiVipCrownLine, RiUserLine, RiMessage2Line, RiTeamLine, RiBarChartLine } from 'react-icons/ri'
 import { motion } from 'framer-motion'
@@ -141,7 +140,7 @@ export default function RestaurantSetupDashboard() {
   return (
     <div className="flex min-h-screen bg-gradient-to-b from-gray-50 to-white">
       {/* Sidebar */}
-      <div className="w-64 bg-white/80 backdrop-blur-lg shadow-lg fixed left-0 top-0 h-screen border-r border-gray-100">
+      <div className="w-72 bg-white/80 backdrop-blur-lg shadow-lg fixed left-0 top-0 h-screen border-r border-gray-100">
         <div className="p-6 flex flex-col h-full">
           {/* Logo or Brand Name */}
           <div className="mb-8">
@@ -168,7 +167,7 @@ export default function RestaurantSetupDashboard() {
               }`}
             >
               <RiUserLine className="text-xl" />
-              <span>Profile</span>
+              <span className="text-sm">Profile</span>
             </button>
 
             <button
@@ -181,7 +180,7 @@ export default function RestaurantSetupDashboard() {
               type="button"
             >
               <RiRestaurantLine className="text-xl" />
-              <span>Restaurant Profile</span>
+              <span className="text-sm">Restaurant Profile</span>
             </button>
             
             <button
@@ -194,7 +193,7 @@ export default function RestaurantSetupDashboard() {
               type="button"
             >
               <RiLayoutLine className="text-xl" />
-              <span>Floor Plan</span>
+              <span className="text-sm">Floor Plan</span>
             </button>
             
             <button
@@ -206,19 +205,7 @@ export default function RestaurantSetupDashboard() {
               }`}
             >
               <RiCalendarLine className="text-xl" />
-              <span>Reservation</span>
-            </button>
-            
-            <button
-              onClick={() => setActiveSection('subscription')}
-              className={`flex items-center space-x-3 w-full p-3 rounded-lg transition-all duration-200 ${
-                activeSection === 'subscription'
-                  ? 'bg-[#FF4F18] text-white font-medium shadow-lg'
-                  : 'text-gray-600 hover:bg-gray-50 hover:text-[#FF4F18]'
-              }`}
-            >
-              <RiVipCrownLine className="text-xl" />
-              <span>Upgrade Plan</span>
+              <span className="text-sm">Reservation</span>
             </button>
             
             <button
@@ -229,8 +216,8 @@ export default function RestaurantSetupDashboard() {
                   : 'text-gray-600 hover:bg-gray-50 hover:text-[#FF4F18]'
               }`}
             >
-              <RiBarChartLine className="text-xl" />
-              <span>Usage & Limits</span>
+              <RiVipCrownLine className="text-xl" />
+              <span className="text-sm">Subscription & Usage</span>
             </button>
             
             <button
@@ -242,7 +229,7 @@ export default function RestaurantSetupDashboard() {
               }`}
             >
               <RiTeamLine className="text-xl" />
-              <span>Staff Management</span>
+              <span className="text-sm">Staff Management</span>
             </button>
             
             <button
@@ -254,7 +241,7 @@ export default function RestaurantSetupDashboard() {
               }`}
             >
               <RiMessage2Line className="text-xl" />
-              <span>Messages</span>
+              <span className="text-sm">Messages</span>
             </button>
             <Link
               href="/restaurant-owner"
@@ -262,7 +249,7 @@ export default function RestaurantSetupDashboard() {
                 text-gray-600 hover:bg-gray-50 hover:text-[#FF4F18]"
             >
               <FaHome className="text-xl" />
-              <span>Home</span>
+              <span className="text-sm">Home</span>
             </Link>
 
             {/* Sign Out Button at Bottom */}
@@ -272,7 +259,7 @@ export default function RestaurantSetupDashboard() {
                 className="flex items-center space-x-3 w-full p-3 rounded-lg text-red-500 hover:bg-red-50 transition-all duration-200"
               >
                 <FaSignOutAlt className="text-xl" />
-                <span>Sign Out</span>
+                <span className="text-sm">Sign Out</span>
               </button>
             </div>
           </nav>
@@ -280,7 +267,7 @@ export default function RestaurantSetupDashboard() {
       </div>
 
       {/* Main Content Area */}
-      <div className="flex-1 ml-64 p-8">
+      <div className="flex-1 ml-72 p-8">
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -294,8 +281,7 @@ export default function RestaurantSetupDashboard() {
               {activeSection === 'profile' && 'Restaurant Profile'}
               {activeSection === 'floorplan' && 'Floor Plan'}
               {activeSection === 'reservation' && 'Reservations'}
-              {activeSection === 'subscription' && 'Upgrade Plan'}
-              {activeSection === 'subscription-management' && 'Usage & Limits'}
+              {activeSection === 'subscription-management' && 'Subscription & Usage'}
               {activeSection === 'staff' && 'Staff Management'}
               {activeSection === 'messages' && 'Messages'}
             </h1>
@@ -433,11 +419,6 @@ export default function RestaurantSetupDashboard() {
                   <p className="text-[#64748B]">Please create a restaurant profile first</p>
                 </div>
               )}
-            </div>
-          )}
-          {activeSection === 'subscription' && (
-            <div className="bg-white p-6 rounded-xl shadow-sm border border-[#F2F4F7] mt-4">
-              <SubscriptionPlans />
             </div>
           )}
           {activeSection === 'subscription-management' && (

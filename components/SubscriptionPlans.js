@@ -1,11 +1,19 @@
 'use client'
 
 import { useState } from 'react'
-import { FaCheckCircle, FaCrown } from 'react-icons/fa'
+import { FaCheckCircle, FaCrown, FaChevronDown, FaChevronUp } from 'react-icons/fa'
 import { motion } from 'framer-motion'
 
 export default function SubscriptionPlans() {
   const [currentPlan] = useState('basic') // Default plan is basic
+  const [expandedPlans, setExpandedPlans] = useState({})
+
+  const togglePlanExpansion = (planName) => {
+    setExpandedPlans(prev => ({
+      ...prev,
+      [planName]: !prev[planName]
+    }))
+  }
 
   return (
     <div className="bg-white py-12 px-6 rounded-2xl">
@@ -59,17 +67,25 @@ export default function SubscriptionPlans() {
                 'Automated email and SMS notifications',
                 'Standard reporting and analytics',
                 'Integration with basic POS systems',
-                'Support for 1 floor plan',
-                'Up to 20 tables'
-              ].map((feature, index) => (
+                'Support for 2 floor plans',
+                'Up to 50 tables',
+                '5,000 bookings per month'
+              ].slice(0, expandedPlans.basic ? 9 : 4).map((feature, index) => (
                 <li key={index} className="flex items-start text-gray-600 group">
                   <FaCheckCircle className="text-[#FF4F18] mr-3 mt-1 flex-shrink-0 group-hover:scale-110 transition-transform" />
                   <span>{feature}</span>
                 </li>
               ))}
             </ul>
+            <button 
+              onClick={() => togglePlanExpansion('basic')}
+              className="text-[#FF4F18] text-sm font-medium mb-4 flex items-center gap-1 hover:underline"
+            >
+              {expandedPlans.basic ? 'See Less' : 'See More'}
+              {expandedPlans.basic ? <FaChevronUp className="text-xs" /> : <FaChevronDown className="text-xs" />}
+            </button>
             <div className="text-sm text-gray-600 italic mb-4">
-              Ideal For: Small restaurants or cafes with a single dining area and limited seating capacity.
+              Ideal For: Small to medium restaurants getting started with digital floor plan management.
             </div>
             <button 
               className={`w-full py-4 px-6 rounded-xl ${
@@ -79,11 +95,11 @@ export default function SubscriptionPlans() {
               } font-semibold transition-all duration-200 transform hover:scale-[1.02]`}
               disabled={currentPlan === 'basic'}
             >
-              {currentPlan === 'basic' ? 'Current Plan' : 'Downgrade'}
+              {currentPlan === 'basic' ? 'Current Plan' : 'Upgrade Plan'}
             </button>
           </motion.div>
 
-          {/* Professional Plan */}
+          {/* Business Plan */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -105,19 +121,27 @@ export default function SubscriptionPlans() {
             <ul className="space-y-4 mb-8 flex-grow">
               {[
                 'All features included in the Basic Plan',
-                'Support for up to 2 floor plans',
-                'Up to 50 tables',
-                'Inclusion of 10 custom 3D models for unique restaurant layouts',
-                'Priority technical support with a 24-hour response time'
-              ].map((feature, index) => (
+                'Support for up to 3 floor plans',
+                'Up to 100 tables',
+                '10,000 bookings per month',
+                'Priority technical support with a 24-hour response time',
+                'Advanced analytics dashboard'
+              ].slice(0, expandedPlans.business ? 6 : 3).map((feature, index) => (
                 <li key={index} className="flex items-start text-gray-600 group">
                   <FaCheckCircle className="text-[#FF4F18] mr-3 mt-1 flex-shrink-0 group-hover:scale-110 transition-transform" />
                   <span>{feature}</span>
                 </li>
               ))}
             </ul>
+            <button 
+              onClick={() => togglePlanExpansion('business')}
+              className="text-[#FF4F18] text-sm font-medium mb-4 flex items-center gap-1 hover:underline"
+            >
+              {expandedPlans.business ? 'See Less' : 'See More'}
+              {expandedPlans.business ? <FaChevronUp className="text-xs" /> : <FaChevronDown className="text-xs" />}
+            </button>
             <div className="text-sm text-gray-600 italic mb-4">
-              Ideal For: Medium-sized restaurants with multiple dining areas or sections requiring customized layouts and enhanced support.
+              Ideal For: Growing restaurants that need more capacity and enhanced features.
             </div>
             <button 
               className="w-full py-4 px-6 rounded-xl bg-[#FF4F18] text-white font-semibold hover:bg-[#FF4F18]/90 transition-all duration-200 transform hover:scale-[1.02] shadow-lg shadow-[#FF4F18]/20"
@@ -126,7 +150,7 @@ export default function SubscriptionPlans() {
             </button>
           </motion.div>
 
-          {/* Business Plan */}
+          {/* Professional Plan */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -146,21 +170,29 @@ export default function SubscriptionPlans() {
             {/* Professional plan features */}
             <ul className="space-y-4 mb-8 flex-grow">
               {[
-                'All features included in the Basic and Business Plans',
-                'Support for 3 or more floor plans',
-                'Unlimited number of tables',
-                'Augmented Reality (AR) support for an immersive customer experience',
-                'Unlimited custom 3D models to accurately represent complex layouts',
-                'Priority technical support with a 2-hour response time'
-              ].map((feature, index) => (
+                'All features included in the Business Plan',
+                'Support for up to 5 floor plans',
+                'Up to 200 tables',
+                '25,000 bookings per month',
+                'Inclusion of 10 custom 3D models for unique restaurant layouts',
+                'Priority technical support with a 12-hour response time',
+                'API access for integrations'
+              ].slice(0, expandedPlans.professional ? 7 : 3).map((feature, index) => (
                 <li key={index} className="flex items-start text-gray-600 group">
                   <FaCheckCircle className="text-[#FF4F18] mr-3 mt-1 flex-shrink-0 group-hover:scale-110 transition-transform" />
                   <span>{feature}</span>
                 </li>
               ))}
             </ul>
+            <button 
+              onClick={() => togglePlanExpansion('professional')}
+              className="text-[#FF4F18] text-sm font-medium mb-4 flex items-center gap-1 hover:underline"
+            >
+              {expandedPlans.professional ? 'See Less' : 'See More'}
+              {expandedPlans.professional ? <FaChevronUp className="text-xs" /> : <FaChevronDown className="text-xs" />}
+            </button>
             <div className="text-sm text-gray-600 italic mb-4">
-              Ideal For: Large restaurants, hotel dining facilities, or establishments with complex seating arrangements seeking advanced features and rapid support.
+              Ideal For: Medium-sized restaurants with multiple dining areas requiring advanced features.
             </div>
             <button className="w-full py-4 px-6 rounded-xl bg-[#FF4F18] text-white font-semibold hover:bg-[#FF4F18]/90 transition-all duration-200 transform hover:scale-[1.02] shadow-lg shadow-[#FF4F18]/20">
               Contact Sales

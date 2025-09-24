@@ -41,7 +41,9 @@ export default function EnhancedSubscriptionPlans() {
       
       if (subscriptionData.success) {
         setSubscription(subscriptionData.data)
-        setCurrentPlan(subscriptionData.data.planType)
+        // Handle legacy 'free' plan type as 'basic'
+        const planType = subscriptionData.data.planType === 'free' ? 'basic' : subscriptionData.data.planType
+        setCurrentPlan(planType)
         setUsage(subscriptionData.data.usage)
       }
     } catch (error) {
@@ -141,65 +143,27 @@ export default function EnhancedSubscriptionPlans() {
 
   const plans = [
     {
-      id: 'free',
-      name: 'Free',
+      id: 'basic',
+      name: 'Basic',
       price: 0,
       period: 'month',
       description: 'Perfect for getting started',
       features: [
         'Interactive 3D floor plan system',
         'Real-time reservation management',
-        'Basic customer support',
-        '1 floor plan',
-        'Up to 10 tables',
-        'Up to 2 staff members',
-        '100 bookings per month'
+        'Customer database with tagging and notes',
+        'Automated email and SMS notifications',
+        'Standard reporting and analytics',
+        'Integration with basic POS systems',
+        'Support for 2 floor plans',
+        'Up to 50 tables',
+        '5,000 bookings per month'
       ],
       limits: {
-        floorPlans: 1,
-        tables: 10,
-        staff: 2,
-        bookings: 100,
-        apiCalls: 1000,
-        storage: 100
-      },
-      featureFlags: {
-        floorPlan3D: true,
-        realTimeReservations: true,
-        emailNotifications: false,
-        basicAnalytics: false,
-        custom3DModels: false,
-        arSupport: false,
-        advancedAnalytics: false,
-        prioritySupport: false,
-        apiAccess: false,
-        whiteLabel: false,
-        customIntegrations: false
-      }
-    },
-    {
-      id: 'basic',
-      name: 'Basic',
-      price: 1200,
-      period: 'month',
-      description: 'Ideal for small restaurants',
-      popular: false,
-      features: [
-        'All Free features',
-        'Email notifications',
-        'Basic analytics and reporting',
-        'Customer database with notes',
-        '1 floor plan',
-        'Up to 20 tables',
-        'Up to 5 staff members',
-        '1,000 bookings per month',
-        '10,000 API calls per month'
-      ],
-      limits: {
-        floorPlans: 1,
-        tables: 20,
+        floorPlans: 2,
+        tables: 50,
         staff: 5,
-        bookings: 1000,
+        bookings: 5000,
         apiCalls: 10000,
         storage: 1000
       },
@@ -220,27 +184,23 @@ export default function EnhancedSubscriptionPlans() {
     {
       id: 'business',
       name: 'Business',
-      price: 2800,
+      price: 1200,
       period: 'month',
       description: 'Perfect for growing restaurants',
       popular: true,
       features: [
-        'All Basic features',
-        'Custom 3D models',
-        'Advanced analytics',
-        'Priority support (24h response)',
-        'API access',
-        '2 floor plans',
-        'Up to 50 tables',
-        'Up to 10 staff members',
-        '5,000 bookings per month',
-        '50,000 API calls per month'
+        'All features included in the Basic Plan',
+        'Support for up to 3 floor plans',
+        'Up to 100 tables',
+        '10,000 bookings per month',
+        'Priority technical support with a 24-hour response time',
+        'Advanced analytics dashboard'
       ],
       limits: {
-        floorPlans: 2,
-        tables: 50,
+        floorPlans: 3,
+        tables: 100,
         staff: 10,
-        bookings: 5000,
+        bookings: 10000,
         apiCalls: 50000,
         storage: 5000
       },
@@ -261,27 +221,24 @@ export default function EnhancedSubscriptionPlans() {
     {
       id: 'professional',
       name: 'Professional',
-      price: 5500,
+      price: 2800,
       period: 'month',
       description: 'For established restaurants',
       popular: false,
       features: [
-        'All Business features',
-        'AR support',
-        'White-label options',
-        'Custom integrations',
-        'Priority support (2h response)',
-        '5 floor plans',
-        'Up to 100 tables',
-        'Up to 25 staff members',
-        '15,000 bookings per month',
-        '150,000 API calls per month'
+        'All features included in the Business Plan',
+        'Support for up to 5 floor plans',
+        'Up to 200 tables',
+        '25,000 bookings per month',
+        'Inclusion of 10 custom 3D models for unique restaurant layouts',
+        'Priority technical support with a 12-hour response time',
+        'API access for integrations'
       ],
       limits: {
         floorPlans: 5,
-        tables: 100,
+        tables: 200,
         staff: 25,
-        bookings: 15000,
+        bookings: 25000,
         apiCalls: 150000,
         storage: 15000
       },
@@ -486,7 +443,7 @@ export default function EnhancedSubscriptionPlans() {
                         : 'bg-blue-600 text-white hover:bg-blue-700'
                     }`}
                   >
-                    {currentPlan === 'free' || plans.find(p => p.id === currentPlan)?.price < plan.price ? (
+                    {(currentPlan === 'free' || currentPlan === 'basic') || plans.find(p => p.id === currentPlan)?.price < plan.price ? (
                       <>
                         <FaArrowUp className="inline mr-2" />
                         Upgrade
@@ -515,7 +472,7 @@ export default function EnhancedSubscriptionPlans() {
           >
             <h3 className="text-xl font-bold text-gray-900 mb-4">Confirm Plan Change</h3>
             <p className="text-gray-600 mb-6">
-              Are you sure you want to {plans.find(p => p.id === currentPlan)?.price < plans.find(p => p.id === selectedPlan)?.price ? 'upgrade' : 'downgrade'} to the {plans.find(p => p.id === selectedPlan)?.name} plan?
+              Are you sure you want to {(currentPlan === 'free' || currentPlan === 'basic') || plans.find(p => p.id === currentPlan)?.price < plans.find(p => p.id === selectedPlan)?.price ? 'upgrade' : 'downgrade'} to the {plans.find(p => p.id === selectedPlan)?.name} plan?
             </p>
             <div className="flex space-x-4">
               <button

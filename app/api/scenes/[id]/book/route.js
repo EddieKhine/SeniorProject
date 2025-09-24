@@ -5,6 +5,7 @@ import Floorplan from '@/models/Floorplan';
 import Booking from '@/models/Booking';
 import Restaurant from '@/models/Restaurants';
 import User from '@/models/user'; // Import the User model
+import Subscription from '@/models/Subscription'; // Import the Subscription model
 import { verifyFirebaseAuth } from "@/lib/firebase-admin";
 
 // Helper function to ensure user exists in MongoDB
@@ -350,7 +351,7 @@ export async function POST(request, { params }) {
           startTime,
           endTime,
           guestCount,
-          status: 'confirmed',
+          status: 'pending',
           customerName: customerName,
           customerEmail: currentUser.email,
           customerPhone: currentUser.contactNumber || currentUser.phoneNumber || 'Not provided',
@@ -400,7 +401,7 @@ export async function POST(request, { params }) {
     }).populate('restaurantId', 'restaurantName');
 
     return NextResponse.json({ 
-      message: "Booking confirmed",
+      message: "Booking created successfully. Please wait for restaurant confirmation.",
       booking: {
         _id: createdBooking._id,
         bookingRef: createdBooking.bookingRef,

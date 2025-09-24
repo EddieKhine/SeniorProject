@@ -175,9 +175,9 @@ restaurantSchema.methods.getPlanType = async function() {
   if (this.subscriptionId) {
     const Subscription = mongoose.model('Subscription');
     const subscription = await Subscription.findById(this.subscriptionId);
-    return subscription ? subscription.planType : 'free';
+    return subscription ? subscription.planType : 'basic';
   }
-  return 'free';
+  return 'basic';
 };
 
 // Method to update features based on plan

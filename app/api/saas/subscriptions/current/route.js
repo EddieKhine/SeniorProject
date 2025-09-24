@@ -40,12 +40,12 @@ export async function GET(req) {
     const subscription = await Subscription.findOne({ organizationId: organization._id });
 
     if (!subscription) {
-      // Return default free plan
-      const freePlanLimits = Subscription.getPlanLimits('free');
+      // Return default basic plan
+      const basicPlanLimits = Subscription.getPlanLimits('basic');
       return NextResponse.json({
         success: true,
         data: {
-          planType: 'free',
+          planType: 'basic',
           status: 'active',
           price: 0,
           currency: 'THB',
@@ -54,19 +54,19 @@ export async function GET(req) {
           endDate: null,
           usage: {
             floorPlansUsed: 0,
-            floorPlansLimit: freePlanLimits.floorPlansLimit,
+            floorPlansLimit: basicPlanLimits.floorPlansLimit,
             tablesUsed: 0,
-            tablesLimit: freePlanLimits.tablesLimit,
+            tablesLimit: basicPlanLimits.tablesLimit,
             staffUsed: 0,
-            staffLimit: freePlanLimits.staffLimit,
+            staffLimit: basicPlanLimits.staffLimit,
             bookingsThisMonth: 0,
-            bookingsLimit: freePlanLimits.bookingsLimit,
+            bookingsLimit: basicPlanLimits.bookingsLimit,
             apiCallsThisMonth: 0,
-            apiCallsLimit: freePlanLimits.apiCallsLimit,
+            apiCallsLimit: basicPlanLimits.apiCallsLimit,
             storageUsed: 0,
-            storageLimit: freePlanLimits.storageLimit
+            storageLimit: basicPlanLimits.storageLimit
           },
-          features: freePlanLimits.features
+          features: basicPlanLimits.features
         }
       });
     }

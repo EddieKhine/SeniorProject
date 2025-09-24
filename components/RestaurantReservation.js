@@ -108,7 +108,7 @@ export default function RestaurantReservation({ restaurantId }) {
     }
 
     try {
-      const response = await fetch(`/api/bookings/${bookingId}/status`, {
+      const response = await fetch(`/api/bookings/restaurant/${bookingId}/status`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -168,7 +168,7 @@ export default function RestaurantReservation({ restaurantId }) {
 
     try {
       const promises = Array.from(selectedBookings).map(bookingId =>
-        fetch(`/api/bookings/${bookingId}/status`, {
+        fetch(`/api/bookings/restaurant/${bookingId}/status`, {
           method: 'PATCH',
           headers: {
             'Content-Type': 'application/json',
@@ -186,6 +186,37 @@ export default function RestaurantReservation({ restaurantId }) {
     } catch (error) {
       console.error('Error performing bulk action:', error);
       toast.error('Failed to update some bookings');
+    }
+  };
+
+  const handleDeleteBooking = async (bookingId) => {
+    if (!token) {
+      toast.error('Authentication required');
+      return;
+    }
+
+    if (!confirm('Are you sure you want to delete this booking? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/bookings/restaurant/${bookingId}/delete`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to delete booking');
+      }
+      
+      toast.success('Booking deleted successfully');
+      fetchBookings();
+    } catch (error) {
+      console.error('Error deleting booking:', error);
+      toast.error('Failed to delete booking');
     }
   };
 
@@ -288,12 +319,61 @@ export default function RestaurantReservation({ restaurantId }) {
         </select>
       </div>
 
+      {/* Bulk Actions Section */}
+      {selectedBookings.size > 0 && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <span className="text-blue-800 font-medium">
+                {selectedBookings.size} booking{selectedBookings.size > 1 ? 's' : ''} selected
+              </span>
+              <select
+                value={bulkAction}
+                onChange={(e) => setBulkAction(e.target.value)}
+                className="px-3 py-1.5 border border-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+              >
+                <option value="">Select Action</option>
+                <option value="confirmed">Confirm Selected</option>
+                <option value="cancelled">Cancel Selected</option>
+                <option value="completed">Mark as Completed</option>
+              </select>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={handleBulkAction}
+                disabled={!bulkAction}
+                className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-all"
+              >
+                Apply Action
+              </button>
+              <button
+                onClick={() => {
+                  setSelectedBookings(new Set());
+                  setBulkAction('');
+                }}
+                className="px-4 py-2 bg-gray-500 text-white text-sm font-medium rounded-lg hover:bg-gray-600 transition-all"
+              >
+                Clear Selection
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Table Layout - Added overflow handling */}
       <div className="flex-1 overflow-y-auto">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-[#111827] uppercase tracking-wider">
+                  <input
+                    type="checkbox"
+                    checked={selectedBookings.size === bookings.length && bookings.length > 0}
+                    onChange={selectAllBookings}
+                    className="rounded border-gray-300 text-[#FF4F18] focus:ring-[#FF4F18]"
+                  />
+                </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-[#111827] uppercase tracking-wider">Customer</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-[#111827] uppercase tracking-wider">Contact</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-[#111827] uppercase tracking-wider">Date & Time</th>
@@ -309,6 +389,14 @@ export default function RestaurantReservation({ restaurantId }) {
                   animate={{ opacity: 1 }}
                   className="hover:bg-gray-50"
                 >
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <input
+                      type="checkbox"
+                      checked={selectedBookings.has(booking._id)}
+                      onChange={() => toggleBookingSelection(booking._id)}
+                      className="rounded border-gray-300 text-[#FF4F18] focus:ring-[#FF4F18]"
+                    />
+                  </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
                       <RiUserLine className="text-[#FF4F18] mr-2" />
@@ -346,48 +434,92 @@ export default function RestaurantReservation({ restaurantId }) {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <div className="flex items-center gap-2">
+                      {/* Quick Action Dropdown */}
+                      <select
+                        onChange={(e) => {
+                          if (e.target.value) {
+                            if (e.target.value === 'delete') {
+                              handleDeleteBooking(booking._id);
+                            } else {
+                              handleBookingAction(booking._id, e.target.value);
+                            }
+                            e.target.value = ''; // Reset selection
+                          }
+                        }}
+                        className="px-2 py-1.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#FF4F18] focus:border-transparent text-xs text-black bg-white"
+                      >
+                        <option value="">Quick Actions</option>
+                        {booking.status === 'pending' && (
+                          <>
+                            <option value="confirm">Confirm</option>
+                            <option value="cancel">Cancel</option>
+                          </>
+                        )}
+                        {booking.status === 'confirmed' && (
+                          <>
+                            <option value="complete">Mark Complete</option>
+                            <option value="cancel">Cancel</option>
+                          </>
+                        )}
+                        {(booking.status === 'cancelled' || booking.status === 'completed') && (
+                          <option value="delete">Delete</option>
+                        )}
+                      </select>
+                      
+                      {/* Individual Action Buttons */}
                       {booking.status === 'pending' && (
-                        <>
+                        <div className="flex gap-1">
                           <motion.button
                             whileHover={{ scale: 1.05 }}
                             whileTap={{ scale: 0.95 }}
                             onClick={() => handleBookingAction(booking._id, 'confirm')}
-                            className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-all"
+                            className="px-2 py-1 bg-green-600 text-white text-xs font-medium rounded hover:bg-green-700 transition-all flex items-center gap-1"
                             title="Confirm Booking"
                           >
-                            <FaCheckCircle className="w-5 h-5" />
+                            <FaCheckCircle className="w-3 h-3" />
                           </motion.button>
                           <motion.button
                             whileHover={{ scale: 1.05 }}
                             whileTap={{ scale: 0.95 }}
                             onClick={() => handleBookingAction(booking._id, 'cancel')}
-                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                            className="px-2 py-1 bg-red-600 text-white text-xs font-medium rounded hover:bg-red-700 transition-all flex items-center gap-1"
                             title="Cancel Booking"
                           >
-                            <FaTimesCircle className="w-5 h-5" />
+                            <FaTimesCircle className="w-3 h-3" />
                           </motion.button>
-                        </>
+                        </div>
                       )}
                       {booking.status === 'confirmed' && (
-                        <motion.button
-                          whileHover={{ scale: 1.05 }}
-                          whileTap={{ scale: 0.95 }}
-                          onClick={() => handleBookingAction(booking._id, 'complete')}
-                          className="p-2 text-[#FF4F18] hover:bg-[#FF4F18]/10 rounded-lg transition-all"
-                          title="Mark as Completed"
-                        >
-                          <FaCheckCircle className="w-5 h-5" />
-                        </motion.button>
+                        <div className="flex gap-1">
+                          <motion.button
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={() => handleBookingAction(booking._id, 'complete')}
+                            className="px-2 py-1 bg-[#FF4F18] text-white text-xs font-medium rounded hover:bg-[#FF4F18]/90 transition-all flex items-center gap-1"
+                            title="Mark as Completed"
+                          >
+                            <FaCheckCircle className="w-3 h-3" />
+                          </motion.button>
+                          <motion.button
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={() => handleBookingAction(booking._id, 'cancel')}
+                            className="px-2 py-1 bg-red-600 text-white text-xs font-medium rounded hover:bg-red-700 transition-all flex items-center gap-1"
+                            title="Cancel Booking"
+                          >
+                            <FaTimesCircle className="w-3 h-3" />
+                          </motion.button>
+                        </div>
                       )}
                       {(booking.status === 'cancelled' || booking.status === 'completed') && (
                         <motion.button
                           whileHover={{ scale: 1.05 }}
                           whileTap={{ scale: 0.95 }}
                           onClick={() => handleDeleteBooking(booking._id)}
-                          className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                          className="px-2 py-1 bg-gray-600 text-white text-xs font-medium rounded hover:bg-gray-700 transition-all flex items-center gap-1"
                           title="Delete Booking"
                         >
-                          <FaTrash className="w-5 h-5" />
+                          <FaTrash className="w-3 h-3" />
                         </motion.button>
                       )}
                     </div>

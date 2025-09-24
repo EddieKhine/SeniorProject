@@ -163,9 +163,9 @@ export default function PaymentDialog({ bookingDetails, onClose, onSuccess }) {
       await new Promise(resolve => setTimeout(resolve, 2000));
       
       // Show success message
-      toast.success('Payment successful! Your table has been reserved.', {
-        duration: 5000,
-        icon: '🎉'
+      toast.success('Payment successful! Your booking has been submitted and is pending restaurant confirmation.', {
+        duration: 6000,
+        icon: '⏳'
       });
       
       // Optional: Show a more detailed success message
@@ -173,9 +173,9 @@ export default function PaymentDialog({ bookingDetails, onClose, onSuccess }) {
       successMessage.className = 'fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50';
       successMessage.innerHTML = `
         <div class="bg-white rounded-xl shadow-xl p-6 max-w-md mx-4 text-center animate-fade-up">
-          <div class="text-[#FF4F18] text-5xl mb-4">🎉</div>
-          <h3 class="text-xl font-bold text-gray-800 mb-2">Booking Confirmed!</h3>
-          <p class="text-gray-600 mb-4">Your table has been successfully reserved. We look forward to serving you!</p>
+          <div class="text-[#FF4F18] text-5xl mb-4">⏳</div>
+          <h3 class="text-xl font-bold text-gray-800 mb-2">Booking Submitted!</h3>
+          <p class="text-gray-600 mb-4">Your booking has been submitted successfully and is pending restaurant confirmation. You will receive a confirmation once approved.</p>
           <button class="px-6 py-2 bg-[#FF4F18] text-white rounded-lg hover:bg-[#FF4F18]/90 transition-all">
             OK
           </button>

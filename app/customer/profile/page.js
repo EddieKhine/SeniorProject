@@ -293,7 +293,7 @@ export default function CustomerProfile() {
         )}
       </div>
       
-      <label className="absolute bottom-0 right-0 w-8 h-8 bg-orange-500 rounded-full shadow-lg cursor-pointer hover:bg-orange-600 transition-colors flex items-center justify-center">
+      <label className="absolute bottom-0 right-0 w-8 h-8 bg-[#FF4F18] rounded-full shadow-lg cursor-pointer hover:bg-[#FF4F18]/90 transition-colors flex items-center justify-center">
         <FaCamera className="text-white text-sm" />
         <input
           type="file"
@@ -345,14 +345,14 @@ export default function CustomerProfile() {
               <div className="flex items-center space-x-4">
                 <button
                   onClick={() => router.push("/")}
-                  className="flex items-center space-x-2 px-4 py-2 text-gray-600 hover:text-orange-500 transition-colors"
+                  className="flex items-center space-x-2 px-4 py-2 text-gray-600 hover:text-[#FF4F18] transition-colors"
                 >
                   <FaHome />
                   <span>Home</span>
                 </button>
                 <button
                   onClick={handleLogout}
-                  className="flex items-center space-x-2 px-4 py-2 text-gray-600 hover:text-red-500 transition-colors"
+                  className="flex items-center space-x-2 px-4 py-2 text-gray-600 hover:text-[#FF4F18] transition-colors"
                 >
                   <FaSignOutAlt />
                   <span>Logout</span>
@@ -382,7 +382,7 @@ export default function CustomerProfile() {
                     onClick={() => setActiveTab("profile")}
                     className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${
                       activeTab === "profile"
-                        ? "bg-orange-500 text-white"
+                        ? "bg-[#FF4F18] text-white"
                         : "text-gray-600 hover:bg-gray-100"
                     }`}
                   >
@@ -394,7 +394,7 @@ export default function CustomerProfile() {
                     onClick={() => setActiveTab("activities")}
                     className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${
                       activeTab === "activities"
-                        ? "bg-orange-500 text-white"
+                        ? "bg-[#FF4F18] text-white"
                         : "text-gray-600 hover:bg-gray-100"
                     }`}
                   >
@@ -414,7 +414,7 @@ export default function CustomerProfile() {
                     {!isEditing ? (
                       <button
                         onClick={() => setIsEditing(true)}
-                        className="flex items-center space-x-2 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
+                        className="flex items-center space-x-2 px-4 py-2 bg-[#FF4F18] text-white rounded-lg hover:bg-[#FF4F18]/90 transition-colors"
                       >
                         <FaUserEdit />
                         <span>Edit Profile</span>
@@ -516,7 +516,7 @@ export default function CustomerProfile() {
                       <div className="flex justify-end">
                         <button
                           type="submit"
-                          className="flex items-center space-x-2 px-6 py-3 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
+                          className="flex items-center space-x-2 px-6 py-3 bg-[#FF4F18] text-white rounded-lg hover:bg-[#FF4F18]/90 transition-colors"
                         >
                           <FaSave />
                           <span>Save Changes</span>
@@ -585,7 +585,7 @@ export default function CustomerProfile() {
                               <p className="text-gray-600 text-sm">{restaurant.cuisine}</p>
                               <button
                                 onClick={() => router.push(`/restaurants/${restaurant._id}/floorplan`)}
-                                className="mt-3 w-full py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
+                                className="mt-3 w-full py-2 bg-[#FF4F18] text-white rounded-lg hover:bg-[#FF4F18]/90 transition-colors"
                               >
                                 View Details
                               </button>
@@ -605,7 +605,7 @@ export default function CustomerProfile() {
                     <h3 className="text-lg font-semibold text-gray-900 mb-4">Your Reservations</h3>
                     {bookingsLoading ? (
                       <div className="flex justify-center py-8">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div>
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#FF4F18]"></div>
                       </div>
                     ) : bookings.length > 0 ? (
                       <div className="space-y-4">
@@ -643,7 +643,7 @@ export default function CustomerProfile() {
                               </div>
                               <button
                                 onClick={() => router.push(`/restaurants/${booking.restaurantId}/floorplan`)}
-                                className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
+                                className="px-4 py-2 bg-[#FF4F18] text-white rounded-lg hover:bg-[#FF4F18]/90 transition-colors"
                               >
                                 View Restaurant
                               </button>

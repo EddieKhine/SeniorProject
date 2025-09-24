@@ -5,12 +5,17 @@ const subscriptionSchema = new mongoose.Schema({
   restaurantId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Restaurant',
-    required: true
+    required: false
   },
   ownerId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'RestaurantOwner',
     required: true
+  },
+  organizationId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Organization',
+    required: false
   },
   
   // Subscription details

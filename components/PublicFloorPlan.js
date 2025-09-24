@@ -1179,7 +1179,10 @@ export default function PublicFloorPlan({ floorplanData, floorplanId, restaurant
         return newSet;
     });
 
-    toast.success(`Booking confirmed! Reference: ${result.booking.bookingRef}`);
+    toast.success(`Booking submitted successfully! Reference: ${result.booking.bookingRef}. Please wait for restaurant confirmation.`, {
+      duration: 6000,
+      icon: '⏳'
+    });
   };
 
   // Add this useEffect to debug state updates
