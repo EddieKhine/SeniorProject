@@ -257,6 +257,12 @@ async function createCustomerAccount(lineUserId, displayName, pictureUrl) {
 async function handleCustomerMode(event, userId, client) {
   try {
     const profile = await client.getProfile(userId);
+    const restaurantId = await getRestaurantId();
+    
+    console.log("👤 Customer accessing chatbot:");
+    console.log("   LINE User ID:", userId);
+    console.log("   Display Name:", profile.displayName);
+    console.log("   Restaurant ID:", restaurantId);
     
     // Check if customer exists in database
     const customerCheck = await checkCustomerInDatabase(userId);
@@ -312,6 +318,18 @@ async function handleCustomerMode(event, userId, client) {
                     label: "Make Booking"
                   },
                   margin: "lg"
+                },
+                {
+                  type: "button",
+                  style: "primary",
+                  height: "sm",
+                  color: "#0084FF",
+                  action: {
+                    type: "uri",
+                    uri: `https://line.me/R/app/2007787204-zGYZn1ZE?restaurantId=${restaurantId}`,
+                    label: "Open Restaurant App"
+                  },
+                  margin: "sm"
                 },
                 {
                   type: "button",
@@ -401,6 +419,18 @@ async function handleCustomerMode(event, userId, client) {
                   label: "Make Booking"
                 },
                 margin: "md"
+              },
+              {
+                type: "button",
+                style: "primary",
+                height: "sm",
+                color: "#0084FF",
+                action: {
+                  type: "uri",
+                  uri: `https://line.me/R/app/2007787204-zGYZn1ZE?restaurantId=${restaurantId}`,
+                  label: "Open Restaurant App"
+                },
+                margin: "sm"
               },
               {
                 type: "button",
@@ -719,6 +749,7 @@ async function handleCustomerFloorplan(event, userId, client, customer) {
     // Get restaurant floorplan
     const floorplan = await Floorplan.findOne();
     const restaurant = await Restaurant.findOne().select('restaurantName');
+    const restaurantId = await getRestaurantId();
     
     if (!floorplan || !restaurant) {
       return client.replyMessage(event.replyToken, {
@@ -771,6 +802,15 @@ async function handleCustomerFloorplan(event, userId, client, customer) {
       `Table Capacities:\n${capacityText}\n\n` +
       `Tip: Use "Make Booking" to see real-time availability and select your preferred table!`;
 
+    // Create LIFF URL with restaurant ID parameter
+    const liffUrl = `https://line.me/R/app/2007787204-zGYZn1ZE?restaurantId=${restaurantId}`;
+    
+    console.log("🔗 User requesting floorplan with LIFF link:");
+    console.log("   LINE User ID:", userId);
+    console.log("   Customer Name:", customer?.firstName || 'Unknown');
+    console.log("   Restaurant ID:", restaurantId);
+    console.log("   LIFF URL:", liffUrl);
+
     return client.replyMessage(event.replyToken, {
       type: "template",
       altText: "Restaurant Floorplan",
@@ -787,7 +827,7 @@ async function handleCustomerFloorplan(event, userId, client, customer) {
           {
             type: "uri",
             label: "View Visual Floorplan",
-            uri: `${process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/restaurants`
+            uri: liffUrl
           },
           {
             type: "postback",
@@ -812,6 +852,7 @@ async function handleCustomerInfo(event, userId, client, customer) {
   try {
     // Get restaurant information
     const restaurant = await Restaurant.findOne().select('restaurantName address contactNumber operatingHours description');
+    const restaurantId = await getRestaurantId();
     
     if (!restaurant) {
       return client.replyMessage(event.replyToken, {
@@ -826,6 +867,9 @@ async function handleCustomerInfo(event, userId, client, customer) {
       `📞 ${restaurant.contactNumber || 'Contact not available'}\n\n` +
       `🕒 Operating Hours:\n${restaurant.operatingHours || 'Hours not available'}\n\n` +
       `${restaurant.description || 'Welcome to our restaurant!'}`;
+
+    // Create LIFF URL with restaurant ID parameter
+    const liffUrl = `https://line.me/R/app/2007787204-zGYZn1ZE?restaurantId=${restaurantId}`;
 
     return client.replyMessage(event.replyToken, {
       type: "template",
@@ -845,6 +889,11 @@ async function handleCustomerInfo(event, userId, client, customer) {
             label: "View Floorplan",
             data: "action=customer_floorplan",
             displayText: "View floorplan",
+          },
+          {
+            type: "uri",
+            label: "Visit Website",
+            uri: liffUrl
           }
         ],
       },

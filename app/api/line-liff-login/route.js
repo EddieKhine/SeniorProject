@@ -4,15 +4,23 @@ import { NextResponse } from "next/server";
 
 export async function POST(req) {
   try {
-    console.log("LINE LIFF login endpoint called");
+    console.log("🔥 LINE LIFF login endpoint called");
     await dbConnect();
     const body = await req.json();
-    console.log("Received LIFF login request body:", body);
+    console.log("📱 LIFF Login Request Details:");
+    console.log("   User ID:", body.userId);
+    console.log("   Display Name:", body.displayName);
+    console.log("   Picture URL:", body.pictureUrl);
+    
+    console.log("   Full Body:", JSON.stringify(body, null, 2));
     const { userId, displayName, pictureUrl } = body;
 
     // Check if user exists by LINE userId
+    console.log("🔍 Searching for existing user with LINE ID:", userId);
     let user = await User.findOne({ lineUserId: userId });
+    
     if (!user) {
+      console.log("👤 Creating NEW LINE user...");
       // Create new user compatible with Firebase auth system
       // Use a unique email format for LINE users
       const lineEmail = `line.${userId}@foodloft.local`;
@@ -28,23 +36,35 @@ export async function POST(req) {
         role: "customer",
       });
       await user.save();
-      console.log("New LINE user created in MongoDB:", user);
+      console.log("✅ NEW LINE user created successfully!");
+      console.log("   Database ID:", user._id);
+      console.log("   LINE User ID:", user.lineUserId);
+      console.log("   Email:", user.email);
+      console.log("   Name:", user.firstName);
     } else {
+      console.log("✅ EXISTING LINE user found!");
+      console.log("   Database ID:", user._id);
+      console.log("   LINE User ID:", user.lineUserId);
+      console.log("   Email:", user.email);
+      console.log("   Name:", user.firstName);
+      
       // Update profile info if changed
       let updated = false;
       if (displayName && user.firstName !== displayName) {
+        console.log("   Updating display name:", user.firstName, "→", displayName);
         user.firstName = displayName;
         updated = true;
       }
       if (pictureUrl && user.profileImage !== pictureUrl) {
+        console.log("   Updating profile picture");
         user.profileImage = pictureUrl;
         updated = true;
       }
       if (updated) {
         await user.save();
-        console.log("Updated existing LINE user:", user);
+        console.log("   Profile updated successfully!");
       } else {
-        console.log("Existing LINE user found:", user);
+        console.log("   No profile updates needed");
       }
     }
 
@@ -61,6 +81,14 @@ export async function POST(req) {
       isLineUser: true // Flag to identify LINE users
     };
 
+    console.log("🚀 Sending response to LIFF client...");
+    console.log("   Response user data:", {
+      id: userData.id,
+      lineUserId: userData.lineUserId,
+      firstName: userData.firstName,
+      isLineUser: userData.isLineUser
+    });
+    
     // Store user data in localStorage (client-side will handle this)
     // No JWT tokens needed anymore with new auth system
     return NextResponse.json({ 

@@ -18,6 +18,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { performanceMonitor, measurePerformance } from '@/utils/performance';
 import { handleSceneError } from '@/utils/errorHandler';
 import { useFirebaseAuth } from '@/contexts/FirebaseAuthContext';
+import { useAuth } from '@/context/AuthContext';
 import { auth } from "@/lib/firebase-config";
 import '@/css/loading.css';
 
@@ -98,19 +99,48 @@ export default function PublicFloorPlan({ floorplanData, floorplanId, restaurant
   const loadingOverlayRef = useRef(null);
   const [sceneLoaded, setSceneLoaded] = useState(false);
   const [preloadProgress, setPreloadProgress] = useState(0);
-  const { userProfile, isAuthenticated, loading: authLoading } = useFirebaseAuth(); // Use the centralized auth state
+  const firebaseAuth = useFirebaseAuth(); // Firebase auth
+  const lineAuth = useAuth(); // LINE auth from AuthContext
   const [authLoadingOverride, setAuthLoadingOverride] = useState(false);
   
+  // Combine both auth states
+  const userProfile = firebaseAuth.userProfile || lineAuth.user;
+  const isAuthenticated = firebaseAuth.isAuthenticated || !!lineAuth.user;
+  const authLoading = firebaseAuth.loading || lineAuth.loading;
   
   // Debug auth state changes
   useEffect(() => {
-    console.log('🔍 PublicFloorPlan auth state:', {
-      authLoading,
-      isAuthenticated,
-      hasUserProfile: !!userProfile,
-      userProfileId: userProfile?.firebaseUid || userProfile?.uid || 'none'
+    console.log('🔍 PublicFloorPlan auth state updated:', {
+      timestamp: new Date().toISOString(),
+      firebaseAuth: {
+        loading: firebaseAuth.loading,
+        isAuthenticated: firebaseAuth.isAuthenticated,
+        hasProfile: !!firebaseAuth.userProfile,
+        profileData: firebaseAuth.userProfile ? {
+          uid: firebaseAuth.userProfile.uid || firebaseAuth.userProfile.firebaseUid,
+          email: firebaseAuth.userProfile.email
+        } : null
+      },
+      lineAuth: {
+        loading: lineAuth.loading,
+        hasUser: !!lineAuth.user,
+        isLineUser: lineAuth.user?.isLineUser,
+        userData: lineAuth.user ? {
+          id: lineAuth.user.id,
+          lineUserId: lineAuth.user.lineUserId,
+          email: lineAuth.user.email,
+          firstName: lineAuth.user.firstName
+        } : null
+      },
+      combined: {
+        authLoading,
+        isAuthenticated,
+        hasUserProfile: !!userProfile,
+        userProfileId: userProfile?.firebaseUid || userProfile?.uid || userProfile?.lineUserId || 'none',
+        userType: userProfile?.isLineUser ? 'LINE' : userProfile ? 'Firebase' : 'none'
+      }
     });
-  }, [authLoading, isAuthenticated, userProfile]);
+  }, [firebaseAuth.loading, firebaseAuth.isAuthenticated, firebaseAuth.userProfile, lineAuth.loading, lineAuth.user, authLoading, isAuthenticated, userProfile]);
 
   // Log initial mount state
   useEffect(() => {
@@ -671,10 +701,40 @@ export default function PublicFloorPlan({ floorplanData, floorplanId, restaurant
             console.log('✅ Auth check passed for table click:', { authLoading, authLoadingOverride, userProfile: !!userProfile, isAuthenticated });
             
             // Check authentication after loading is complete
+            console.log('🔍 Table click - checking authentication:', {
+              isAuthenticated,
+              hasUserProfile: !!userProfile,
+              firebaseAuth: {
+                loading: firebaseAuth.loading,
+                isAuthenticated: firebaseAuth.isAuthenticated,
+                hasProfile: !!firebaseAuth.userProfile
+              },
+              lineAuth: {
+                loading: lineAuth.loading,
+                hasUser: !!lineAuth.user,
+                userData: lineAuth.user ? {
+                  id: lineAuth.user.id,
+                  lineUserId: lineAuth.user.lineUserId,
+                  firstName: lineAuth.user.firstName,
+                  isLineUser: lineAuth.user.isLineUser
+                } : null
+              },
+              localStorage: {
+                hasCustomerUser: !!localStorage.getItem('customerUser'),
+                customerUserData: localStorage.getItem('customerUser') ? JSON.parse(localStorage.getItem('customerUser')) : null
+              }
+            });
+
             if (!isAuthenticated || !userProfile) {
+                console.log('❌ Authentication failed - showing login error');
                 toast.error("Please log in to make a booking.");
                 return;
             }
+
+            console.log('✅ Authentication successful:', {
+              userType: userProfile?.isLineUser ? 'LINE' : 'Firebase',
+              userId: userProfile?.lineUserId || userProfile?.firebaseUid || userProfile?.uid
+            });
 
             console.log('Click detected');
             console.log('Current state values:', {

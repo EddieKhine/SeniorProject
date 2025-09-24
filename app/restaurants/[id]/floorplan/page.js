@@ -15,7 +15,6 @@ import { RiImageAddLine } from 'react-icons/ri';
 
 export default function RestaurantFloorplanPage() {
   const params = useParams();
-  const restaurantId = params.id;
   const [restaurant, setRestaurant] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isSaved, setIsSaved] = useState(false);
@@ -23,54 +22,122 @@ export default function RestaurantFloorplanPage() {
   const [currentGalleryIndex, setCurrentGalleryIndex] = useState(0);
   const [currentMenuIndex, setCurrentMenuIndex] = useState(0);
   const router = useRouter();
+  
+  // Get restaurant ID from URL params or LIFF query parameters
+  const getRestaurantId = () => {
+    // First try URL params
+    if (params.id) {
+      return params.id;
+    }
+    
+    // Then try LIFF query parameters (when coming from LINE chatbot)
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      const restaurantIdParam = urlParams.get('restaurantId');
+      if (restaurantIdParam) {
+        return restaurantIdParam;
+      }
+    }
+    
+    // Fallback to default restaurant ID
+    return "67b3234c9a20aede53b0e727";
+  };
+  
+  const restaurantId = getRestaurantId();
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      function startLiff() {
-        window.liff.init({ liffId: "2007787204-zGYZn1ZE" })
-          .then(() => {
-            if (window.liff.isInClient()) {
-              // Use sessionStorage to prevent infinite login loop in LIFF environment
-              const loginAttempted = sessionStorage.getItem('liffLoginComplete');
 
-              if (!loginAttempted) {
-                if (window.liff.isLoggedIn()) {
-                  window.liff.getProfile().then(profile => {
+     if (typeof window !== "undefined") {
+       function startLiff() {
+         console.log('🔧 Starting LIFF initialization...');
+         window.liff.init({ liffId: "2007787204-zGYZn1ZE" })
+           .then(() => {
+             console.log('✅ LIFF initialized successfully');
+             console.log('🔍 LIFF Status:', {
+               isInClient: window.liff.isInClient(),
+               isLoggedIn: window.liff.isLoggedIn(),
+               currentUrl: window.location.href
+             });
+             
+             if (window.liff.isInClient()) {
+               console.log('📱 User is in LINE app - proceeding with LIFF login');
+               // Use sessionStorage to prevent infinite login loop in LIFF environment
+               const loginAttempted = sessionStorage.getItem('liffLoginComplete');
+               console.log('🔍 Login attempt status:', loginAttempted);
+ 
+               if (!loginAttempted) {
+                 if (window.liff.isLoggedIn()) {
+                   console.log('✅ User is logged into LINE - getting profile');
+                   window.liff.getProfile().then(profile => {
+                     console.log('📱 Got LINE profile:', profile);
+                     
+                    // Send to server - THIS WILL SHOW IN TERMINAL
+                    console.log('🚀 Sending LINE profile to server...');
+                    console.log('📱 Profile data being sent:', {
+                      userId: profile.userId,
+                      displayName: profile.displayName,
+                      pictureUrl: profile.pictureUrl
+                    });
+                    
                     fetch("/api/line-liff-login", {
                       method: "POST",
                       headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify(profile)
+                      body: JSON.stringify({
+                        userId: profile.userId,
+                        displayName: profile.displayName,
+                        pictureUrl: profile.pictureUrl
+                      })
                     })
-                    .then(res => res.json())
-                    .then(data => {
-                      if (data.user) {
-                        // Store LINE user data in localStorage (compatible with new auth system)
-                        localStorage.setItem('customerUser', JSON.stringify(data.user));
-                        console.log('LINE user logged in:', data.user);
-                      }
-                      // Set the flag before reloading to break the loop
-                      sessionStorage.setItem('liffLoginComplete', 'true');
-                      window.location.reload();
-                    })
-                    .catch(fetchErr => {
-                      console.error("Fetch error during LIFF login:", fetchErr);
-                    });
-                  }).catch(profileErr => {
-                    console.error("Error getting LIFF profile:", profileErr);
-                  });
-                } else {
-                  // If not logged into LINE, initiate login
-                  window.liff.login();
-                }
-              }
-              // If loginAttempted is true, do nothing. The user is logged in.
-            }
-            // If NOT in LINE app, do nothing (web/PC flow continues as normal)
-          })
-          .catch(err => {
-            console.error("LIFF init error:", err);
-          });
-      }
+                     .then(res => {
+                       console.log('📡 Server response status:', res.status);
+                       return res.json();
+                     })
+                     .then(data => {
+                       console.log('📡 Server response data:', data);
+                       if (data.user) {
+                         // Store LINE user data in localStorage (compatible with new auth system)
+                         localStorage.setItem('customerUser', JSON.stringify(data.user));
+                         console.log('✅ LINE user logged in successfully:', data.user);
+                         
+                         // Trigger a custom event to notify AuthContext
+                         window.dispatchEvent(new CustomEvent('lineUserLogin', { detail: data.user }));
+                         
+                         // Set the flag to prevent login loop
+                         sessionStorage.setItem('liffLoginComplete', 'true');
+                         
+                         // Don't reload, let the auth context handle the state update
+                         console.log('✅ LIFF login complete, user should now be authenticated');
+                       } else {
+                         // Set the flag and reload if no user data
+                         sessionStorage.setItem('liffLoginComplete', 'true');
+                         window.location.reload();
+                       }
+                     })
+                     .catch(fetchErr => {
+                       console.error("❌ Fetch error during LIFF login:", fetchErr);
+                     });
+                   }).catch(profileErr => {
+                     console.error("❌ Error getting LIFF profile:", profileErr);
+                   });
+                 } else {
+                   console.log('❌ User not logged into LINE - initiating login');
+                   // If not logged into LINE, initiate login
+                   window.liff.login();
+                 }
+               } else {
+                 console.log('ℹ️ Login already attempted, skipping');
+               }
+               
+               // If loginAttempted is true, do nothing. The user is logged in.
+             } else {
+               console.log('🌐 User is NOT in LINE app - web browser access');
+             }
+             // If NOT in LINE app, do nothing (web/PC flow continues as normal)
+           })
+           .catch(err => {
+             console.error("❌ LIFF init error:", err);
+           });
+       }
 
       if (!window.liff) {
         const script = document.createElement("script");
@@ -475,6 +542,7 @@ export default function RestaurantFloorplanPage() {
           <FaComments className="text-xl lg:text-2xl" />
         </button>
       </div>
+
 
       {showChat && restaurant && (
         <CustomerChat

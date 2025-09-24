@@ -3,6 +3,7 @@ import Script from "next/script";
 import "./globals.css";
 import Navbar from '../components/navbar';
 import { FirebaseAuthProvider } from '@/contexts/FirebaseAuthContext';
+import { AuthProvider } from '@/context/AuthContext';
 import { GoogleMapsProvider } from '../contexts/GoogleMapsContext';
 import { Toaster } from 'react-hot-toast';
 
@@ -23,10 +24,12 @@ export default function RootLayout({ children }) {
           src={`https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&libraries=places`}
         />
         <FirebaseAuthProvider>
-          <GoogleMapsProvider>
-            {children}
-            <Toaster position="bottom-center" />
-          </GoogleMapsProvider>
+          <AuthProvider>
+            <GoogleMapsProvider>
+              {children}
+              <Toaster position="bottom-center" />
+            </GoogleMapsProvider>
+          </AuthProvider>
         </FirebaseAuthProvider>
       </body>
     </html>
