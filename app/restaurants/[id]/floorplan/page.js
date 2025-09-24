@@ -46,39 +46,18 @@ export default function RestaurantFloorplanPage() {
   const restaurantId = getRestaurantId();
 
   useEffect(() => {
+    if (typeof window !== "undefined") {
+      function startLiff() {
+        window.liff.init({ liffId: "2007787204-zGYZn1ZE" })
+          .then(() => {
+            if (window.liff.isInClient()) {
+              // Use sessionStorage to prevent infinite login loop
+              const loginAttempted = sessionStorage.getItem('liffLoginComplete');
 
-     if (typeof window !== "undefined") {
-       function startLiff() {
-         console.log('🔧 Starting LIFF initialization...');
-         window.liff.init({ liffId: "2007787204-zGYZn1ZE" })
-           .then(() => {
-             console.log('✅ LIFF initialized successfully');
-             console.log('🔍 LIFF Status:', {
-               isInClient: window.liff.isInClient(),
-               isLoggedIn: window.liff.isLoggedIn(),
-               currentUrl: window.location.href
-             });
-             
-             if (window.liff.isInClient()) {
-               console.log('📱 User is in LINE app - proceeding with LIFF login');
-               // Use sessionStorage to prevent infinite login loop in LIFF environment
-               const loginAttempted = sessionStorage.getItem('liffLoginComplete');
-               console.log('🔍 Login attempt status:', loginAttempted);
- 
-               if (!loginAttempted) {
-                 if (window.liff.isLoggedIn()) {
-                   console.log('✅ User is logged into LINE - getting profile');
-                   window.liff.getProfile().then(profile => {
-                     console.log('📱 Got LINE profile:', profile);
-                     
-                    // Send to server - THIS WILL SHOW IN TERMINAL
-                    console.log('🚀 Sending LINE profile to server...');
-                    console.log('📱 Profile data being sent:', {
-                      userId: profile.userId,
-                      displayName: profile.displayName,
-                      pictureUrl: profile.pictureUrl
-                    });
-                    
+              if (!loginAttempted) {
+                if (window.liff.isLoggedIn()) {
+                  window.liff.getProfile().then(profile => {
+                    // Send to server for authentication
                     fetch("/api/line-liff-login", {
                       method: "POST",
                       headers: { "Content-Type": "application/json" },
@@ -88,73 +67,62 @@ export default function RestaurantFloorplanPage() {
                         pictureUrl: profile.pictureUrl
                       })
                     })
-                     .then(res => {
-                       console.log('📡 Server response status:', res.status);
-                       return res.json();
-                     })
-                     .then(data => {
-                       console.log('📡 Server response data:', data);
-                       if (data.user) {
-                         // Store LINE user data in localStorage (compatible with new auth system)
-                         localStorage.setItem('customerUser', JSON.stringify(data.user));
-                         console.log('✅ LINE user logged in successfully:', data.user);
-                         
-                         // Trigger a custom event to notify AuthContext
-                         window.dispatchEvent(new CustomEvent('lineUserLogin', { detail: data.user }));
-                         
-                         // Set the flag to prevent login loop
-                         sessionStorage.setItem('liffLoginComplete', 'true');
-                         
-                         // Don't reload, let the auth context handle the state update
-                         console.log('✅ LIFF login complete, user should now be authenticated');
-                       } else {
-                         // Set the flag and reload if no user data
-                         sessionStorage.setItem('liffLoginComplete', 'true');
-                         window.location.reload();
-                       }
-                     })
-                     .catch(fetchErr => {
-                       console.error("❌ Fetch error during LIFF login:", fetchErr);
-                     });
-                   }).catch(profileErr => {
-                     console.error("❌ Error getting LIFF profile:", profileErr);
-                   });
-                 } else {
-                   console.log('❌ User not logged into LINE - initiating login');
-                   // If not logged into LINE, initiate login
-                   window.liff.login();
-                 }
-               } else {
-                 console.log('ℹ️ Login already attempted, skipping');
-               }
-               
-               // If loginAttempted is true, do nothing. The user is logged in.
-             } else {
-               console.log('🌐 User is NOT in LINE app - web browser access');
-             }
-             // If NOT in LINE app, do nothing (web/PC flow continues as normal)
-           })
-           .catch(err => {
-             console.error("❌ LIFF init error:", err);
-           });
-       }
+                    .then(res => res.json())
+                    .then(data => {
+                      if (data.user) {
+                        // Store LINE user data in localStorage
+                        localStorage.setItem('customerUser', JSON.stringify(data.user));
+                        
+                        // Trigger custom event to notify AuthContext
+                        window.dispatchEvent(new CustomEvent('lineUserLogin', { detail: data.user }));
+                        
+                        // Set flag to prevent login loop
+                        sessionStorage.setItem('liffLoginComplete', 'true');
+                      } else {
+                        sessionStorage.setItem('liffLoginComplete', 'true');
+                        window.location.reload();
+                      }
+                    })
+                    .catch(error => {
+                      console.error("LIFF login error:", error);
+                    });
+                  }).catch(error => {
+                    console.error("Error getting LIFF profile:", error);
+                  });
+                } else {
+                  // If not logged into LINE, initiate login
+                  window.liff.login();
+                }
+              }
+            }
+          })
+          .catch(error => {
+            console.error("LIFF init error:", error);
+          });
+      }
 
       if (!window.liff) {
         const script = document.createElement("script");
         script.src = "https://static.line-scdn.net/liff/edge/2/sdk.js";
         script.onload = startLiff;
+        script.onerror = () => {
+          // Try alternative CDN
+          const altScript = document.createElement("script");
+          altScript.src = "https://d.line-scdn.net/liff/edge/2/sdk.js";
+          altScript.onload = startLiff;
+          document.body.appendChild(altScript);
+        };
         document.body.appendChild(script);
       } else {
         startLiff();
       }
     }
 
+    // Restaurant and floorplan fetching logic
     const fetchRestaurantAndFloorplan = async () => {
       try {
-        console.log('Fetching restaurant data for ID:', restaurantId);
         const response = await fetch(`/api/restaurants/${restaurantId}/public-floorplan`);
         if (!response.ok) {
-          console.error('Failed to fetch restaurant:', response.status);
           throw new Error('Failed to fetch restaurant');
         }
         
@@ -222,6 +190,7 @@ export default function RestaurantFloorplanPage() {
 
   return (
     <div className="bg-gray-100 min-h-screen">
+      
       {/* Modern Navigation */}
       <nav className="bg-white border-b border-gray-100 sticky top-0 z-50 backdrop-blur-lg bg-white/80">
         <div className="max-w-full mx-auto px-4 sm:px-6 py-3 sm:py-4">

@@ -727,7 +727,25 @@ export default function PublicFloorPlan({ floorplanData, floorplanId, restaurant
 
             if (!isAuthenticated || !userProfile) {
                 console.log('❌ Authentication failed - showing login error');
-                toast.error("Please log in to make a booking.");
+                console.log('🔍 Detailed auth failure info:', {
+                  isAuthenticated,
+                  hasUserProfile: !!userProfile,
+                  firebaseAuth: {
+                    loading: firebaseAuth.loading,
+                    isAuthenticated: firebaseAuth.isAuthenticated,
+                    hasProfile: !!firebaseAuth.userProfile
+                  },
+                  lineAuth: {
+                    loading: lineAuth.loading,
+                    hasUser: !!lineAuth.user,
+                    userData: lineAuth.user
+                  },
+                  localStorage: {
+                    hasCustomerUser: !!localStorage.getItem('customerUser'),
+                    customerUserData: localStorage.getItem('customerUser') ? JSON.parse(localStorage.getItem('customerUser')) : null
+                  }
+                });
+                toast.error("Please log in to make a booking. Check console for debug info.");
                 return;
             }
 

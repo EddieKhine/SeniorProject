@@ -348,6 +348,7 @@ async function handleCustomerMode(event, userId, client) {
                   color: "#0084FF",
                   action: {
                     type: "uri",
+                    // Same LIFF ID for both local and production - LIFF app should be configured to point to ngrok URL for testing
                     uri: `https://liff.line.me/2007787204-zGYZn1ZE?restaurantId=${restaurantId}`,
                     label: "Open Restaurant App"
                   },
@@ -641,22 +642,27 @@ async function handleCustomerBookings(event, userId, client, customer) {
   try {
     await dbConnect();
     
-    // Get customer's bookings
+    // Get customer's upcoming bookings only (today and future)
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
     const bookings = await Booking.find({
       userId: customer._id,
-      status: { $in: ['pending', 'confirmed'] }
+      status: { $in: ['pending', 'confirmed'] },
+      date: { $gte: today }
     })
     .populate('restaurantId', 'restaurantName')
     .populate('floorplanId', 'name')
     .sort({ date: 1, startTime: 1 });
 
+
     if (bookings.length === 0) {
       return client.replyMessage(event.replyToken, {
         type: "template",
-        altText: "No Bookings",
+        altText: "No Upcoming Bookings",
         template: {
           type: "buttons",
-          text: "📋 No Active Bookings\n\nYou don't have any upcoming reservations.\n\nWould you like to make a new booking?",
+          text: "📋 No Upcoming Bookings\n\nYou don't have any reservations for today or future dates.\n\nWould you like to make a new booking?",
           actions: [
             {
               type: "postback",
@@ -675,8 +681,11 @@ async function handleCustomerBookings(event, userId, client, customer) {
       });
     }
 
+    // Limit bookings to prevent LINE API 400 error (max 10 bookings)
+    const limitedBookings = bookings.slice(0, 10);
+    
     // Show bookings in carousel format
-    const bookingTemplates = bookings.map((booking, index) => {
+    const bookingTemplates = limitedBookings.map((booking, index) => {
       const dateObj = new Date(booking.date);
       const dateStr = dateObj.toLocaleDateString("en-GB");
       const statusEmoji = {
@@ -750,7 +759,7 @@ async function handleCustomerBookings(event, userId, client, customer) {
 
     return client.replyMessage(event.replyToken, {
       type: "flex",
-      altText: `Your Bookings (${bookings.length})`,
+      altText: `Your Bookings (${limitedBookings.length}${bookings.length > 10 ? ` of ${bookings.length}` : ''})`,
       contents: {
         type: "carousel",
         contents: bookingTemplates
@@ -2698,7 +2707,17 @@ async function handleEvent(event) {
       // All non-staff users are treated as customers automatically
       
       // Default message for non-staff - automatically treat as customer
-      return await handleCustomerMode(event, userId, client);
+      try {
+        return await handleCustomerMode(event, userId, client);
+      } catch (error) {
+        console.error("Error in handleCustomerMode:", error);
+        // Don't try to reply again if we already failed with 400 (reply token used)
+        if (error.statusCode === 400) {
+          console.log("Reply token already used in handleCustomerMode, skipping");
+          return;
+        }
+        throw error;
+      }
     }
   } 
   

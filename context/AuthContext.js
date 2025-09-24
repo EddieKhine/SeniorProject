@@ -10,22 +10,13 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   const fetchUser = useCallback(async () => {
-    console.log('🔍 AuthContext: fetchUser called');
     setLoading(true);
     let currentUser = null;
     const storedUser = localStorage.getItem('customerUser');
 
-    console.log('🔍 AuthContext: stored user data:', storedUser ? 'exists' : 'not found');
-
     if (storedUser && storedUser !== "undefined") {
         try {
             currentUser = JSON.parse(storedUser);
-            console.log('🔍 AuthContext: parsed user from localStorage:', {
-              id: currentUser.id,
-              isLineUser: currentUser.isLineUser,
-              lineUserId: currentUser.lineUserId,
-              email: currentUser.email
-            });
         } catch (e) {
             console.error("Failed to parse user from localStorage", e);
             localStorage.removeItem('customerUser');
@@ -33,7 +24,6 @@ export const AuthProvider = ({ children }) => {
     }
 
     if (!currentUser) {
-        console.log('🔍 AuthContext: no stored user, trying API fetch');
         try {
             const response = await fetch('/api/customer/profile');
             if (response.ok) {
@@ -41,15 +31,13 @@ export const AuthProvider = ({ children }) => {
                 if (data && data.user) {
                     currentUser = data.user;
                     localStorage.setItem('customerUser', JSON.stringify(currentUser));
-                    console.log('🔍 AuthContext: fetched user from API:', currentUser);
                 }
             }
         } catch (error) {
-            console.error("Could not fetch user from session", error);
+            // Silently handle session fetch errors (normal for LIFF users)
         }
     }
     
-    console.log('🔍 AuthContext: setting user:', currentUser ? 'user found' : 'no user');
     setUser(currentUser);
     setLoading(false);
   }, []);
@@ -59,7 +47,6 @@ export const AuthProvider = ({ children }) => {
     
     // Listen for LINE user login events
     const handleLineUserLogin = (event) => {
-      console.log('🔍 AuthContext: received lineUserLogin event', event.detail);
       setUser(event.detail);
       setLoading(false);
     };
@@ -93,7 +80,6 @@ export const AuthProvider = ({ children }) => {
 
   // Add a manual refresh function
   const refreshUser = useCallback(() => {
-    console.log('🔄 AuthContext: manual refresh triggered');
     fetchUser();
   }, [fetchUser]);
 
