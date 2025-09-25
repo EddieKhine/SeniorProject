@@ -3,12 +3,18 @@ import dbConnect from "@/lib/mongodb";
 import Restaurant from "@/models/Restaurants";
 import Floorplan from "@/models/Floorplan";
 
+// ========================================
+// RESTAURANT CONFIGURATION
+// ========================================
+// Change this restaurant ID to switch between different restaurants
+const DEFAULT_RESTAURANT_ID = "68d548d7a11657653c2d49ec";
+
 export async function GET() {
   try {
     await dbConnect();
     
-    // Get restaurant information using specific restaurant ID
-    const restaurantId = "68d537658b174612538ddbc6";
+    // Get restaurant information using configurable restaurant ID
+    const restaurantId = DEFAULT_RESTAURANT_ID;
     const restaurant = await Restaurant.findById(restaurantId).select('restaurantName operatingHours defaultFloorplanId');
     
     // Get floorplan information using restaurant ID

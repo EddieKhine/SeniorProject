@@ -14,7 +14,7 @@ import { notifyStaffOfNewBooking, notifyCustomerOfBookingConfirmation, notifyCus
 // RESTAURANT CONFIGURATION
 // ========================================
 // Change this restaurant ID to switch between different restaurants
-const DEFAULT_RESTAURANT_ID = "68d537658b174612538ddbc6";
+const DEFAULT_RESTAURANT_ID = "68d548d7a11657653c2d49ec";
 
 const config = {
   channelAccessToken: process.env.LINE_CHANNEL_ACCESS_TOKEN,
@@ -2579,8 +2579,9 @@ async function getAvailableTables(selectedDate, selectedTime, guestCount) {
     const floorplan = await Floorplan.findOne({ restaurantId: restaurantId });
     if (!floorplan) return [];
     
-    // Get existing bookings for the selected date and time
+    // Get existing bookings for the selected date and time (filtered by restaurant ID)
     const existingBookings = await Booking.find({
+      restaurantId: restaurantId, // Filter by specific restaurant ID
       date: new Date(selectedDate),
       $or: [
         {
@@ -3289,7 +3290,10 @@ async function handleEvent(event) {
 
       try {
         await dbConnect();
-        const booking = await Booking.findById(bookingId).populate('restaurantId', 'restaurantName');
+        const booking = await Booking.findOne({
+          _id: bookingId,
+          restaurantId: staffMember.restaurantId._id
+        }).populate('restaurantId', 'restaurantName');
         
         if (!booking) {
           return client.replyMessage(event.replyToken, {
@@ -3358,7 +3362,10 @@ async function handleEvent(event) {
 
       try {
         await dbConnect();
-        const booking = await Booking.findById(bookingId).populate('restaurantId', 'restaurantName');
+        const booking = await Booking.findOne({
+          _id: bookingId,
+          restaurantId: staffMember.restaurantId._id
+        }).populate('restaurantId', 'restaurantName');
         
         if (!booking) {
           return client.replyMessage(event.replyToken, {

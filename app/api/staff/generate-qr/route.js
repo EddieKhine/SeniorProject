@@ -3,13 +3,22 @@ import QRCode from 'qrcode';
 import crypto from 'crypto';
 import { saveToken, cleanupExpiredTokens } from '../../../../lib/tokenStorage';
 
+// ========================================
+// RESTAURANT CONFIGURATION
+// ========================================
+// Change this restaurant ID to switch between different restaurants
+const DEFAULT_RESTAURANT_ID = "68d548d7a11657653c2d49ec";
+
 export async function POST(request) {
   try {
     const { restaurantId, role, displayName } = await request.json();
 
-    if (!restaurantId || !role || !displayName) {
+    // Use configurable restaurant ID if none provided
+    const finalRestaurantId = restaurantId || DEFAULT_RESTAURANT_ID;
+
+    if (!role || !displayName) {
       return NextResponse.json({
-        error: 'Restaurant ID, role, and display name are required'
+        error: 'Role and display name are required'
       }, { status: 400 });
     }
 
@@ -22,7 +31,7 @@ export async function POST(request) {
 
     // Store token with registration data (expires in 30 minutes)
     const tokenData = {
-      restaurantId,
+      restaurantId: finalRestaurantId,
       role,
       displayName,
       timestamp,
@@ -35,6 +44,7 @@ export async function POST(request) {
       token,
       displayName,
       role,
+      restaurantId: finalRestaurantId,
       expiresAt: new Date(timestamp + (30 * 60 * 1000)).toISOString()
     });
 

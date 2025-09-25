@@ -40,7 +40,7 @@ export default function RestaurantFloorplanPage() {
     }
     
     // Fallback to default restaurant ID
-    return "68d537658b174612538ddbc6";
+    return "68d548d7a11657653c2d49ec"; // TODO: Make this configurable
   };
   
   const restaurantId = getRestaurantId();
