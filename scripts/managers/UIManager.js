@@ -3,7 +3,7 @@ import { SidebarManager } from './SidebarManager.js';
 import { FileManager } from './FileManager.js';
 import { DragManager } from './DragManager.js';
 import { TouchManager } from './TouchManager.js';
-import { chair, table, sofa, roundTable, create2SeaterTable, create8SeaterTable, plant01, plant02 } from '../asset.js';
+import { chair, table, sofa, roundTable, create2SeaterTable, create8SeaterTable, plant01, plant02, largeFridge, foodStand, drinkStand, iceBox, iceCreamBox } from '../asset.js';
 import * as THREE from 'three';
 import { DoorManager } from './DoorManager.js';
 import { WindowManager } from './WindowManager.js';
@@ -63,6 +63,17 @@ export class UIManager {
         this.createTable = () => table(scene);
         this.createSofa = () => sofa(scene);
         this.createRoundTable = () => roundTable(scene);
+        this.create2SeaterTable = () => create2SeaterTable(scene);
+        this.create8SeaterTable = () => create8SeaterTable(scene);
+        this.createPlant01 = () => plant01(scene);
+        this.createPlant02 = () => plant02(scene);
+        
+        // Restaurant equipment creation methods
+        this.createLargeFridge = () => largeFridge(scene);
+        this.createFoodStand = () => foodStand(scene);
+        this.createDrinkStand = () => drinkStand(scene);
+        this.createIceBox = () => iceBox(scene);
+        this.createIceCreamBox = () => iceCreamBox(scene);
     }
 
     initializeUI() {

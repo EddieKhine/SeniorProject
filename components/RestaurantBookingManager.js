@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 import { createScene, createFloor } from '@/scripts/floor';
-import { chair, table, roundTable, sofa, create2SeaterTable, create8SeaterTable, plant01, plant02 } from '@/scripts/asset';
+import { chair, table, roundTable, sofa, create2SeaterTable, create8SeaterTable, plant01, plant02, largeFridge, foodStand, drinkStand, iceBox, iceCreamBox } from '@/scripts/asset';
 import { DoorManager } from '@/scripts/managers/DoorManager';
 import { WindowManager } from '@/scripts/managers/WindowManager';
 import FloorplanManager from './FloorplanManager';
@@ -528,6 +528,64 @@ export default function RestaurantBookingManager({ floorplanData, floorplanId, r
           
           console.log("Found plant objects:", plantObjects.length);
           console.log("Plant objects data:", plantObjects);
+          
+          // Restaurant Equipment
+          console.log("Loading restaurant equipment...");
+          const fridgeObjects = floorplanData.objects.filter(obj => obj.userData?.isFridge);
+          const foodStandObjects = floorplanData.objects.filter(obj => obj.userData?.isFoodStand);
+          const drinkStandObjects = floorplanData.objects.filter(obj => obj.userData?.isDrinkStand);
+          const iceBoxObjects = floorplanData.objects.filter(obj => obj.userData?.isIceBox);
+          const iceCreamBoxObjects = floorplanData.objects.filter(obj => obj.userData?.isIceCreamBox);
+          
+          for (const objData of fridgeObjects) {
+            const model = await largeFridge(scene);
+            if (model) {
+              model.position.fromArray(objData.position);
+              model.rotation.set(objData.rotation.x, objData.rotation.y, objData.rotation.z);
+              model.scale.fromArray(objData.scale);
+              model.userData = objData.userData;
+            }
+          }
+          
+          for (const objData of foodStandObjects) {
+            const model = await foodStand(scene);
+            if (model) {
+              model.position.fromArray(objData.position);
+              model.rotation.set(objData.rotation.x, objData.rotation.y, objData.rotation.z);
+              model.scale.fromArray(objData.scale);
+              model.userData = objData.userData;
+            }
+          }
+          
+          for (const objData of drinkStandObjects) {
+            const model = await drinkStand(scene);
+            if (model) {
+              model.position.fromArray(objData.position);
+              model.rotation.set(objData.rotation.x, objData.rotation.y, objData.rotation.z);
+              model.scale.fromArray(objData.scale);
+              model.userData = objData.userData;
+            }
+          }
+          
+          for (const objData of iceBoxObjects) {
+            const model = await iceBox(scene);
+            if (model) {
+              model.position.fromArray(objData.position);
+              model.rotation.set(objData.rotation.x, objData.rotation.y, objData.rotation.z);
+              model.scale.fromArray(objData.scale);
+              model.userData = objData.userData;
+            }
+          }
+          
+          for (const objData of iceCreamBoxObjects) {
+            const model = await iceCreamBox(scene);
+            if (model) {
+              model.position.fromArray(objData.position);
+              model.rotation.set(objData.rotation.x, objData.rotation.y, objData.rotation.z);
+              model.scale.fromArray(objData.scale);
+              model.userData = objData.userData;
+            }
+          }
           
           for (const objData of plantObjects) {
             console.log("Processing plant:", objData);

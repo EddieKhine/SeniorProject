@@ -16,12 +16,30 @@ export class ObjectManager {
         while (object && 
                !object.userData?.isWall && 
                !object.userData?.isChair &&
-               !object.userData?.isFurniture) {
+               !object.userData?.isFurniture &&
+               !object.userData?.isTable &&
+               !object.userData?.isSofa &&
+               !object.userData?.isPlant &&
+               !object.userData?.isFridge &&
+               !object.userData?.isFoodStand &&
+               !object.userData?.isDrinkStand &&
+               !object.userData?.isIceBox &&
+               !object.userData?.isIceCreamBox &&
+               !object.userData?.isRestaurantEquipment) {
             object = object.parent;
         }
         return object?.userData?.isWall || 
                object?.userData?.isChair || 
-               object?.userData?.isFurniture ? object : null;
+               object?.userData?.isFurniture ||
+               object?.userData?.isTable ||
+               object?.userData?.isSofa ||
+               object?.userData?.isPlant ||
+               object?.userData?.isFridge ||
+               object?.userData?.isFoodStand ||
+               object?.userData?.isDrinkStand ||
+               object?.userData?.isIceBox ||
+               object?.userData?.isIceCreamBox ||
+               object?.userData?.isRestaurantEquipment ? object : null;
     }
 
     handleRemoveObject(event) {

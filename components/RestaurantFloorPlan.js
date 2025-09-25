@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 import { useRouter } from 'next/navigation';
 import { createScene, createFloor } from '@/scripts/floor';
-import { chair, table, roundTable, sofa, create2SeaterTable, create8SeaterTable , plant01, plant02} from '@/scripts/asset';
+import { chair, table, roundTable, sofa, create2SeaterTable, create8SeaterTable, plant01, plant02, largeFridge, foodStand, drinkStand, iceBox, iceCreamBox } from '@/scripts/asset';
 import { DoorManager} from '@/scripts/managers/DoorManager';
 import { WindowManager } from '@/scripts/managers/WindowManager';
 import FloorplanManager from './FloorplanManager';
@@ -400,6 +400,16 @@ export default function RestaurantFloorPlan({ token, restaurantId, isCustomerVie
                   } else if (objData.userData.isPlant02) {
                     model = await plant02(scene);
                   }
+                } else if (objData.userData.isFridge) {
+                  model = await largeFridge(scene);
+                } else if (objData.userData.isFoodStand) {
+                  model = await foodStand(scene);
+                } else if (objData.userData.isDrinkStand) {
+                  model = await drinkStand(scene);
+                } else if (objData.userData.isIceBox) {
+                  model = await iceBox(scene);
+                } else if (objData.userData.isIceCreamBox) {
+                  model = await iceCreamBox(scene);
                 }
 
                 if (model) {

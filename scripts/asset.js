@@ -322,5 +322,302 @@ export async function plant02(scene){
         console.error("Error loading plant02:", error);
         return null;
     }
+}
+
+// Restaurant Equipment Assets
+
+export function largeFridge(scene) {
+    const group = new THREE.Group();
+    
+    // Main fridge body
+    const fridgeGeometry = new THREE.BoxGeometry(1.2, 2.0, 0.6);
+    const fridgeMaterial = new THREE.MeshPhongMaterial({
+        color: 0xE5E5E5, // Stainless steel color
+        shininess: 100
+    });
+    const fridgeBody = new THREE.Mesh(fridgeGeometry, fridgeMaterial);
+    fridgeBody.position.set(0, 1.0, 0);
+    fridgeBody.castShadow = true;
+    fridgeBody.receiveShadow = true;
+    
+    // Fridge door handle
+    const handleGeometry = new THREE.BoxGeometry(0.05, 0.3, 0.05);
+    const handleMaterial = new THREE.MeshPhongMaterial({
+        color: 0x333333,
+        shininess: 50
+    });
+    const handle = new THREE.Mesh(handleGeometry, handleMaterial);
+    handle.position.set(0.5, 1.0, 0.32);
+    
+    // Door lines/divisions
+    const lineGeometry = new THREE.BoxGeometry(1.0, 0.02, 0.01);
+    const lineMaterial = new THREE.MeshPhongMaterial({
+        color: 0xCCCCCC,
+        shininess: 80
+    });
+    const doorLine = new THREE.Mesh(lineGeometry, lineMaterial);
+    doorLine.position.set(0, 1.0, 0.31);
+    
+    group.add(fridgeBody);
+    group.add(handle);
+    group.add(doorLine);
+    
+    group.position.set(0, 0.01, 0);
+    group.userData = {
+        isMovable: true,
+        isRotatable: true,
+        isFridge: true,
+        isRestaurantEquipment: true,
+        isFurniture: true, // Add for removal
+        name: 'Large Fridge'
+    };
+    
+    scene.add(group);
+    return group;
+}
+
+export function foodStand(scene) {
+    const group = new THREE.Group();
+    
+    // Rectangular table base (like a buffet table)
+    const tableGeometry = new THREE.BoxGeometry(1.2, 0.8, 0.6);
+    const tableMaterial = new THREE.MeshPhongMaterial({
+        color: 0x8B4513, // Brown wood color
+        shininess: 30
+    });
+    const tableBase = new THREE.Mesh(tableGeometry, tableMaterial);
+    tableBase.position.set(0, 0.4, 0);
+    tableBase.castShadow = true;
+    tableBase.receiveShadow = true;
+    
+    // Table legs
+    const legGeometry = new THREE.BoxGeometry(0.05, 0.8, 0.05);
+    const legMaterial = new THREE.MeshPhongMaterial({
+        color: 0x654321,
+        shininess: 20
+    });
+    
+    // Four table legs
+    const positions = [
+        [-0.55, 0.4, -0.25],
+        [0.55, 0.4, -0.25],
+        [-0.55, 0.4, 0.25],
+        [0.55, 0.4, 0.25]
+    ];
+    
+    positions.forEach(pos => {
+        const leg = new THREE.Mesh(legGeometry, legMaterial);
+        leg.position.set(pos[0], pos[1], pos[2]);
+        leg.castShadow = true;
+        group.add(leg);
+    });
+    
+    // Food display surface
+    const surfaceGeometry = new THREE.BoxGeometry(1.15, 0.05, 0.55);
+    const surfaceMaterial = new THREE.MeshPhongMaterial({
+        color: 0xFFFFFF,
+        shininess: 80
+    });
+    const surface = new THREE.Mesh(surfaceGeometry, surfaceMaterial);
+    surface.position.set(0, 0.825, 0);
+    surface.castShadow = true;
+    surface.receiveShadow = true;
+    
+    group.add(tableBase);
+    group.add(surface);
+    
+    group.position.set(0, 0.01, 0);
+    group.userData = {
+        isMovable: true,
+        isRotatable: true,
+        isFoodStand: true,
+        isRestaurantEquipment: true,
+        isFurniture: true, // Add this for removal
+        name: 'Food Stand',
+        equipmentType: 'foodStand'
+    };
+    
+    scene.add(group);
+    return group;
+}
+
+export function drinkStand(scene) {
+    const group = new THREE.Group();
+    
+    // Base cabinet
+    const cabinetGeometry = new THREE.BoxGeometry(0.8, 0.8, 0.4);
+    const cabinetMaterial = new THREE.MeshPhongMaterial({
+        color: 0x8B4513, // Brown wood color
+        shininess: 20
+    });
+    const cabinet = new THREE.Mesh(cabinetGeometry, cabinetMaterial);
+    cabinet.position.set(0, 0.4, 0);
+    cabinet.castShadow = true;
+    cabinet.receiveShadow = true;
+    
+    // Glass dispensers
+    const dispenserGeometry = new THREE.CylinderGeometry(0.08, 0.08, 0.4);
+    const dispenserMaterial = new THREE.MeshPhongMaterial({
+        color: 0x87CEEB,
+        opacity: 0.7,
+        transparent: true,
+        shininess: 100
+    });
+    
+    const dispenser1 = new THREE.Mesh(dispenserGeometry, dispenserMaterial);
+    dispenser1.position.set(-0.2, 1.0, 0);
+    
+    const dispenser2 = new THREE.Mesh(dispenserGeometry, dispenserMaterial);
+    dispenser2.position.set(0.2, 1.0, 0);
+    
+    // Tap/spouts
+    const tapGeometry = new THREE.BoxGeometry(0.05, 0.05, 0.1);
+    const tapMaterial = new THREE.MeshPhongMaterial({
+        color: 0x333333,
+        shininess: 50
+    });
+    
+    const tap1 = new THREE.Mesh(tapGeometry, tapMaterial);
+    tap1.position.set(-0.2, 0.8, 0.15);
+    
+    const tap2 = new THREE.Mesh(tapGeometry, tapMaterial);
+    tap2.position.set(0.2, 0.8, 0.15);
+    
+    group.add(cabinet);
+    group.add(dispenser1);
+    group.add(dispenser2);
+    group.add(tap1);
+    group.add(tap2);
+    
+    group.position.set(0, 0.01, 0);
+    group.userData = {
+        isMovable: true,
+        isRotatable: true,
+        isDrinkStand: true,
+        isRestaurantEquipment: true,
+        isFurniture: true, // Add for removal
+        name: 'Drink Stand'
+    };
+    
+    scene.add(group);
+    return group;
+}
+
+export function iceBox(scene) {
+    const group = new THREE.Group();
+    
+    // Main ice box body
+    const boxGeometry = new THREE.BoxGeometry(1.0, 0.8, 0.6);
+    const boxMaterial = new THREE.MeshPhongMaterial({
+        color: 0xF0F8FF, // Alice blue for ice box
+        shininess: 60
+    });
+    const iceBoxBody = new THREE.Mesh(boxGeometry, boxMaterial);
+    iceBoxBody.position.set(0, 0.4, 0);
+    iceBoxBody.castShadow = true;
+    iceBoxBody.receiveShadow = true;
+    
+    // Ice box lid
+    const lidGeometry = new THREE.BoxGeometry(1.05, 0.1, 0.65);
+    const lidMaterial = new THREE.MeshPhongMaterial({
+        color: 0xE6F3FF,
+        shininess: 70
+    });
+    const lid = new THREE.Mesh(lidGeometry, lidMaterial);
+    lid.position.set(0, 0.85, 0);
+    lid.castShadow = true;
+    
+    // Handle on lid
+    const handleGeometry = new THREE.BoxGeometry(0.2, 0.05, 0.05);
+    const handleMaterial = new THREE.MeshPhongMaterial({
+        color: 0x333333,
+        shininess: 40
+    });
+    const handle = new THREE.Mesh(handleGeometry, handleMaterial);
+    handle.position.set(0, 0.92, 0.2);
+    
+    group.add(iceBoxBody);
+    group.add(lid);
+    group.add(handle);
+    
+    group.position.set(0, 0.01, 0);
+    group.userData = {
+        isMovable: true,
+        isRotatable: true,
+        isIceBox: true,
+        isRestaurantEquipment: true,
+        isFurniture: true, // Add for removal
+        name: 'Ice Box'
+    };
+    
+    scene.add(group);
+    return group;
+}
+
+export function iceCreamBox(scene) {
+    const group = new THREE.Group();
+    
+    // Main freezer body
+    const freezerGeometry = new THREE.BoxGeometry(1.5, 1.0, 0.8);
+    const freezerMaterial = new THREE.MeshPhongMaterial({
+        color: 0xFFFFFF,
+        shininess: 90
+    });
+    const freezerBody = new THREE.Mesh(freezerGeometry, freezerMaterial);
+    freezerBody.position.set(0, 0.5, 0);
+    freezerBody.castShadow = true;
+    freezerBody.receiveShadow = true;
+    
+    // Glass top cover
+    const glassGeometry = new THREE.BoxGeometry(1.4, 0.05, 0.7);
+    const glassMaterial = new THREE.MeshPhongMaterial({
+        color: 0x87CEEB,
+        opacity: 0.3,
+        transparent: true,
+        shininess: 100
+    });
+    const glassTop = new THREE.Mesh(glassGeometry, glassMaterial);
+    glassTop.position.set(0, 1.025, 0);
+    
+    // Freezer compartment divisions
+    const dividerGeometry = new THREE.BoxGeometry(0.02, 0.8, 0.7);
+    const dividerMaterial = new THREE.MeshPhongMaterial({
+        color: 0xE5E5E5,
+        shininess: 50
+    });
+    
+    const divider1 = new THREE.Mesh(dividerGeometry, dividerMaterial);
+    divider1.position.set(-0.4, 0.5, 0);
+    
+    const divider2 = new THREE.Mesh(dividerGeometry, dividerMaterial);
+    divider2.position.set(0.4, 0.5, 0);
+    
+    // Brand/display panel
+    const panelGeometry = new THREE.BoxGeometry(0.3, 0.2, 0.02);
+    const panelMaterial = new THREE.MeshPhongMaterial({
+        color: 0x4169E1,
+        shininess: 80
+    });
+    const displayPanel = new THREE.Mesh(panelGeometry, panelMaterial);
+    displayPanel.position.set(0, 0.8, 0.41);
+    
+    group.add(freezerBody);
+    group.add(glassTop);
+    group.add(divider1);
+    group.add(divider2);
+    group.add(displayPanel);
+    
+    group.position.set(0, 0.01, 0);
+    group.userData = {
+        isMovable: true,
+        isRotatable: true,
+        isIceCreamBox: true,
+        isRestaurantEquipment: true,
+        isFurniture: true, // Add for removal
+        name: 'Ice Cream Box'
+    };
+    
+    scene.add(group);
+    return group;
 }       
 

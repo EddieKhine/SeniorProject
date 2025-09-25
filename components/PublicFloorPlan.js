@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 import { createScene, createFloor } from '@/scripts/floor';
-import { chair, table, roundTable, sofa, create2SeaterTable, create8SeaterTable, plant01, plant02 } from '@/scripts/asset';
+import { chair, table, roundTable, sofa, create2SeaterTable, create8SeaterTable, plant01, plant02, largeFridge, foodStand, drinkStand, iceBox, iceCreamBox } from '@/scripts/asset';
 import { DoorManager } from '@/scripts/managers/DoorManager';
 import { WindowManager } from '@/scripts/managers/WindowManager';
 import '@/css/booking.css';
@@ -600,6 +600,13 @@ export default function PublicFloorPlan({ floorplanData, floorplanId, restaurant
           const plantObjects = floorplanData.objects.filter(obj => 
             obj.userData?.isPlant || obj.userData?.isPlant01 || obj.userData?.isPlant02
           );
+          
+          // Restaurant Equipment
+          const fridgeObjects = floorplanData.objects.filter(obj => obj.userData?.isFridge);
+          const foodStandObjects = floorplanData.objects.filter(obj => obj.userData?.isFoodStand);
+          const drinkStandObjects = floorplanData.objects.filter(obj => obj.userData?.isDrinkStand);
+          const iceBoxObjects = floorplanData.objects.filter(obj => obj.userData?.isIceBox);
+          const iceCreamBoxObjects = floorplanData.objects.filter(obj => obj.userData?.isIceCreamBox);
 
           // Create model loading promises
           const modelPromises = [];
@@ -646,6 +653,52 @@ export default function PublicFloorPlan({ floorplanData, floorplanId, restaurant
                 data: objData 
               });
             }
+          }
+          
+          // Restaurant Equipment
+          for (const objData of fridgeObjects) {
+            objData.userData.objectId = objData.objectId;
+            modelPromises.push({ 
+              type: 'fridge', 
+              promise: largeFridge(scene), 
+              data: objData 
+            });
+          }
+          
+          for (const objData of foodStandObjects) {
+            objData.userData.objectId = objData.objectId;
+            modelPromises.push({ 
+              type: 'foodStand', 
+              promise: foodStand(scene), 
+              data: objData 
+            });
+          }
+          
+          for (const objData of drinkStandObjects) {
+            objData.userData.objectId = objData.objectId;
+            modelPromises.push({ 
+              type: 'drinkStand', 
+              promise: drinkStand(scene), 
+              data: objData 
+            });
+          }
+          
+          for (const objData of iceBoxObjects) {
+            objData.userData.objectId = objData.objectId;
+            modelPromises.push({ 
+              type: 'iceBox', 
+              promise: iceBox(scene), 
+              data: objData 
+            });
+          }
+          
+          for (const objData of iceCreamBoxObjects) {
+            objData.userData.objectId = objData.objectId;
+            modelPromises.push({ 
+              type: 'iceCreamBox', 
+              promise: iceCreamBox(scene), 
+              data: objData 
+            });
           }
 
           // Wait for all models to load

@@ -55,7 +55,8 @@ export class FileManager {
                 sofa: 1,
                 wall: 1,
                 door: 1,
-                window: 1
+                window: 1,
+                equipment: 1
             };
 
             const sceneData = {
@@ -86,6 +87,18 @@ export class FileManager {
                         friendlyId = `d${counters.door++}`;
                     } else if (obj.userData.isWindow) {
                         friendlyId = `win${counters.window++}`;
+                    } else if (obj.userData.isFridge) {
+                        friendlyId = `fridge${counters.equipment++}`;
+                    } else if (obj.userData.isFoodStand) {
+                        friendlyId = `foodstand${counters.equipment++}`;
+                    } else if (obj.userData.isDrinkStand) {
+                        friendlyId = `drinkstand${counters.equipment++}`;
+                    } else if (obj.userData.isIceBox) {
+                        friendlyId = `icebox${counters.equipment++}`;
+                    } else if (obj.userData.isIceCreamBox) {
+                        friendlyId = `icecream${counters.equipment++}`;
+                    } else if (obj.userData.isPlant) {
+                        friendlyId = `plant${counters.equipment++}`;
                     } else {
                         friendlyId = `obj${THREE.MathUtils.generateUUID().slice(0, 4)}`;
                     }
@@ -721,6 +734,16 @@ export class FileManager {
                     } else if (data.userData.isPlant02) {
                         model = await this.ui.createPlant02();
                     }
+                } else if (data.userData.isFridge) {
+                    model = await this.ui.createLargeFridge();
+                } else if (data.userData.isFoodStand) {
+                    model = await this.ui.createFoodStand();
+                } else if (data.userData.isDrinkStand) {
+                    model = await this.ui.createDrinkStand();
+                } else if (data.userData.isIceBox) {
+                    model = await this.ui.createIceBox();
+                } else if (data.userData.isIceCreamBox) {
+                    model = await this.ui.createIceCreamBox();
                 }
 
                 if (model) {

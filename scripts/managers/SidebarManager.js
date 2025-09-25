@@ -1,4 +1,4 @@
-import { chair, table, sofa, roundTable, create2SeaterTable, create8SeaterTable, plant01, plant02 } from '../asset.js';
+import { chair, table, sofa, roundTable, create2SeaterTable, create8SeaterTable, plant01, plant02, largeFridge, foodStand, drinkStand, iceBox, iceCreamBox } from '../asset.js';
 
 export class SidebarManager {
     constructor(uiManager) {
@@ -161,6 +161,108 @@ export class SidebarManager {
                                     isPlant02: true,
                                     isMovable: true,
                                     isRotatable: true
+                                };
+                            }
+                        }
+                    }
+                ]
+            },
+            {
+                title: "Restaurant Equipment",
+                icon: "bi-box-seam",
+                items: [
+                    {
+                        name: "Large Fridge",
+                        thumbnail: "/assets/thumbnails/fridge.jpg",
+                        icon: "bi-snow",
+                        action: async () => {
+                            const fridgeModel = await this.ui.createLargeFridge();
+                            if (fridgeModel) {
+                                fridgeModel.position.set(0, 0.5, 0);
+                                fridgeModel.userData = {
+                                    isFridge: true,
+                                    isMovable: true,
+                                    isRotatable: true,
+                                    isRestaurantEquipment: true,
+                                    isFurniture: true,
+                                    name: 'Large Fridge'
+                                };
+                            }
+                        }
+                    },
+                    {
+                        name: "Food Stand",
+                        thumbnail: "/assets/thumbnails/foodstand.jpg",
+                        icon: "bi-cup-straw",
+                        action: async () => {
+                            const foodStandModel = await this.ui.createFoodStand();
+                            if (foodStandModel) {
+                                foodStandModel.position.set(0, 0.5, 0);
+                                foodStandModel.userData = {
+                                    isFoodStand: true,
+                                    isMovable: true,
+                                    isRotatable: true,
+                                    isRestaurantEquipment: true,
+                                    isFurniture: true, // Add for removal
+                                    name: 'Food Stand',
+                                    equipmentType: 'foodStand'
+                                };
+                            }
+                        }
+                    },
+                    {
+                        name: "Drink Stand",
+                        thumbnail: "/assets/thumbnails/drinkstand.jpg",
+                        icon: "bi-cup",
+                        action: async () => {
+                            const drinkStandModel = await this.ui.createDrinkStand();
+                            if (drinkStandModel) {
+                                drinkStandModel.position.set(0, 0.5, 0);
+                                drinkStandModel.userData = {
+                                    isDrinkStand: true,
+                                    isMovable: true,
+                                    isRotatable: true,
+                                    isRestaurantEquipment: true,
+                                    isFurniture: true,
+                                    name: 'Drink Stand'
+                                };
+                            }
+                        }
+                    },
+                    {
+                        name: "Ice Box",
+                        thumbnail: "/assets/thumbnails/icebox.jpg",
+                        icon: "bi-snow2",
+                        action: async () => {
+                            const iceBoxModel = await this.ui.createIceBox();
+                            if (iceBoxModel) {
+                                iceBoxModel.position.set(0, 0.5, 0);
+                                iceBoxModel.userData = {
+                                    isIceBox: true,
+                                    isMovable: true,
+                                    isRotatable: true,
+                                    isRestaurantEquipment: true,
+                                    isFurniture: true,
+                                    name: 'Ice Box'
+                                };
+                            }
+                        }
+                    },
+                    {
+                        name: "Ice Cream Box",
+                        thumbnail: "/assets/thumbnails/icecreambox.jpg",
+                        icon: "bi-snow3",
+                        action: async () => {
+                            const iceCreamBoxModel = await this.ui.createIceCreamBox();
+                            if (iceCreamBoxModel) {
+                                iceCreamBoxModel.position.set(0, 0.5, 0);
+                                iceCreamBoxModel.userData = {
+                                    isIceCreamBox: true,
+                                    isMovable: true,
+                                    isRotatable: true,
+                                    isRestaurantEquipment: true,
+                                    isFurniture: true,
+                                    name: 'Ice Cream Box'
                                 };
                             }
                         }
