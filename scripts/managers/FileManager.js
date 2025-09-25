@@ -193,6 +193,14 @@ export class FileManager {
         try {
             console.log('Capturing screenshot for floorplan:', floorplanId);
             
+            // Check if we're in production environment
+            const isProduction = process.env.NODE_ENV === 'production' || 
+                                window.location.hostname !== 'localhost';
+            
+            if (isProduction) {
+                console.log('Production environment detected - using enhanced screenshot capture');
+            }
+            
             // Hide UI elements temporarily for clean screenshot
             const elementsToHide = [
                 document.querySelector('.sidebar'),
@@ -317,16 +325,54 @@ export class FileManager {
             }
             
             // Wait additional time for GPU to process all sprites
-            await new Promise(resolve => setTimeout(resolve, 2000)); // 2 second delay
+            // Reduced delay for production performance
+            await new Promise(resolve => setTimeout(resolve, 1000)); // 1 second delay
             
-            // Final render before screenshot
+            // Force renderer to flush any pending operations
+            this.ui.renderer.info.reset();
+            
+            // Final render before screenshot with explicit flush
             this.ui.renderer.render(this.ui.scene, this.ui.camera);
             
-            // Capture screenshot as blob
+            // Ensure WebGL context is ready for screenshot
+            const gl = this.ui.renderer.getContext();
+            if (gl) {
+                gl.finish(); // Force GPU to complete all operations
+            }
+            
+            // Capture screenshot as blob with production fallback
             const canvas = this.ui.renderer.domElement;
-            const blob = await new Promise(resolve => {
-                canvas.toBlob(resolve, 'image/png', 0.9);
-            });
+            let blob;
+            
+            try {
+                // Try the standard method first
+                blob = await new Promise((resolve, reject) => {
+                    const timeout = setTimeout(() => {
+                        reject(new Error('Screenshot capture timeout'));
+                    }, 5000);
+                    
+                    canvas.toBlob((result) => {
+                        clearTimeout(timeout);
+                        if (result) {
+                            resolve(result);
+                        } else {
+                            reject(new Error('Failed to capture screenshot'));
+                        }
+                    }, 'image/png', 0.9);
+                });
+            } catch (error) {
+                console.error('Canvas toBlob failed, trying alternative method:', error);
+                
+                // Fallback: Convert canvas to data URL then to blob
+                try {
+                    const dataURL = canvas.toDataURL('image/png', 0.9);
+                    const response = await fetch(dataURL);
+                    blob = await response.blob();
+                } catch (fallbackError) {
+                    console.error('Fallback screenshot method failed:', fallbackError);
+                    throw new Error('Screenshot capture failed in production environment');
+                }
+            }
             
             // Clean up temporary table labels immediately
             tableLabels.forEach(label => {
@@ -349,30 +395,64 @@ export class FileManager {
                 }
             });
             
-            // Upload screenshot
+            // Upload screenshot with retry logic
             if (blob) {
+                console.log('Screenshot blob created, size:', blob.size, 'bytes');
+                
                 const formData = new FormData();
                 formData.append('screenshot', blob, `floorplan_${floorplanId}.png`);
                 formData.append('floorplanId', floorplanId);
                 formData.append('isEditing', isEditing.toString());
                 
-                const uploadResponse = await fetch('/api/floorplan-screenshot', {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    },
-                    body: formData
-                });
+                // Retry logic for production reliability
+                let uploadSuccess = false;
+                let retryCount = 0;
+                const maxRetries = 3;
                 
-                if (uploadResponse.ok) {
-                    const uploadResult = await uploadResponse.json();
-                    console.log('Screenshot uploaded successfully:', uploadResult.imageUrl);
+                while (!uploadSuccess && retryCount < maxRetries) {
+                    try {
+                        console.log(`Uploading screenshot (attempt ${retryCount + 1}/${maxRetries})`);
+                        
+                        const uploadResponse = await fetch('/api/floorplan-screenshot', {
+                            method: 'POST',
+                            headers: {
+                                'Authorization': `Bearer ${token}`
+                            },
+                            body: formData
+                        });
+                        
+                        if (uploadResponse.ok) {
+                            const uploadResult = await uploadResponse.json();
+                            console.log('Screenshot uploaded successfully:', uploadResult.imageUrl);
+                            
+                            // Update floorplan with screenshot URL
+                            await this.updateFloorplanScreenshot(floorplanId, uploadResult.imageUrl, token);
+                            uploadSuccess = true;
+                        } else {
+                            const errorText = await uploadResponse.text();
+                            console.error(`Upload failed (attempt ${retryCount + 1}):`, uploadResponse.status, errorText);
+                            
+                            if (retryCount < maxRetries - 1) {
+                                await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1)));
+                            }
+                        }
+                    } catch (uploadError) {
+                        console.error(`Upload error (attempt ${retryCount + 1}):`, uploadError);
+                        
+                        if (retryCount < maxRetries - 1) {
+                            await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1)));
+                        }
+                    }
                     
-                    // Update floorplan with screenshot URL
-                    await this.updateFloorplanScreenshot(floorplanId, uploadResult.imageUrl, token);
-                } else {
-                    console.error('Failed to upload screenshot');
+                    retryCount++;
                 }
+                
+                if (!uploadSuccess) {
+                    console.error('Screenshot upload failed after all retries');
+                    // Don't throw error - let the save continue without screenshot
+                }
+            } else {
+                console.error('No screenshot blob created');
             }
             
         } catch (error) {

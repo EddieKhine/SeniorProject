@@ -60,24 +60,31 @@ export async function POST(request) {
       }, { status: 404 });
     }
 
-    // TODO: Implement actual screenshot generation
-    // This would typically involve:
-    // 1. Using Puppeteer to render the floorplan
-    // 2. Taking a screenshot
-    // 3. Uploading to a CDN or storage service
-    // 4. Returning the image URL
-    
-    // For now, return a placeholder response
-    return NextResponse.json({
-      success: true,
-      message: "Screenshot generation not yet implemented",
-      floorplan: {
-        id: floorplan._id,
-        name: floorplan.name,
-        restaurantName: floorplan.restaurantId.restaurantName
-      },
-      screenshotUrl: null // This would be the actual screenshot URL
-    });
+    // Return existing screenshot URL if available
+    if (floorplan.screenshotUrl) {
+      return NextResponse.json({
+        success: true,
+        message: "Floorplan screenshot retrieved successfully",
+        floorplan: {
+          id: floorplan._id,
+          name: floorplan.name,
+          restaurantName: floorplan.restaurantId.restaurantName
+        },
+        screenshotUrl: floorplan.screenshotUrl
+      });
+    } else {
+      // No screenshot available
+      return NextResponse.json({
+        success: false,
+        message: "No screenshot available for this floorplan",
+        floorplan: {
+          id: floorplan._id,
+          name: floorplan.name,
+          restaurantName: floorplan.restaurantId.restaurantName
+        },
+        screenshotUrl: null
+      });
+    }
 
   } catch (error) {
     console.error('Error generating floorplan screenshot:', error);

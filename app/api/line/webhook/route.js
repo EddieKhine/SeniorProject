@@ -3429,7 +3429,7 @@ async function handleEvent(event) {
           });
         }
 
-        const baseUrl = process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000';
         const fullImageUrl = floorplanData.imageUrl.startsWith('http') 
           ? floorplanData.imageUrl 
           : `${baseUrl}${floorplanData.imageUrl}`;

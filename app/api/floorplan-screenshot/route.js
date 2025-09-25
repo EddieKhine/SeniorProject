@@ -55,47 +55,66 @@ export async function POST(request) {
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
 
-    // Create floorplan screenshots directory if it doesn't exist
-    const screenshotsDir = path.join(process.cwd(), 'public', 'images', 'floorplans');
-    try {
-      await mkdir(screenshotsDir, { recursive: true });
-    } catch (error) {
-      // Directory might already exist, that's okay
-    }
-
-    // Generate filename - reuse existing if editing, create new if creating
-    let filename;
-    if (isEditing) {
-      // Check if existing screenshot exists to reuse the same filename
+    // Check if we're in production (Vercel, Netlify, etc.)
+    const isProduction = process.env.NODE_ENV === 'production' || 
+                        process.env.VERCEL || 
+                        process.env.NETLIFY;
+    
+    let imageUrl;
+    
+    if (isProduction) {
+      // Use cloud storage for production
       try {
-        const existingFloorplan = await getExistingFloorplan(floorplanId);
-        if (existingFloorplan && existingFloorplan.screenshotUrl) {
-          // Extract filename from existing URL
-          const urlParts = existingFloorplan.screenshotUrl.split('/');
-          filename = urlParts[urlParts.length - 1];
-        } else {
-          // No existing screenshot, create new timestamped one
-          const timestamp = Date.now();
-          filename = `floorplan_${floorplanId}_${timestamp}.png`;
-        }
-      } catch (error) {
-        console.error('Error checking existing floorplan:', error);
+        const { storage } = await import('@/lib/firebase-admin');
+        const bucket = storage.bucket('foodloft-450813.firebasestorage.app');
+        
+        // Generate unique filename
         const timestamp = Date.now();
-        filename = `floorplan_${floorplanId}_${timestamp}.png`;
+        const filename = `floorplan_${floorplanId}_${timestamp}.png`;
+        const fileRef = bucket.file(`floorplans/${filename}`);
+        
+        // Upload to Firebase Storage
+        await fileRef.save(buffer, {
+          metadata: { contentType: 'image/png' },
+        });
+        
+        // Make file public
+        await fileRef.makePublic();
+        imageUrl = `https://storage.googleapis.com/${bucket.name}/floorplans/${filename}`;
+        
+        console.log('Screenshot uploaded to cloud storage:', imageUrl);
+        
+      } catch (cloudError) {
+        console.error('Cloud storage upload failed, falling back to local storage:', cloudError);
+        // Fall back to local storage
+        const screenshotsDir = path.join(process.cwd(), 'public', 'images', 'floorplans');
+        try {
+          await mkdir(screenshotsDir, { recursive: true });
+        } catch (error) {
+          // Directory might already exist, that's okay
+        }
+        
+        const timestamp = Date.now();
+        const filename = `floorplan_${floorplanId}_${timestamp}.png`;
+        const filePath = path.join(screenshotsDir, filename);
+        await writeFile(filePath, buffer);
+        imageUrl = `/images/floorplans/${filename}`;
       }
     } else {
-      // Creating new floorplan, use timestamp
+      // Use local storage for development
+      const screenshotsDir = path.join(process.cwd(), 'public', 'images', 'floorplans');
+      try {
+        await mkdir(screenshotsDir, { recursive: true });
+      } catch (error) {
+        // Directory might already exist, that's okay
+      }
+      
       const timestamp = Date.now();
-      filename = `floorplan_${floorplanId}_${timestamp}.png`;
+      const filename = `floorplan_${floorplanId}_${timestamp}.png`;
+      const filePath = path.join(screenshotsDir, filename);
+      await writeFile(filePath, buffer);
+      imageUrl = `/images/floorplans/${filename}`;
     }
-    
-    const filePath = path.join(screenshotsDir, filename);
-
-    // Write the file
-    await writeFile(filePath, buffer);
-
-    // Return the URL path
-    const imageUrl = `/images/floorplans/${filename}`;
 
     return NextResponse.json({
       message: 'Screenshot uploaded successfully',
