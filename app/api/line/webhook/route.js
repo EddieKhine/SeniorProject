@@ -1314,15 +1314,8 @@ async function handleBookingTimeSelection(event, userId, client, customer, selec
     const allTimeSlots = generateTimeSlots(hours.open, hours.close, 30, selectedDate); // 30-minute intervals
     console.log("All generated time slots:", allTimeSlots);
     
-    // Pagination logic - reduced to 6 slots per page to leave room for navigation buttons
-    const slotsPerPage = 6; // Show 6 time slots per page
-    const startIndex = page * slotsPerPage;
-    const endIndex = startIndex + slotsPerPage;
-    let timeSlots = allTimeSlots.slice(startIndex, endIndex);
-    const hasMoreSlots = endIndex < allTimeSlots.length;
-    
-    console.log(`Page ${page}: Showing slots ${startIndex + 1}-${Math.min(endIndex, allTimeSlots.length)} of ${allTimeSlots.length} total slots`);
-    console.log("Has more slots:", hasMoreSlots);
+    let timeSlots = allTimeSlots.slice(0, 12); // Limit to 12 slots for carousel
+    console.log("Final time slots for display:", timeSlots.length, "slots (limited from", allTimeSlots.length, ")");
     
     // Check if we have any time slots
     if (timeSlots.length === 0) {
@@ -1331,17 +1324,13 @@ async function handleBookingTimeSelection(event, userId, client, customer, selec
       // Try with fallback hours (24-hour operation)
       const fallbackHours = { open: "00:00", close: "23:59" };
       const fallbackTimeSlots = generateTimeSlots(fallbackHours.open, fallbackHours.close, 30, selectedDate);
-      const fallbackStartIndex = page * slotsPerPage;
-      const fallbackEndIndex = fallbackStartIndex + slotsPerPage;
-      const fallbackLimited = fallbackTimeSlots.slice(fallbackStartIndex, fallbackEndIndex);
-      const fallbackHasMore = fallbackEndIndex < fallbackTimeSlots.length;
+      const fallbackLimited = fallbackTimeSlots.slice(0, 12);
       
       console.log(`Fallback generated ${fallbackLimited.length} time slots`);
       
       if (fallbackLimited.length > 0) {
         // Use fallback time slots
         timeSlots = fallbackLimited;
-        hasMoreSlots = fallbackHasMore;
         console.log("Using fallback time slots");
       } else {
         return client.replyMessage(event.replyToken, {
@@ -1403,124 +1392,6 @@ async function handleBookingTimeSelection(event, userId, client, customer, selec
         }
       };
     });
-
-    // Add compact navigation buttons (max 2 buttons to stay within carousel limits)
-    const totalPages = Math.ceil(allTimeSlots.length / slotsPerPage);
-    
-    if (page > 0 && hasMoreSlots) {
-      // Both back and forward buttons - create a combined navigation bubble
-      const navBubble = {
-        type: "bubble",
-        body: {
-          type: "box",
-          layout: "vertical",
-          contents: [
-            {
-              type: "text",
-              text: `📅 Page ${page + 1} of ${totalPages}`,
-              weight: "bold",
-              size: "sm",
-              color: "#1DB446",
-              align: "center",
-              margin: "sm"
-            },
-            {
-              type: "box",
-              layout: "horizontal",
-              contents: [
-                {
-                  type: "button",
-                  action: {
-                    type: "postback",
-                    data: `action=booking_times&date=${selectedDate}&page=${page - 1}`,
-                    label: "⬅️ Previous"
-                  },
-                  style: "secondary",
-                  height: "sm"
-                },
-                {
-                  type: "button",
-                  action: {
-                    type: "postback",
-                    data: `action=booking_times&date=${selectedDate}&page=${page + 1}`,
-                    label: "Next ➡️"
-                  },
-                  style: "primary",
-                  height: "sm"
-                }
-              ],
-              spacing: "sm",
-              margin: "md"
-            }
-          ]
-        }
-      };
-      timeBubbles.push(navBubble);
-    } else if (page > 0) {
-      // Only back button
-      const backBubble = {
-        type: "bubble",
-        body: {
-          type: "box",
-          layout: "vertical",
-          contents: [
-            {
-              type: "text",
-              text: `📅 Page ${page + 1} of ${totalPages}`,
-              weight: "bold",
-              size: "sm",
-              color: "#1DB446",
-              align: "center",
-              margin: "sm"
-            },
-            {
-              type: "button",
-              action: {
-                type: "postback",
-                data: `action=booking_times&date=${selectedDate}&page=${page - 1}`,
-                label: "⬅️ Previous Times"
-              },
-              style: "secondary",
-              height: "sm",
-              margin: "md"
-            }
-          ]
-        }
-      };
-      timeBubbles.push(backBubble);
-    } else if (hasMoreSlots) {
-      // Only forward button
-      const showMoreBubble = {
-        type: "bubble",
-        body: {
-          type: "box",
-          layout: "vertical",
-          contents: [
-            {
-              type: "text",
-              text: `📅 Page ${page + 1} of ${totalPages}`,
-              weight: "bold",
-              size: "sm",
-              color: "#1DB446",
-              align: "center",
-              margin: "sm"
-            },
-            {
-              type: "button",
-              action: {
-                type: "postback",
-                data: `action=booking_times&date=${selectedDate}&page=${page + 1}`,
-                label: `Show More Times (${allTimeSlots.length - endIndex} left)`
-              },
-              style: "primary",
-              height: "sm",
-              margin: "md"
-            }
-          ]
-        }
-      };
-      timeBubbles.push(showMoreBubble);
-    }
 
     const message = {
       type: "flex",
