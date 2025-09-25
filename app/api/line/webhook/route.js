@@ -149,15 +149,21 @@ async function updateBookingStatus(bookingId, status, staffMember) {
 async function getRestaurantId() {
   try {
     await dbConnect();
+    // First try to find the specific restaurant ID
+    const specificRestaurant = await Restaurant.findById("68d537658b174612538ddbc6").select('_id');
+    if (specificRestaurant) {
+      return specificRestaurant._id.toString();
+    }
+    // Fallback to first available restaurant
     const restaurant = await Restaurant.findOne().select('_id');
     if (restaurant) {
       return restaurant._id.toString();
     }
-    // Fallback to hardcoded ID if no restaurant found
-    return "67b3234c9a20aede53b0e727";
+    // Final fallback to hardcoded ID if no restaurant found
+    return "68d537658b174612538ddbc6";
   } catch (error) {
     console.error("Error getting restaurant ID:", error);
-    return "67b3234c9a20aede53b0e727";
+    return "68d537658b174612538ddbc6";
   }
 }
 
@@ -178,7 +184,7 @@ async function getFloorplanImage() {
     }
     
     if (!restaurant) {
-      console.log('No restaurant found with ID:', RESTAURANT_ID);
+      console.log('No restaurant found with ID:', restaurantId);
       return null;
     }
     
