@@ -217,13 +217,94 @@ async function getFloorplanImage() {
     }
     
     if (!floorplan || !floorplan.screenshotUrl) {
-      console.log('No floorplan or screenshot URL found');
-      return null;
+      console.log('No floorplan or screenshot URL found, trying fallback...');
+      
+      // Fallback: Try to find any floorplan with a valid screenshot
+      const fallbackFloorplan = await Floorplan.findOne({ 
+        screenshotUrl: { $exists: true, $ne: null, $ne: '' } 
+      });
+      
+      if (fallbackFloorplan && fallbackFloorplan.screenshotUrl) {
+        console.log('Found fallback floorplan:', fallbackFloorplan._id);
+        floorplan = fallbackFloorplan;
+      } else {
+        console.log('No fallback floorplan found');
+        return null;
+      }
     }
 
+    // Ensure the image URL is properly formatted
+    let imageUrl = floorplan.screenshotUrl;
+    console.log('🔍 Original screenshotUrl from database:', imageUrl);
+    
+    // Check if this is a Firebase Storage URL or a local path
+    if (imageUrl.startsWith('https://storage.googleapis.com/')) {
+      // This is already a Firebase Storage URL, use it as is
+      console.log('✅ Using Firebase Storage URL:', imageUrl);
+    } else if (imageUrl.startsWith('http')) {
+      // This is already a full URL, use it as is
+      console.log('✅ Using existing URL:', imageUrl);
+    } else {
+      // This is a local path, but since you mentioned the images are stored in Firebase,
+      // we should construct the Firebase Storage URL regardless of environment
+      console.log('🔄 Converting local path to Firebase Storage URL...');
+      const filename = imageUrl.split('/').pop();
+      console.log('📁 Extracted filename:', filename);
+      
+      if (filename) {
+        imageUrl = `https://storage.googleapis.com/foodloft-450813.firebasestorage.app/floorplans/${filename}`;
+        console.log('🔗 Constructed Firebase Storage URL:', imageUrl);
+        
+        // Test if the Firebase Storage URL is accessible
+        try {
+          console.log('🧪 Testing Firebase Storage URL accessibility...');
+          const response = await fetch(imageUrl, { method: 'HEAD' });
+          if (response.ok) {
+            console.log('✅ Firebase Storage URL is accessible');
+          } else {
+            console.log('❌ Firebase Storage URL returned status:', response.status);
+            // Try alternative Firebase Storage URL format
+            const alternativeUrl = `https://firebasestorage.googleapis.com/v0/b/foodloft-450813.firebasestorage.app/o/floorplans%2F${encodeURIComponent(filename)}?alt=media`;
+            console.log('🔄 Trying alternative Firebase Storage URL:', alternativeUrl);
+            
+            // Test the alternative URL
+            try {
+              const altResponse = await fetch(alternativeUrl, { method: 'HEAD' });
+              if (altResponse.ok) {
+                console.log('✅ Alternative Firebase Storage URL is accessible');
+                imageUrl = alternativeUrl;
+              } else {
+                console.log('❌ Alternative Firebase Storage URL also failed:', altResponse.status);
+                // Try direct Firebase Storage URL without encoding
+                const directUrl = `https://storage.googleapis.com/foodloft-450813.firebasestorage.app/floorplans/${filename}`;
+                console.log('🔄 Trying direct Firebase Storage URL:', directUrl);
+                imageUrl = directUrl;
+              }
+            } catch (altError) {
+              console.log('❌ Error testing alternative URL:', altError.message);
+              // Fallback to direct URL
+              const directUrl = `https://storage.googleapis.com/foodloft-450813.firebasestorage.app/floorplans/${filename}`;
+              console.log('🔄 Fallback to direct Firebase Storage URL:', directUrl);
+              imageUrl = directUrl;
+            }
+          }
+        } catch (error) {
+          console.log('❌ Error testing Firebase Storage URL:', error.message);
+        }
+      } else {
+        // Fallback to local URL with base URL if filename extraction fails
+        console.log('⚠️ Filename extraction failed, using fallback...');
+        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+        imageUrl = imageUrl.startsWith('/') ? `${baseUrl}${imageUrl}` : `${baseUrl}/${imageUrl}`;
+        console.log('🔗 Using local URL with base URL (fallback):', imageUrl);
+      }
+    }
+    
+    console.log('🎯 Final image URL:', imageUrl);
+
     return {
-      restaurantName: restaurant.restaurantName, // Fixed: was restaurant.name
-      imageUrl: floorplan.screenshotUrl,
+      restaurantName: restaurant.restaurantName,
+      imageUrl: imageUrl,
       floorplan: floorplan
     };
   } catch (error) {
@@ -343,7 +424,14 @@ async function handleCustomerMode(event, userId, client) {
                   color: "#333333",
                   align: "center",
                   margin: "md"
-                },
+                }
+              ],
+              paddingAll: "lg"
+            },
+            footer: {
+              type: "box",
+              layout: "vertical",
+              contents: [
                 {
                   type: "button",
                   style: "primary",
@@ -406,8 +494,7 @@ async function handleCustomerMode(event, userId, client) {
                   },
                   margin: "sm"
                 }
-              ],
-              paddingAll: "lg"
+              ]
             }
           }
         };
@@ -454,7 +541,14 @@ async function handleCustomerMode(event, userId, client) {
                 color: "#666666",
                 align: "center",
                 margin: "md"
-              },
+              }
+            ],
+            paddingAll: "lg"
+          },
+          footer: {
+            type: "box",
+            layout: "vertical",
+            contents: [
               {
                 type: "button",
                 style: "primary",
@@ -516,8 +610,7 @@ async function handleCustomerMode(event, userId, client) {
                 },
                 margin: "sm"
               }
-            ],
-            paddingAll: "lg"
+            ]
           }
         }
       };
@@ -890,11 +983,8 @@ async function handleCustomerFloorplan(event, userId, client, customer) {
       });
     }
 
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
-    const fullImageUrl = floorplanData.imageUrl.startsWith('http') 
-      ? floorplanData.imageUrl 
-      : `${baseUrl}${floorplanData.imageUrl}`;
-
+    // Use the imageUrl directly since getFloorplanImage() already handles Firebase Storage URLs
+    const fullImageUrl = floorplanData.imageUrl;
     console.log("📸 Sending floorplan image:", fullImageUrl);
 
     return client.replyMessage(event.replyToken, [
@@ -1515,8 +1605,14 @@ async function handleBookingTableSelection(event, userId, client, customer, sele
   try {
     await dbConnect();
     
-    // Get available tables for the selected date and time
-    const availableTables = await getAvailableTables(selectedDate, selectedTime, guestCount);
+    // Get restaurant ID once and reuse
+    const restaurantId = await getRestaurantId();
+    
+    // Get all required data in parallel to reduce API calls
+    const [availableTables, floorplanData] = await Promise.all([
+      getAvailableTablesOptimized(selectedDate, selectedTime, guestCount, restaurantId),
+      getFloorplanImageOptimized(restaurantId)
+    ]);
     
     if (availableTables.length === 0) {
       const noTablesText = `❌ No Available Tables\n\n` +
@@ -1603,69 +1699,50 @@ async function handleBookingTableSelection(event, userId, client, customer, sele
       }
     }));
 
-    // Use reply message for main table selection to avoid duplication
-    const tableSelectionMessage = {
+    // Create a single consolidated message with floorplan image and table selection
+    const messages = [];
+    
+    // Add floorplan image if available
+    if (floorplanData && floorplanData.imageUrl) {
+      // Use the imageUrl directly since getFloorplanImageOptimized() already handles Firebase Storage URLs
+      const fullImageUrl = floorplanData.imageUrl;
+      
+      messages.push({
+        type: "image",
+        originalContentUrl: fullImageUrl,
+        previewImageUrl: fullImageUrl,
+      });
+      
+      messages.push({
+        type: "text",
+        text: `📍 Restaurant Floorplan\n\nPlease refer to the floorplan above to see table locations. Select your preferred table from the options below:`,
+      });
+    } else {
+      messages.push({
+        type: "text",
+        text: `📋 Available Tables for ${dateStr} at ${selectedTime}\n👥 ${guestCount} guests\n\nSelect your preferred table:`,
+      });
+    }
+    
+    // Add table selection flex message
+    messages.push({
       type: "flex",
       altText: "Select Table",
       contents: {
         type: "carousel",
         contents: tableBubbles
       }
-    };
+    });
 
-    // Send floorplan image and table selection as separate messages using pushMessage
-    // to avoid reply token conflicts and prevent looping
-    try {
-      const floorplanData = await getFloorplanImage();
-      if (floorplanData && floorplanData.imageUrl) {
-        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
-        const fullImageUrl = floorplanData.imageUrl.startsWith('http') 
-          ? floorplanData.imageUrl 
-          : `${baseUrl}${floorplanData.imageUrl}`;
-        
-        // Send floorplan image using push message to preserve reply token
-        await client.pushMessage(userId, {
-          type: "image",
-          originalContentUrl: fullImageUrl,
-          previewImageUrl: fullImageUrl,
-        });
-        
-        // Send explanatory text
-        await client.pushMessage(userId, {
-          type: "text",
-          text: `📍 Restaurant Floorplan\n\nPlease refer to the floorplan above to see table locations. Select your preferred table from the options below:`,
-        });
-        
-        // Send table selection options using reply token
-        return client.replyMessage(event.replyToken, tableSelectionMessage);
-        
-      } else {
-        // No floorplan available - send table selection directly with reply token
-        return client.replyMessage(event.replyToken, {
-          type: "text",
-          text: `📋 Available Tables for ${dateStr} at ${selectedTime}\n${guestCount} guests\n\nSelect your preferred table:`,
-        });
-      }
-    } catch (floorplanError) {
-      console.error('Error sending floorplan image:', floorplanError);
-      // If floorplan fails, send table selection directly using reply token
-      return client.replyMessage(event.replyToken, {
-        type: "text", 
-        text: `📋 Available Tables for ${dateStr} at ${selectedTime}\n${guestCount} guests\n\nSelect your preferred table:`,
-      });
-    }
+    // Send all messages at once using reply token
+    return client.replyMessage(event.replyToken, messages);
 
   } catch (error) {
     console.error('Error in table selection:', error);
-    // Send error message using push to avoid reply token conflicts
-    try {
-      await client.pushMessage(userId, {
-        type: "text",
-        text: "Sorry, there was an error loading tables. Please try again later.",
-      });
-    } catch (pushError) {
-      console.error('Error sending error message:', pushError);
-    }
+    return client.replyMessage(event.replyToken, {
+      type: "text",
+      text: "Sorry, there was an error loading tables. Please try again later.",
+    });
   }
 }
 
@@ -1673,10 +1750,12 @@ async function handleBookingPayment(event, userId, client, customer, selectedDat
   try {
     await dbConnect();
     
-    // Get table and restaurant information using specific restaurant ID
+    // Get restaurant ID once and get all required data in parallel
     const restaurantId = await getRestaurantId();
-    const restaurant = await Restaurant.findById(restaurantId).select('restaurantName _id');
-    const floorplan = await Floorplan.findOne({ restaurantId: restaurantId });
+    const [restaurant, floorplan] = await Promise.all([
+      Restaurant.findById(restaurantId).select('restaurantName _id'),
+      Floorplan.findOne({ restaurantId: restaurantId })
+    ]);
     
     if (!floorplan || !restaurant) {
       return client.replyMessage(event.replyToken, {
@@ -2041,10 +2120,12 @@ async function handleBookingConfirmation(event, userId, client, customer, select
   try {
     await dbConnect();
     
-    // Get table and restaurant information using specific restaurant ID
+    // Get restaurant ID once and get all required data in parallel
     const restaurantId = await getRestaurantId();
-    const restaurant = await Restaurant.findById(restaurantId).select('restaurantName');
-    const floorplan = await Floorplan.findOne({ restaurantId: restaurantId });
+    const [restaurant, floorplan] = await Promise.all([
+      Restaurant.findById(restaurantId).select('restaurantName'),
+      Floorplan.findOne({ restaurantId: restaurantId })
+    ]);
     
     if (!floorplan || !restaurant) {
       return client.replyMessage(event.replyToken, {
@@ -2259,10 +2340,12 @@ async function handleBookingCompletion(event, userId, client, customer, selected
     });
     await dbConnect();
     
-    // Get restaurant and floorplan information using specific restaurant ID
+    // Get restaurant ID once and get all required data in parallel
     const restaurantId = await getRestaurantId();
-    const restaurant = await Restaurant.findById(restaurantId);
-    const floorplan = await Floorplan.findOne({ restaurantId: restaurantId });
+    const [restaurant, floorplan] = await Promise.all([
+      Restaurant.findById(restaurantId),
+      Floorplan.findOne({ restaurantId: restaurantId })
+    ]);
     
     if (!restaurant || !floorplan) {
       return client.replyMessage(event.replyToken, {
@@ -2614,6 +2697,151 @@ async function getAvailableTables(selectedDate, selectedTime, guestCount) {
   } catch (error) {
     console.error('Error getting available tables:', error);
     return [];
+  }
+}
+
+// Optimized version that accepts restaurantId to avoid redundant calls
+async function getAvailableTablesOptimized(selectedDate, selectedTime, guestCount, restaurantId) {
+  try {
+    // Calculate end time (2-hour booking duration)
+    const [startHour, startMinute] = selectedTime.split(':').map(Number);
+    const endTime = new Date();
+    endTime.setHours(startHour + 2, startMinute);
+    const endTimeStr = endTime.toTimeString().slice(0, 5);
+    
+    // Get floorplan and bookings in parallel
+    const [floorplan, existingBookings] = await Promise.all([
+      Floorplan.findOne({ restaurantId: restaurantId }),
+      Booking.find({
+        restaurantId: restaurantId,
+        date: new Date(selectedDate),
+        $or: [
+          {
+            startTime: { $lt: endTimeStr },
+            endTime: { $gt: selectedTime }
+          }
+        ],
+        status: { $in: ['pending', 'confirmed'] }
+      })
+    ]);
+    
+    if (!floorplan) return [];
+    
+    const bookedTableIds = new Set(existingBookings.map(booking => booking.tableId));
+    
+    // Filter available tables
+    const availableTables = floorplan.data.objects
+      .filter(obj => obj.type === 'table' || obj.objectId.startsWith('t'))
+      .filter(obj => !bookedTableIds.has(obj.objectId))
+      .filter(obj => {
+        const capacity = obj.userData?.maxCapacity || 4;
+        return capacity >= parseInt(guestCount);
+      })
+      .map(obj => ({
+        id: obj.objectId,
+        capacity: obj.userData?.maxCapacity || 4,
+        name: obj.userData?.name || `Table ${obj.objectId}`
+      }))
+      .sort((a, b) => a.capacity - b.capacity); // Sort by capacity
+    
+    return availableTables;
+    
+  } catch (error) {
+    console.error('Error getting available tables:', error);
+    return [];
+  }
+}
+
+// Optimized version that accepts restaurantId to avoid redundant calls
+async function getFloorplanImageOptimized(restaurantId) {
+  try {
+    // Get restaurant and floorplan data in parallel
+    const [restaurant, floorplan] = await Promise.all([
+      Restaurant.findById(restaurantId).select('restaurantName'),
+      Floorplan.findOne({ restaurantId: restaurantId })
+    ]);
+    
+    if (!restaurant || !floorplan || !floorplan.screenshotUrl) {
+      return null;
+    }
+
+    // Apply the same URL handling logic as getFloorplanImage
+    let imageUrl = floorplan.screenshotUrl;
+    console.log('🔍 [Optimized] Original screenshotUrl from database:', imageUrl);
+    
+    // Check if this is a Firebase Storage URL or a local path
+    if (imageUrl.startsWith('https://storage.googleapis.com/')) {
+      // This is already a Firebase Storage URL, use it as is
+      console.log('✅ [Optimized] Using Firebase Storage URL:', imageUrl);
+    } else if (imageUrl.startsWith('http')) {
+      // This is already a full URL, use it as is
+      console.log('✅ [Optimized] Using existing URL:', imageUrl);
+    } else {
+      // This is a local path, but since you mentioned the images are stored in Firebase,
+      // we should construct the Firebase Storage URL regardless of environment
+      console.log('🔄 [Optimized] Converting local path to Firebase Storage URL...');
+      const filename = imageUrl.split('/').pop();
+      console.log('📁 [Optimized] Extracted filename:', filename);
+      
+      if (filename) {
+        imageUrl = `https://storage.googleapis.com/foodloft-450813.firebasestorage.app/floorplans/${filename}`;
+        console.log('🔗 [Optimized] Constructed Firebase Storage URL:', imageUrl);
+        
+        // Test if the Firebase Storage URL is accessible
+        try {
+          console.log('🧪 [Optimized] Testing Firebase Storage URL accessibility...');
+          const response = await fetch(imageUrl, { method: 'HEAD' });
+          if (response.ok) {
+            console.log('✅ [Optimized] Firebase Storage URL is accessible');
+          } else {
+            console.log('❌ [Optimized] Firebase Storage URL returned status:', response.status);
+            // Try alternative Firebase Storage URL format
+            const alternativeUrl = `https://firebasestorage.googleapis.com/v0/b/foodloft-450813.firebasestorage.app/o/floorplans%2F${encodeURIComponent(filename)}?alt=media`;
+            console.log('🔄 [Optimized] Trying alternative Firebase Storage URL:', alternativeUrl);
+            
+            // Test the alternative URL
+            try {
+              const altResponse = await fetch(alternativeUrl, { method: 'HEAD' });
+              if (altResponse.ok) {
+                console.log('✅ [Optimized] Alternative Firebase Storage URL is accessible');
+                imageUrl = alternativeUrl;
+              } else {
+                console.log('❌ [Optimized] Alternative Firebase Storage URL also failed:', altResponse.status);
+                // Try direct Firebase Storage URL without encoding
+                const directUrl = `https://storage.googleapis.com/foodloft-450813.firebasestorage.app/floorplans/${filename}`;
+                console.log('🔄 [Optimized] Trying direct Firebase Storage URL:', directUrl);
+                imageUrl = directUrl;
+              }
+            } catch (altError) {
+              console.log('❌ [Optimized] Error testing alternative URL:', altError.message);
+              // Fallback to direct URL
+              const directUrl = `https://storage.googleapis.com/foodloft-450813.firebasestorage.app/floorplans/${filename}`;
+              console.log('🔄 [Optimized] Fallback to direct Firebase Storage URL:', directUrl);
+              imageUrl = directUrl;
+            }
+          }
+        } catch (error) {
+          console.log('❌ [Optimized] Error testing Firebase Storage URL:', error.message);
+        }
+      } else {
+        // Fallback to local URL with base URL if filename extraction fails
+        console.log('⚠️ [Optimized] Filename extraction failed, using fallback...');
+        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+        imageUrl = imageUrl.startsWith('/') ? `${baseUrl}${imageUrl}` : `${baseUrl}/${imageUrl}`;
+        console.log('🔗 [Optimized] Using local URL with base URL (fallback):', imageUrl);
+      }
+    }
+    
+    console.log('🎯 [Optimized] Final image URL:', imageUrl);
+
+    return {
+      restaurantName: restaurant.restaurantName,
+      imageUrl: imageUrl,
+      floorplan: floorplan
+    };
+  } catch (error) {
+    console.error('Error fetching floorplan:', error);
+    return null;
   }
 }
 
@@ -3538,10 +3766,8 @@ async function handleEvent(event) {
           });
         }
 
-        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000';
-        const fullImageUrl = floorplanData.imageUrl.startsWith('http') 
-          ? floorplanData.imageUrl 
-          : `${baseUrl}${floorplanData.imageUrl}`;
+        // Use the imageUrl directly since getFloorplanImage() already handles Firebase Storage URLs
+        const fullImageUrl = floorplanData.imageUrl;
 
         return client.replyMessage(event.replyToken, [
           {
