@@ -1184,7 +1184,9 @@ export default function PublicFloorPlan({ floorplanData, floorplanId, restaurant
         if (data.openingHours && data.openingHours[dayOfWeek]) {
           const dayHours = data.openingHours[dayOfWeek];
           if (!dayHours.isClosed) {
-            const timeSlots = generateTimeSlots(dayHours.open, dayHours.close);
+            // Pass today's date to filter out past time slots
+            const todayDateString = today.toISOString().split('T')[0];
+            const timeSlots = generateTimeSlots(dayHours.open, dayHours.close, todayDateString);
             setAvailableTimeSlots(timeSlots);
           }
         }
@@ -1195,7 +1197,7 @@ export default function PublicFloorPlan({ floorplanData, floorplanId, restaurant
     fetchRestaurantDetails();
   }, [restaurantId]);
 
-  const generateTimeSlots = (openTime, closeTime) => {
+  const generateTimeSlots = (openTime, closeTime, selectedDate = null) => {
     const slots = [];
     
     const parseTime = (timeStr) => {
@@ -1209,6 +1211,11 @@ export default function PublicFloorPlan({ floorplanData, floorplanId, restaurant
     const formattedOpenTime = parseTime(openTime);
     const formattedCloseTime = parseTime(closeTime);
     
+    // Get current date and time
+    const now = new Date();
+    const today = now.toISOString().split('T')[0]; // YYYY-MM-DD format
+    const isToday = selectedDate === today;
+    
     let current = new Date();
     const [openHours, openMinutes] = formattedOpenTime.split(':').map(Number);
     current.setHours(openHours, openMinutes, 0);
@@ -1217,6 +1224,24 @@ export default function PublicFloorPlan({ floorplanData, floorplanId, restaurant
     const [closeHours, closeMinutes] = formattedCloseTime.split(':').map(Number);
     end.setHours(closeHours, closeMinutes, 0);
     end.setHours(end.getHours() - 2);
+
+    // If it's today, ensure we start from current time or opening time, whichever is later
+    if (isToday) {
+      const currentHour = now.getHours();
+      const currentMinute = now.getMinutes();
+      
+      // Round up to next 30-minute interval
+      const nextSlotMinute = currentMinute <= 30 ? 30 : 0;
+      const nextSlotHour = currentMinute > 30 ? currentHour + 1 : currentHour;
+      
+      const earliestSlotTime = new Date();
+      earliestSlotTime.setHours(nextSlotHour, nextSlotMinute, 0);
+      
+      // Use the later of opening time or earliest available slot time
+      if (earliestSlotTime > current) {
+        current = earliestSlotTime;
+      }
+    }
 
     while (current <= end) {
         const startTime = current.toLocaleTimeString('en-US', {
@@ -1260,7 +1285,7 @@ export default function PublicFloorPlan({ floorplanData, floorplanId, restaurant
         return;
       }
 
-      const timeSlots = generateTimeSlots(dayHours.open, dayHours.close);
+      const timeSlots = generateTimeSlots(dayHours.open, dayHours.close, formattedDate);
       setAvailableTimeSlots(timeSlots);
     } catch (error) {
       console.error('Error generating time slots:', error);
