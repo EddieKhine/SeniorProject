@@ -2,6 +2,7 @@ import { WallManager } from '../wallManager.js';
 import { SidebarManager } from './SidebarManager.js';
 import { FileManager } from './FileManager.js';
 import { DragManager } from './DragManager.js';
+import { TouchManager } from './TouchManager.js';
 import { chair, table, sofa, roundTable, create2SeaterTable, create8SeaterTable, plant01, plant02 } from '../asset.js';
 import * as THREE from 'three';
 import { DoorManager } from './DoorManager.js';
@@ -35,6 +36,7 @@ export class UIManager {
         this.fileManager = new FileManager(this);
         this.sidebarManager = new SidebarManager(this);
         this.dragManager = new DragManager(this);
+        this.touchManager = new TouchManager(this);
 
         // If view-only mode, load the specified scene
         const sceneId = urlParams.get('scene');
@@ -81,6 +83,12 @@ export class UIManager {
         const canvas = this.renderer.domElement;
 
         canvas.addEventListener('mousemove', (event) => {
+            // Check for drag/rotation FIRST to prevent camera movement
+            if (this.dragManager && (this.dragManager.isDragging || this.dragManager.isRotating)) {
+                this.dragManager.handleMouseMove(event);
+                return; // Exit early to prevent other handlers
+            }
+            
             if (this.wallManager.isAddWallMode) {
                 const raycaster = this.createRaycaster(event);
                 const intersects = raycaster.intersectObject(this.floor);

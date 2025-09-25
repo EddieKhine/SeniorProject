@@ -14,6 +14,7 @@ import { chair, table, sofa, roundTable, create2SeaterTable } from '@/scripts/as
 import { FaBoxOpen, FaTrash, FaArrowsAltH, FaSave, FaFolderOpen } from "react-icons/fa";
 import { RiLayoutGridFill } from "react-icons/ri";
 import styles from "@/css/ui.css";
+import touchStyles from "@/css/touch-help.css";
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 
 export default function EditFloorplan() {
@@ -95,6 +96,12 @@ export default function EditFloorplan() {
         controls.enableDamping = true;
         controls.dampingFactor = 0.05;
         controls.screenSpacePanning = true;
+        
+        // Ensure zoom is explicitly enabled
+        controls.enableZoom = true;
+        controls.zoomSpeed = 1.0;
+        controls.minDistance = 1;
+        controls.maxDistance = 50;
 
         // Add floor
         const floor = createFloor(20, 20, 2);
@@ -285,6 +292,7 @@ export default function EditFloorplan() {
         <title>Edit Floor Plan</title>
         <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.3/font/bootstrap-icons.css" />
         <link rel="stylesheet" href={styles} />
+        <link rel="stylesheet" href={touchStyles} />
       </Head>
       <div>
         <button

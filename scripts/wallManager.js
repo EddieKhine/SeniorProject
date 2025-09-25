@@ -25,13 +25,20 @@ export class WallManager {
         } else {
             this.isAddWallMode = !this.isAddWallMode;
         }
-        this.previewWall.visible = this.isAddWallMode;
+        // Only show preview wall when we have a valid position from mouse/touch movement
+        // Don't show it immediately when entering wall mode
+        if (!this.isAddWallMode) {
+            this.previewWall.visible = false;
+        }
         return this.isAddWallMode;
     }
 
     switchDirection() {
         this.direction = this.direction === 'horizontal' ? 'vertical' : 'horizontal';
-        this.updatePreviewWall(this.previewWall.position); // Update rotation
+        // Only update preview if it's currently visible and positioned properly
+        if (this.previewWall.visible && this.previewWall.position.x < 500) {
+            this.updatePreviewWall(this.previewWall.position); // Update rotation
+        }
     }
 
     createPreviewWall() {
@@ -46,6 +53,8 @@ export class WallManager {
         
         this.previewWall = new THREE.Mesh(geometry, material);
         this.previewWall.visible = false;
+        // Position preview wall off-screen initially to prevent accidental placement
+        this.previewWall.position.set(1000, 1000, 1000);
         this.scene.add(this.previewWall);
     }
 
@@ -56,29 +65,31 @@ export class WallManager {
         const snappedX = Math.round(mousePosition.x / this.gridSize) * this.gridSize;
         const snappedZ = Math.round(mousePosition.z / this.gridSize) * this.gridSize;
 
-        // Calculate final position based on direction
-        const position = new THREE.Vector3();
-        const rotation = this.direction === 'horizontal' ? 0 : Math.PI / 2;
+        // Calculate position based on direction for proper wall connections
+        let position, rotation;
         
         if (this.direction === 'horizontal') {
-            position.set(
-                snappedX + this.gridSize / 2,
-                1,
-                snappedZ
-            );
+            // Horizontal walls extend along X-axis, centered between grid points
+            position = new THREE.Vector3(snappedX + this.gridSize / 2, 1, snappedZ);
+            rotation = 0;
         } else {
-            position.set(
-                snappedX,
-                1,
-                snappedZ + this.gridSize / 2
-            );
+            // Vertical walls extend along Z-axis, centered between grid points
+            position = new THREE.Vector3(snappedX, 1, snappedZ + this.gridSize / 2);
+            rotation = Math.PI / 2;
         }
 
-        // Check for existing walls
-        if (!this.wallExists(position.x, position.z)) {
+        // Check for existing walls with same position AND orientation
+        if (!this.wallExists(position.x, position.z, this.direction)) {
             this.previewWall.position.copy(position);
             this.previewWall.rotation.y = rotation;
             this.previewWall.visible = true;
+            
+            // Change preview color if this wall will connect to existing walls
+            if (this.canWallsConnect(position.x, position.z, this.direction)) {
+                this.previewWall.material.color.setHex(0x00ffff); // Cyan for connections
+            } else {
+                this.previewWall.material.color.setHex(0x00ff00); // Green for normal placement
+            }
         } else {
             this.previewWall.visible = false;
         }
@@ -119,10 +130,11 @@ export class WallManager {
         wall.castShadow = true;
         wall.receiveShadow = true;
         
-        // Ensure wall has UUID and openings array
+        // Ensure wall has UUID, direction, and openings array
         wall.userData = {
             isWall: true,
             uuid: THREE.MathUtils.generateUUID(),
+            direction: this.direction,
             openings: []
         };
 
@@ -150,20 +162,78 @@ export class WallManager {
         
         // Create wall mesh
         const wall = this.createWallMesh(start, end);
+        
+        // Determine direction if not provided
+        const direction = data.userData.direction || this.determineDirectionFromPosition(start, end);
+        
+        // Update position to use new positioning system if needed
+        if (!data.userData.direction) {
+            // This is an old wall, update its position to new system
+            const midX = (start.x + end.x) / 2;
+            const midZ = (start.z + end.z) / 2;
+            wall.position.set(midX, 1, midZ);
+        }
+        
         wall.userData = {
             ...data.userData,
             start: start,
-            end: end
+            end: end,
+            direction: direction
         };
 
         return wall;
     }
 
-    wallExists(x, z) {
-        return this.walls.some(wall => 
-            Math.abs(wall.position.x - x) < 0.1 && 
-            Math.abs(wall.position.z - z) < 0.1
-        );
+    determineDirectionFromPosition(start, end) {
+        const deltaX = Math.abs(end.x - start.x);
+        const deltaZ = Math.abs(end.z - start.z);
+        
+        // If the wall extends more along X-axis, it's horizontal
+        // If it extends more along Z-axis, it's vertical
+        return deltaX > deltaZ ? 'horizontal' : 'vertical';
+    }
+
+    wallExists(x, z, direction) {
+        return this.walls.some(wall => {
+            const positionMatch = Math.abs(wall.position.x - x) < 0.1 && 
+                                Math.abs(wall.position.z - z) < 0.1;
+            
+            if (!positionMatch) return false;
+            
+            // Check if the wall has the same orientation using userData
+            const existingWallDirection = wall.userData.direction || 'horizontal';
+            
+            // Only prevent placement if same position AND same orientation
+            return existingWallDirection === direction;
+        });
+    }
+
+    // Helper method to check if walls can connect at their edges
+    canWallsConnect(x, z, direction) {
+        // Check if there are walls that this new wall can connect to at its edges
+        const gridSize = this.gridSize;
+        
+        if (direction === 'horizontal') {
+            // Check for vertical walls at the ends of this horizontal wall
+            const leftEnd = { x: x - gridSize / 2, z: z };
+            const rightEnd = { x: x + gridSize / 2, z: z };
+            
+            return this.walls.some(wall => {
+                if (wall.userData.direction !== 'vertical') return false;
+                return (Math.abs(wall.position.x - leftEnd.x) < 0.1 && Math.abs(wall.position.z - leftEnd.z) < 0.1) ||
+                       (Math.abs(wall.position.x - rightEnd.x) < 0.1 && Math.abs(wall.position.z - rightEnd.z) < 0.1);
+            });
+        } else {
+            // Check for horizontal walls at the ends of this vertical wall
+            const topEnd = { x: x, z: z + gridSize / 2 };
+            const bottomEnd = { x: x, z: z - gridSize / 2 };
+            
+            return this.walls.some(wall => {
+                if (wall.userData.direction !== 'horizontal') return false;
+                return (Math.abs(wall.position.x - topEnd.x) < 0.1 && Math.abs(wall.position.z - topEnd.z) < 0.1) ||
+                       (Math.abs(wall.position.x - bottomEnd.x) < 0.1 && Math.abs(wall.position.z - bottomEnd.z) < 0.1);
+            });
+        }
     }
 
     disposeObject(object) {
