@@ -69,9 +69,15 @@ export async function POST(request) {
       
       // Send confirmation to customer
       try {
-        await notifyCustomerOfBookingConfirmation(booking, staff);
+        console.log('📤 Attempting to send customer confirmation notification...');
+        const notificationResult = await notifyCustomerOfBookingConfirmation(booking, staff);
+        console.log('📤 Notification result:', notificationResult);
       } catch (notificationError) {
-        console.error('Failed to send customer confirmation:', notificationError);
+        console.error('❌ Failed to send customer confirmation:', notificationError);
+        console.error('❌ Notification error details:', {
+          message: notificationError.message,
+          stack: notificationError.stack
+        });
       }
       
     } else if (action === 'reject') {

@@ -10,6 +10,12 @@ import Booking from "@/models/Booking";
 import User from "@/models/user";
 import { notifyStaffOfNewBooking, notifyCustomerOfBookingConfirmation, notifyCustomerOfBookingRejection, getBookingDetailsForStaff } from "@/lib/lineNotificationService";
 
+// ========================================
+// RESTAURANT CONFIGURATION
+// ========================================
+// Change this restaurant ID to switch between different restaurants
+const DEFAULT_RESTAURANT_ID = "68d537658b174612538ddbc6";
+
 const config = {
   channelAccessToken: process.env.LINE_CHANNEL_ACCESS_TOKEN,
   channelSecret: process.env.LINE_CHANNEL_SECRET,
@@ -144,25 +150,29 @@ async function updateBookingStatus(bookingId, status, staffMember) {
   }
 }
 
-// Hard-coded restaurant ID for this LINE bot
+// Get restaurant ID from configuration (DEFAULT_RESTAURANT_ID)
 async function getRestaurantId() {
   try {
     await dbConnect();
-    // First try to find the specific restaurant ID
-    const specificRestaurant = await Restaurant.findById("68d537658b174612538ddbc6").select('_id');
+    // First try to find the specific restaurant ID from configuration
+    const specificRestaurant = await Restaurant.findById(DEFAULT_RESTAURANT_ID).select('_id');
     if (specificRestaurant) {
+      console.log(`✅ Using configured restaurant ID: ${DEFAULT_RESTAURANT_ID}`);
       return specificRestaurant._id.toString();
     }
     // Fallback to first available restaurant
     const restaurant = await Restaurant.findOne().select('_id');
     if (restaurant) {
+      console.log(`⚠️ Configured restaurant not found, using first available: ${restaurant._id}`);
       return restaurant._id.toString();
     }
-    // Final fallback to hardcoded ID if no restaurant found
-    return "68d537658b174612538ddbc6";
+    // Final fallback to configured ID if no restaurant found
+    console.log(`❌ No restaurants found in database, using configured ID: ${DEFAULT_RESTAURANT_ID}`);
+    return DEFAULT_RESTAURANT_ID;
   } catch (error) {
     console.error("Error getting restaurant ID:", error);
-    return "68d537658b174612538ddbc6";
+    console.log(`❌ Error occurred, using configured ID: ${DEFAULT_RESTAURANT_ID}`);
+    return DEFAULT_RESTAURANT_ID;
   }
 }
 
@@ -410,6 +420,15 @@ async function handleCustomerMode(event, userId, client) {
         });
       }
     } else {
+      // Ensure customer has lineUserId (in case they were created through other means)
+      const customer = customerCheck.customer;
+      if (!customer.lineUserId) {
+        console.log("🔗 Adding lineUserId to existing customer:", customer.firstName);
+        customer.lineUserId = userId;
+        await customer.save();
+        console.log("✅ lineUserId added to customer record");
+      }
+      
       // Existing customer - Create simple flex message
       const existingCustomerMessage = {
         type: "flex",
@@ -530,6 +549,14 @@ async function handleCustomerPostback(event, userId, client, postbackData) {
     
     const customer = customerCheck.customer;
     console.log("✅ Customer found:", customer.firstName);
+    
+    // Ensure customer has lineUserId (in case they were created through other means)
+    if (!customer.lineUserId) {
+      console.log("🔗 Adding lineUserId to existing customer:", customer.firstName);
+      customer.lineUserId = userId;
+      await customer.save();
+      console.log("✅ lineUserId added to customer record");
+    }
 
     switch (postbackData) {
       case "action=customer_book":
@@ -660,12 +687,17 @@ async function handleCustomerBookings(event, userId, client, customer) {
   try {
     await dbConnect();
     
-    // Get customer's upcoming bookings only (today and future)
+    // Get the specific restaurant ID for this LINE bot
+    const restaurantId = await getRestaurantId();
+    console.log('🔍 Filtering customer bookings for restaurant ID:', restaurantId);
+    
+    // Get customer's upcoming bookings only (today and future) for this specific restaurant
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     
     const bookings = await Booking.find({
       userId: customer._id,
+      restaurantId: restaurantId, // Filter by specific restaurant ID
       status: { $in: ['pending', 'confirmed'] },
       date: { $gte: today }
     })
@@ -675,8 +707,12 @@ async function handleCustomerBookings(event, userId, client, customer) {
 
 
     if (bookings.length === 0) {
+      // Get restaurant name for the message
+      const restaurant = await Restaurant.findById(restaurantId).select('restaurantName');
+      const restaurantName = restaurant?.restaurantName || 'this restaurant';
+      
       const noBookingsText = `📋 No Upcoming Bookings\n\n` +
-        `You don't have any reservations for today or future dates.\n\n` +
+        `You don't have any reservations at ${restaurantName} for today or future dates.\n\n` +
         `💡 Quick Actions:\n` +
         `• Type "book" to make a new reservation\n` +
         `• Type "floorplan" to view our layout\n` +
@@ -1018,10 +1054,14 @@ async function handleCustomerCancelBooking(event, userId, client, customer, book
       });
     }
     
-    // Find the booking
+    // Get the specific restaurant ID for this LINE bot
+    const restaurantId = await getRestaurantId();
+    
+    // Find the booking (filtered by restaurant ID)
     const booking = await Booking.findOne({
       _id: bookingId,
-      userId: customer._id
+      userId: customer._id,
+      restaurantId: restaurantId // Filter by specific restaurant ID
     }).populate('restaurantId', 'restaurantName');
     
     if (!booking) {
@@ -2250,7 +2290,8 @@ async function handleBookingCompletion(event, userId, client, customer, selected
         email: customer.email,
         firstName: customer.firstName,
         lastName: customer.lastName,
-        contactNumber: customer.contactNumber || 'Not provided'
+        contactNumber: customer.contactNumber || 'Not provided',
+        lineUserId: customer.lineUserId
       },
       pricingData: pricingData
     };
