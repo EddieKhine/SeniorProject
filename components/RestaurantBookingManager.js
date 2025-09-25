@@ -12,7 +12,6 @@ import '@/css/booking.css';
 import '@/css/loading.css';
 import { toast, Toaster } from 'react-hot-toast';
 import { createRoot } from 'react-dom/client';
-import PaymentDialog from '@/components/PaymentDialog';
 import gsap from 'gsap';
 import { motion, AnimatePresence } from "framer-motion";
 

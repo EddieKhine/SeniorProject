@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-
+ 
 const bookingSchema = new mongoose.Schema({
     bookingRef: {
         type: String,
@@ -73,14 +73,14 @@ const bookingSchema = new mongoose.Schema({
         type: String,
         default: ''
     },
-    
+   
     // Lock information for reservation holds
     lockInfo: {
         lockId: { type: String, required: false },
         lockedAt: { type: Date, required: false },
         lockExpiresAt: { type: Date, required: false }
     },
-    
+   
     // Dynamic pricing information
     pricing: {
         basePrice: { type: Number, default: 100 },
@@ -121,76 +121,76 @@ const bookingSchema = new mongoose.Schema({
 }, {
     timestamps: true
 });
-
+ 
 // Generate booking reference number before saving
 bookingSchema.pre('save', async function(next) {
     if (!this.bookingRef) {
         // Generate date-based prefix (e.g., "BK230224" for Feb 24, 2023)
         const datePrefix = new Date().toISOString().slice(2,8).replace(/-/g, '');
-        
+       
         // Find the latest booking number for today
         const latestBooking = await this.constructor.findOne(
             { bookingRef: new RegExp(`^BK${datePrefix}`) },
             { bookingRef: 1 },
             { sort: { bookingRef: -1 } }
         );
-
+ 
         // Generate new sequence number
         let sequenceNumber = '001';
         if (latestBooking && latestBooking.bookingRef) {
             const lastSequence = parseInt(latestBooking.bookingRef.slice(-3));
             sequenceNumber = String(lastSequence + 1).padStart(3, '0');
         }
-
+ 
         // Combine to create booking reference (e.g., "BK230224001")
         this.bookingRef = `BK${datePrefix}${sequenceNumber}`;
     }
     next();
 });
-
+ 
 // Indexes for querying bookings efficiently
 bookingSchema.index({ restaurantId: 1, date: 1 });
 bookingSchema.index({ tableId: 1, date: 1 });
 bookingSchema.index({ userId: 1 });
 bookingSchema.index({ bookingRef: 1 }, { unique: true });
 bookingSchema.index({ 'history.timestamp': 1 });
-
+ 
 // Compound indexes for better performance
 bookingSchema.index({ restaurantId: 1, date: 1, status: 1 });
 bookingSchema.index({ tableId: 1, date: 1, status: 1 });
 bookingSchema.index({ userId: 1, date: -1 });
 bookingSchema.index({ status: 1, date: 1 });
-
+ 
 // Unique compound index to prevent double bookings (OCC constraint)
 bookingSchema.index(
-    { 
-        restaurantId: 1, 
-        tableId: 1, 
-        date: 1, 
-        startTime: 1, 
-        endTime: 1 
-    }, 
-    { 
+    {
+        restaurantId: 1,
+        tableId: 1,
+        date: 1,
+        startTime: 1,
+        endTime: 1
+    },
+    {
         unique: true,
         partialFilterExpression: {
             status: { $in: ['pending', 'confirmed'] }
         }
     }
 );
-
+ 
 // Index for lock management
 bookingSchema.index({ 'lockInfo.lockId': 1 });
 bookingSchema.index({ 'lockInfo.lockExpiresAt': 1 });
-
+ 
 // Method to check if table is available for a specific time
-bookingSchema.statics.isTableAvailable = async function(tableId, date, startTime, endTime, restaurantId = null) {
-    console.log('Checking availability for:', { tableId, date, startTime, endTime, restaurantId });
-    
+bookingSchema.statics.isTableAvailable = async function(tableId, date, startTime, endTime) {
+    console.log('Checking availability for:', { tableId, date, startTime, endTime });
+   
     const bookingDate = new Date(date);
     bookingDate.setHours(0, 0, 0, 0);
-
-    // Build query with optional restaurant ID filter
-    const query = {
+ 
+    // Optimized query using compound index
+    const existingBooking = await this.findOne({
         tableId: tableId,
         date: bookingDate,
         status: { $in: ['pending', 'confirmed'] },
@@ -198,20 +198,12 @@ bookingSchema.statics.isTableAvailable = async function(tableId, date, startTime
             { tableId: tableId },
             { originalTableId: tableId }
         ]
-    };
-
-    // Add restaurant ID filter if provided
-    if (restaurantId) {
-        query.restaurantId = restaurantId;
-    }
-
-    // Optimized query using compound index
-    const existingBooking = await this.findOne(query).select('_id startTime endTime').lean();
-
+    }).select('_id startTime endTime').lean();
+ 
     if (!existingBooking) {
         return true; // No bookings found, table is available
     }
-
+ 
     // Time overlap check (only if booking exists)
     const timeToMinutes = (timeStr) => {
         const [time, period] = timeStr.split(' ');
@@ -220,22 +212,22 @@ bookingSchema.statics.isTableAvailable = async function(tableId, date, startTime
         if (period === 'AM' && hours === 12) hours = 0;
         return hours * 60 + minutes;
     };
-
+ 
     const requestStart = timeToMinutes(startTime);
     const requestEnd = timeToMinutes(endTime);
     const bookingStart = timeToMinutes(existingBooking.startTime);
     const bookingEnd = timeToMinutes(existingBooking.endTime);
-
+ 
     // Check for time overlap
     const hasOverlap = bookingStart < requestEnd && bookingEnd > requestStart;
-
-    console.log(`Checking table ${tableId} for date ${bookingDate}:`, 
+ 
+    console.log(`Checking table ${tableId} for date ${bookingDate}:`,
         hasOverlap ? 'Booked' : 'Available'
     );
-
+ 
     return !hasOverlap;
 };
-
+ 
 // Method to get all bookings for a restaurant on a specific date
 bookingSchema.statics.getRestaurantBookings = async function(restaurantId, date) {
     return this.find({
@@ -246,7 +238,7 @@ bookingSchema.statics.getRestaurantBookings = async function(restaurantId, date)
     .populate('userId', 'firstName lastName contactNumber')
     .sort({ time: 1 });
 };
-
+ 
 // Method to get table bookings
 bookingSchema.statics.getTableBookings = async function(tableId, date) {
     return this.find({
@@ -260,19 +252,19 @@ bookingSchema.statics.getTableBookings = async function(tableId, date) {
     .populate('userId', 'firstName lastName contactNumber')
     .sort({ time: 1 });
 };
-
+ 
 // Method to find booking by reference
 bookingSchema.statics.findByBookingRef = async function(bookingRef) {
     return this.findOne({ bookingRef });
 };
-
+ 
 // Method to get bookings for a specific user
 bookingSchema.statics.getUserBookings = async function(userId) {
     return this.find({ userId })
         .populate('restaurantId')
         .sort({ date: -1, time: -1 });
 };
-
+ 
 // Pre-save middleware to increment version for OCC
 bookingSchema.pre('save', function(next) {
     if (this.isModified() && !this.isNew) {
@@ -280,26 +272,26 @@ bookingSchema.pre('save', function(next) {
     }
     next();
 });
-
+ 
 // Add a method to record history
 bookingSchema.methods.addToHistory = function(action, details = {}) {
     // Check for duplicate recent entries (within last 5 seconds)
     const now = new Date();
     const fiveSecondsAgo = new Date(now.getTime() - 5000);
-    
+   
     const recentDuplicate = this.history.find(entry => {
         if (entry.action !== action) return false;
         if (entry.timestamp < fiveSecondsAgo) return false;
-        
+       
         // Check if details are the same
         if (action === 'modified' && details.previousStatus && details.newStatus) {
             return entry.details.get('previousStatus') === details.previousStatus &&
                    entry.details.get('newStatus') === details.newStatus;
         }
-        
+       
         return false;
     });
-    
+   
     // Only add if no recent duplicate found
     if (!recentDuplicate) {
         this.history.push({
@@ -308,28 +300,29 @@ bookingSchema.methods.addToHistory = function(action, details = {}) {
         });
     }
 };
-
+ 
 // OCC method to update booking with version check
 bookingSchema.methods.updateWithOCC = async function(updates, expectedVersion) {
     if (this.version !== expectedVersion) {
         throw new Error(`Optimistic concurrency control failed. Expected version ${expectedVersion}, but current version is ${this.version}`);
     }
-    
+   
     // Apply updates
     Object.assign(this, updates);
     return await this.save();
 };
-
+ 
 // Static method to find and update with OCC
 bookingSchema.statics.findAndUpdateWithOCC = async function(filter, updates, expectedVersion) {
     const booking = await this.findOne(filter);
     if (!booking) {
         throw new Error('Booking not found');
     }
-    
+   
     return await booking.updateWithOCC(updates, expectedVersion);
 };
-
+ 
 const Booking = mongoose.models.Booking || mongoose.model('Booking', bookingSchema);
-
-export default Booking; 
+ 
+export default Booking;
+ 
