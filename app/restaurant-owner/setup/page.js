@@ -166,7 +166,9 @@ export default function RestaurantOwnerOnboarding() {
           {step === 2 && (
             <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-8">
               <RestaurantProfileForm 
-                onProfileSubmit={async (restaurantData) => {
+                mode="create"
+                initialData={null}
+                onSubmitSuccess={async (restaurantData) => {
                   try {
                     // Store the complete restaurant data in localStorage
                     localStorage.setItem("restaurantData", JSON.stringify({
@@ -188,8 +190,11 @@ export default function RestaurantOwnerOnboarding() {
                     alert('Error saving restaurant data. Please try again.');
                   }
                 }}
+                onCancel={() => {
+                  // Handle cancel if needed
+                  console.log('Form cancelled');
+                }}
                 className="text-[#3A2E2B]"
-                authToken={authToken}
               />
             </div>
           )}
