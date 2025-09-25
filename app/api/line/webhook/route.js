@@ -145,7 +145,6 @@ async function updateBookingStatus(bookingId, status, staffMember) {
 }
 
 // Hard-coded restaurant ID for this LINE bot
-// Get restaurant ID from environment or use first available restaurant
 async function getRestaurantId() {
   try {
     await dbConnect();
@@ -884,9 +883,9 @@ async function handleCustomerFloorplan(event, userId, client, customer) {
 
 async function handleCustomerInfo(event, userId, client, customer) {
   try {
-    // Get restaurant information
-    const restaurant = await Restaurant.findOne().select('restaurantName location contactNumber openingHours description');
+    // Get restaurant information using the specific restaurant ID
     const restaurantId = await getRestaurantId();
+    const restaurant = await Restaurant.findById(restaurantId).select('restaurantName location contactNumber openingHours description');
     
     if (!restaurant) {
       return client.replyMessage(event.replyToken, {
@@ -1149,8 +1148,9 @@ async function handleBookingDateSelection(event, userId, client, customer, page 
     console.log("Starting date selection for customer:", customer.firstName, "page:", page);
     await dbConnect();
     
-    // Get restaurant information
-    const restaurant = await Restaurant.findOne().select('restaurantName openingHours');
+    // Get restaurant information using specific restaurant ID
+    const restaurantId = await getRestaurantId();
+    const restaurant = await Restaurant.findById(restaurantId).select('restaurantName openingHours');
     
     if (!restaurant) {
       console.log("No restaurant found in database");
@@ -1250,8 +1250,9 @@ async function handleBookingTimeSelection(event, userId, client, customer, selec
   try {
     await dbConnect();
     
-    // Get restaurant operating hours
-    const restaurant = await Restaurant.findOne().select('openingHours');
+    // Get restaurant operating hours using specific restaurant ID
+    const restaurantId = await getRestaurantId();
+    const restaurant = await Restaurant.findById(restaurantId).select('openingHours');
     
     if (!restaurant) {
       return client.replyMessage(event.replyToken, {
@@ -1629,9 +1630,10 @@ async function handleBookingPayment(event, userId, client, customer, selectedDat
   try {
     await dbConnect();
     
-    // Get table and restaurant information
-    const floorplan = await Floorplan.findOne();
-    const restaurant = await Restaurant.findOne().select('restaurantName _id');
+    // Get table and restaurant information using specific restaurant ID
+    const restaurantId = await getRestaurantId();
+    const restaurant = await Restaurant.findById(restaurantId).select('restaurantName _id');
+    const floorplan = await Floorplan.findOne({ restaurantId: restaurantId });
     
     if (!floorplan || !restaurant) {
       return client.replyMessage(event.replyToken, {
@@ -1996,9 +1998,10 @@ async function handleBookingConfirmation(event, userId, client, customer, select
   try {
     await dbConnect();
     
-    // Get table and restaurant information
-    const floorplan = await Floorplan.findOne();
-    const restaurant = await Restaurant.findOne().select('restaurantName');
+    // Get table and restaurant information using specific restaurant ID
+    const restaurantId = await getRestaurantId();
+    const restaurant = await Restaurant.findById(restaurantId).select('restaurantName');
+    const floorplan = await Floorplan.findOne({ restaurantId: restaurantId });
     
     if (!floorplan || !restaurant) {
       return client.replyMessage(event.replyToken, {
@@ -2213,9 +2216,10 @@ async function handleBookingCompletion(event, userId, client, customer, selected
     });
     await dbConnect();
     
-    // Get restaurant and floorplan information
-    const restaurant = await Restaurant.findOne();
-    const floorplan = await Floorplan.findOne();
+    // Get restaurant and floorplan information using specific restaurant ID
+    const restaurantId = await getRestaurantId();
+    const restaurant = await Restaurant.findById(restaurantId);
+    const floorplan = await Floorplan.findOne({ restaurantId: restaurantId });
     
     if (!restaurant || !floorplan) {
       return client.replyMessage(event.replyToken, {
@@ -2468,8 +2472,9 @@ async function getAvailableTables(selectedDate, selectedTime, guestCount) {
     endTime.setHours(startHour + 2, startMinute);
     const endTimeStr = endTime.toTimeString().slice(0, 5);
     
-    // Get floorplan
-    const floorplan = await Floorplan.findOne();
+    // Get floorplan using specific restaurant ID
+    const restaurantId = await getRestaurantId();
+    const floorplan = await Floorplan.findOne({ restaurantId: restaurantId });
     if (!floorplan) return [];
     
     // Get existing bookings for the selected date and time

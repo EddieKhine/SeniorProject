@@ -7,11 +7,12 @@ export async function GET() {
   try {
     await dbConnect();
     
-    // Get restaurant information
-    const restaurant = await Restaurant.findOne().select('restaurantName operatingHours defaultFloorplanId');
+    // Get restaurant information using specific restaurant ID
+    const restaurantId = "68d537658b174612538ddbc6";
+    const restaurant = await Restaurant.findById(restaurantId).select('restaurantName operatingHours defaultFloorplanId');
     
-    // Get floorplan information
-    const floorplan = await Floorplan.findOne();
+    // Get floorplan information using restaurant ID
+    const floorplan = await Floorplan.findOne({ restaurantId: restaurantId });
     
     return NextResponse.json({
       success: true,

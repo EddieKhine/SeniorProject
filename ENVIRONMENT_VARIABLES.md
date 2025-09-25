@@ -47,6 +47,8 @@ NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=your_google_maps_api_key
 ```
 LINE_CHANNEL_ACCESS_TOKEN=your_line_channel_access_token
 LINE_CHANNEL_SECRET=your_line_channel_secret
+LINE_RESTAURANT_ID=your_restaurant_id_for_line_bot
+NEXT_PUBLIC_DEFAULT_RESTAURANT_ID=your_default_restaurant_id
 ```
 
 ### AWS S3 Configuration (if using for file uploads)
