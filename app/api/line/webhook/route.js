@@ -2622,10 +2622,10 @@ async function createBookingFromLine(bookingData, floorplanId) {
     // This function replicates the booking creation logic from your existing API
     const { tableId, date, startTime, endTime, guestCount, restaurantId, customerData, pricingData } = bookingData;
     
-    // Check table availability
-    const isAvailable = await Booking.isTableAvailable(tableId, date, startTime, endTime);
+    // Check table availability (filtered by restaurant ID)
+    const isAvailable = await Booking.isTableAvailable(tableId, date, startTime, endTime, restaurantId);
     if (!isAvailable) {
-      return { success: false, error: 'Table is no longer available' };
+      return { success: false, error: 'Table is no longer available for the selected time slot' };
     }
     
     // Create booking with PENDING status for staff confirmation

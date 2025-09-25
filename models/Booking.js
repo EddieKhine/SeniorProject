@@ -183,14 +183,14 @@ bookingSchema.index({ 'lockInfo.lockId': 1 });
 bookingSchema.index({ 'lockInfo.lockExpiresAt': 1 });
 
 // Method to check if table is available for a specific time
-bookingSchema.statics.isTableAvailable = async function(tableId, date, startTime, endTime) {
-    console.log('Checking availability for:', { tableId, date, startTime, endTime });
+bookingSchema.statics.isTableAvailable = async function(tableId, date, startTime, endTime, restaurantId = null) {
+    console.log('Checking availability for:', { tableId, date, startTime, endTime, restaurantId });
     
     const bookingDate = new Date(date);
     bookingDate.setHours(0, 0, 0, 0);
 
-    // Optimized query using compound index
-    const existingBooking = await this.findOne({
+    // Build query with optional restaurant ID filter
+    const query = {
         tableId: tableId,
         date: bookingDate,
         status: { $in: ['pending', 'confirmed'] },
@@ -198,7 +198,15 @@ bookingSchema.statics.isTableAvailable = async function(tableId, date, startTime
             { tableId: tableId },
             { originalTableId: tableId }
         ]
-    }).select('_id startTime endTime').lean();
+    };
+
+    // Add restaurant ID filter if provided
+    if (restaurantId) {
+        query.restaurantId = restaurantId;
+    }
+
+    // Optimized query using compound index
+    const existingBooking = await this.findOne(query).select('_id startTime endTime').lean();
 
     if (!existingBooking) {
         return true; // No bookings found, table is available
