@@ -510,33 +510,43 @@ async function handleCustomerMode(event, userId, client) {
 
 async function handleCustomerPostback(event, userId, client, postbackData) {
   try {
-    console.log("Customer postback received:", postbackData);
+    console.log("🎯 Customer postback received:", postbackData);
     
     // Check if customer exists
     const customerCheck = await checkCustomerInDatabase(userId);
     if (!customerCheck.exists) {
-      console.log("Customer not found, creating account...");
+      console.log("❌ Customer not found, creating account...");
       return client.replyMessage(event.replyToken, {
         type: "text",
         text: "Please send a message first to create your customer account.",
       });
     }
-
+    
     const customer = customerCheck.customer;
-    console.log("Customer found:", customer.firstName);
+    console.log("✅ Customer found:", customer.firstName);
 
     switch (postbackData) {
       case "action=customer_book":
+        console.log("📅 Handling customer booking request");
         return await handleCustomerBooking(event, userId, client, customer);
       
       case "action=customer_bookings":
+        console.log("📋 Handling customer bookings request");
         return await handleCustomerBookings(event, userId, client, customer);
       
       case "action=customer_floorplan":
+        console.log("🏢 Handling customer floorplan request");
         return await handleCustomerFloorplan(event, userId, client, customer);
       
       case "action=customer_info":
+        console.log("ℹ️ Handling customer info request");
         return await handleCustomerInfo(event, userId, client, customer);
+      
+      case "action=cancel_booking":
+        console.log("🚫 Handling customer cancel booking request");
+        // Parse booking ID from postback data
+        const bookingId = postbackData.split("bookingId=")[1];
+        return await handleCustomerCancelBooking(event, userId, client, customer, bookingId);
       
       default:
         // Handle inline booking flow
@@ -708,7 +718,19 @@ async function handleCustomerBookings(event, userId, client, customer) {
         'completed': '✔️'
       };
       
-      return {
+      // Check if booking can be cancelled
+      const bookingDateTime = new Date(booking.date);
+      const [startHour, startMinute] = booking.startTime.split(':').map(Number);
+      bookingDateTime.setHours(startHour, startMinute, 0, 0);
+      
+      const now = new Date();
+      const timeDifference = bookingDateTime.getTime() - now.getTime();
+      const hoursUntilBooking = timeDifference / (1000 * 60 * 60);
+      
+      const canCancel = booking.status === 'pending' || booking.status === 'confirmed';
+      const isWithin2Hours = hoursUntilBooking < 2;
+      
+      const bubble = {
         type: "bubble",
         body: {
           type: "box",
@@ -749,8 +771,12 @@ async function handleCustomerBookings(event, userId, client, customer) {
               margin: "md"
             }
           ]
-        },
-        footer: {
+        }
+      };
+      
+      // Add cancel button only if booking can be cancelled
+      if (canCancel && !isWithin2Hours) {
+        bubble.footer = {
           type: "box",
           layout: "vertical",
           contents: [
@@ -758,7 +784,7 @@ async function handleCustomerBookings(event, userId, client, customer) {
               type: "button",
               action: {
                 type: "postback",
-                label: "Cancel",
+                label: "🚫 Cancel Booking",
                 data: `action=cancel_booking&bookingId=${booking._id}`,
                 displayText: "Cancel this booking"
               },
@@ -766,8 +792,26 @@ async function handleCustomerBookings(event, userId, client, customer) {
               color: "#FF4F18"
             }
           ]
-        }
-      };
+        };
+      } else if (isWithin2Hours && canCancel) {
+        // Show message that booking cannot be cancelled
+        bubble.footer = {
+          type: "box",
+          layout: "vertical",
+          contents: [
+            {
+              type: "text",
+              text: "⚠️ Cannot cancel within 2 hours of booking time",
+              size: "xs",
+              color: "#FF4F18",
+              align: "center",
+              margin: "md"
+            }
+          ]
+        };
+      }
+      
+      return bubble;
     });
 
     return client.replyMessage(event.replyToken, {
@@ -959,32 +1003,72 @@ async function handleCustomerCancelBooking(event, userId, client, customer, book
   try {
     await dbConnect();
     
+    console.log("🚫 Customer requesting to cancel booking:", bookingId);
+    
+    if (!bookingId) {
+      return client.replyMessage(event.replyToken, {
+        type: "text",
+        text: "❌ Invalid booking ID. Please try again.",
+      });
+    }
+    
     // Find the booking
     const booking = await Booking.findOne({
       _id: bookingId,
-      userId: customer._id,
-      status: { $in: ['pending', 'confirmed'] }
+      userId: customer._id
     }).populate('restaurantId', 'restaurantName');
-
+    
     if (!booking) {
       return client.replyMessage(event.replyToken, {
         type: "text",
-        text: "Booking not found or already cancelled.",
+        text: "❌ Booking not found or you don't have permission to cancel this booking.",
       });
     }
-
-    // Update booking status
+    
+    // Check if booking can be cancelled
+    if (booking.status === 'cancelled') {
+      return client.replyMessage(event.replyToken, {
+        type: "text",
+        text: "❌ This booking has already been cancelled.",
+      });
+    }
+    
+    if (booking.status === 'completed') {
+      return client.replyMessage(event.replyToken, {
+        type: "text",
+        text: "❌ This booking has already been completed and cannot be cancelled.",
+      });
+    }
+    
+    // Check if booking is too close to start time (within 2 hours)
+    const bookingDateTime = new Date(booking.date);
+    const [startHour, startMinute] = booking.startTime.split(':').map(Number);
+    bookingDateTime.setHours(startHour, startMinute, 0, 0);
+    
+    const now = new Date();
+    const timeDifference = bookingDateTime.getTime() - now.getTime();
+    const hoursUntilBooking = timeDifference / (1000 * 60 * 60);
+    
+    if (hoursUntilBooking < 2) {
+      return client.replyMessage(event.replyToken, {
+        type: "text",
+        text: "❌ This booking cannot be cancelled as it's within 2 hours of the start time. Please contact the restaurant directly.",
+      });
+    }
+    
+    // Cancel the booking
     booking.status = 'cancelled';
     booking.addToHistory('cancelled', {
+      method: 'line_chat',
       cancelledBy: 'customer',
-      cancelledAt: new Date(),
-      method: 'line_chat'
+      reason: 'Customer requested cancellation'
     });
+    
     await booking.save();
-
+    
     // Update floorplan table status
     await Floorplan.updateOne(
-      { _id: booking.floorplanId, 'data.objects.objectId': booking.tableId },
+      { 'data.objects.objectId': booking.tableId },
       {
         $set: {
           'data.objects.$.userData.bookingStatus': 'available',
@@ -992,41 +1076,66 @@ async function handleCustomerCancelBooking(event, userId, client, customer, book
         }
       }
     );
-
+    
+    // Format booking details for confirmation
     const dateObj = new Date(booking.date);
-    const dateStr = dateObj.toLocaleDateString("en-GB");
-
+    const dateStr = dateObj.toLocaleDateString("en-GB", { 
+      weekday: 'long', 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    });
+    
+    const cancelText = `✅ Booking Cancelled Successfully!\n\n` +
+      `🔖 Ref: ${booking.bookingRef}\n` +
+      `📅 Date: ${dateStr}\n` +
+      `⏰ Time: ${booking.startTime} - ${booking.endTime}\n` +
+      `👥 Guests: ${booking.guestCount}\n` +
+      `🪑 Table: ${booking.tableId}\n\n` +
+      `Your booking has been cancelled and the table is now available for other customers.\n\n` +
+      `💡 Quick Actions:\n` +
+      `• Type "bookings" to view your remaining reservations\n` +
+      `• Type "book" to make a new reservation\n` +
+      `• Type "help" for more options`;
+    
+    console.log("✅ Booking cancelled successfully:", booking.bookingRef);
+    
     return client.replyMessage(event.replyToken, {
-      type: "template",
-      altText: "Booking Cancelled",
-      template: {
-        type: "buttons",
-        text: `✅ Booking Cancelled Successfully\n\n📅 ${dateStr} ${booking.startTime}-${booking.endTime}\n👥 ${booking.guestCount} guests\n🍽️ Table ${booking.tableId}\n📝 Ref: ${booking.bookingRef}\n\nYour booking has been cancelled.`,
-        actions: [
+      type: "text",
+      text: cancelText,
+      quickReply: {
+        items: [
           {
-            type: "postback",
-            label: "Make New Booking",
-            data: "action=customer_book",
-            displayText: "Make a new booking",
+            type: "action",
+            action: {
+              type: "postback",
+              label: "📋 My Bookings",
+              data: "action=customer_bookings",
+              displayText: "View my bookings"
+            }
           },
           {
-            type: "postback",
-            label: "My Bookings",
-            data: "action=customer_bookings",
-            displayText: "View my bookings",
+            type: "action",
+            action: {
+              type: "postback",
+              label: "📅 Make New Booking",
+              data: "action=customer_book",
+              displayText: "Make a new booking"
+            }
           }
-        ],
-      },
+        ]
+      }
     });
-
+    
   } catch (error) {
     console.error('Error cancelling booking:', error);
     return client.replyMessage(event.replyToken, {
       type: "text",
-      text: "Sorry, there was an error cancelling your booking. Please try again later.",
+      text: "❌ Sorry, there was an error cancelling your booking. Please try again or contact the restaurant.",
     });
   }
 }
+
 
 // Inline Booking Flow Functions
 async function handleBookingDateSelection(event, userId, client, customer, page = 0) {
@@ -2747,11 +2856,14 @@ async function handleEvent(event) {
     // Customer mode is now handled automatically for non-staff users
 
     // Handle customer postback actions first (for non-staff users)
-    if (postbackData.startsWith("action=customer_") || postbackData.startsWith("action=booking_")) {
+    if (postbackData.startsWith("action=customer_") || postbackData.startsWith("action=booking_") || postbackData.startsWith("action=cancel_")) {
+      console.log("🎯 Handling customer postback:", postbackData);
       try {
-        return await handleCustomerPostback(event, userId, client, postbackData);
+        const result = await handleCustomerPostback(event, userId, client, postbackData);
+        console.log("✅ Customer postback handled successfully");
+        return result;
       } catch (error) {
-        console.error("Error handling customer postback:", error);
+        console.error("❌ Error handling customer postback:", error);
         // Don't try to reply again if we already failed with 400 (reply token used)
         if (error.statusCode === 400) {
           console.log("Reply token already used in handleCustomerPostback, skipping");
