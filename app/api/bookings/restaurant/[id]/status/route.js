@@ -2,8 +2,11 @@ import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
 import Booking from '@/models/Booking';
 import Restaurant from '@/models/Restaurants';
+import User from '@/models/user';
+import Staff from '@/models/Staff';
 import jwt from 'jsonwebtoken';
 import { sendBookingStatusNotification } from '@/lib/email/bookingNotifications';
+import { notifyCustomerOfBookingConfirmation, notifyCustomerOfBookingRejection } from '@/lib/lineNotificationService';
 
 export async function PATCH(request, { params }) {
   try {
@@ -89,8 +92,47 @@ export async function PATCH(request, { params }) {
     booking.status = status;
     await booking.save();
 
-    // 🚀 Send email notification for status changes
+    // 🚀 Send notifications for status changes
     try {
+      // Get customer information to check if they have LINE User ID
+      const customer = await User.findById(booking.userId);
+      console.log('🔍 Customer info for notifications:', {
+        customerId: customer?._id,
+        hasLineUserId: !!customer?.lineUserId,
+        email: customer?.email
+      });
+
+      // Get staff information for notifications (use restaurant owner as staff)
+      const staff = await Staff.findOne({ restaurantId: booking.restaurantId, role: 'owner' });
+      const staffForNotification = staff || {
+        _id: decoded.userId,
+        displayName: 'Restaurant Staff',
+        role: 'owner'
+      };
+
+      // Send LINE notification if customer has LINE User ID and status is confirmed/cancelled
+      if (customer?.lineUserId && (status === 'confirmed' || status === 'cancelled')) {
+        try {
+          console.log('📱 Attempting to send LINE notification to customer:', {
+            lineUserId: customer.lineUserId,
+            status: status,
+            bookingRef: booking.bookingRef
+          });
+
+          if (status === 'confirmed') {
+            await notifyCustomerOfBookingConfirmation(booking, staffForNotification);
+            console.log('✅ LINE confirmation notification sent successfully');
+          } else if (status === 'cancelled') {
+            await notifyCustomerOfBookingRejection(booking, staffForNotification, 'Booking cancelled by restaurant');
+            console.log('✅ LINE rejection notification sent successfully');
+          }
+        } catch (lineError) {
+          console.error('❌ Failed to send LINE notification:', lineError);
+          // Continue with email notification even if LINE fails
+        }
+      }
+
+      // Send email notification for all customers (LINE users and regular users)
       const emailData = {
         customerName: booking.customerName,
         customerEmail: booking.customerEmail,
@@ -119,9 +161,9 @@ export async function PATCH(request, { params }) {
         .catch(error => {
           console.error('❌ Email notification error:', error);
         });
-    } catch (emailError) {
-      console.error('❌ Email preparation failed:', emailError);
-      // Continue with booking update even if email fails
+    } catch (notificationError) {
+      console.error('❌ Notification preparation failed:', notificationError);
+      // Continue with booking update even if notifications fail
     }
 
     return NextResponse.json({ 
