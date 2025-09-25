@@ -572,8 +572,10 @@ async function handleCustomerPostback(event, userId, client, postbackData) {
         
         // Skip payment processing - go directly to booking completion for staff confirmation workflow
         if (postbackData.startsWith("action=booking_confirm&date=")) {
-          console.log("Booking confirm - skipping payment, going directly to completion");
+          console.log("✅ Booking confirm - skipping payment, going directly to completion");
+          console.log("Postback data:", postbackData);
           const params = parseBookingParams(postbackData);
+          console.log("Parsed params:", params);
           return await handleBookingCompletion(event, userId, client, customer, params.date, params.time, params.guests, params.table);
         }
         
@@ -657,27 +659,38 @@ async function handleCustomerBookings(event, userId, client, customer) {
 
 
     if (bookings.length === 0) {
+      const noBookingsText = `📋 No Upcoming Bookings\n\n` +
+        `You don't have any reservations for today or future dates.\n\n` +
+        `💡 Quick Actions:\n` +
+        `• Type "book" to make a new reservation\n` +
+        `• Type "floorplan" to view our layout\n` +
+        `• Type "info" for restaurant details`;
+
       return client.replyMessage(event.replyToken, {
-        type: "template",
-        altText: "No Upcoming Bookings",
-        template: {
-          type: "buttons",
-          text: "📋 No Upcoming Bookings\n\nYou don't have any reservations for today or future dates.\n\nWould you like to make a new booking?",
-          actions: [
+        type: "text",
+        text: noBookingsText,
+        quickReply: {
+          items: [
             {
-              type: "postback",
-              label: "Make Booking",
-              data: "action=customer_book",
-              displayText: "Make a new booking",
+              type: "action",
+              action: {
+                type: "postback",
+                label: "📅 Make Booking",
+                data: "action=customer_book",
+                displayText: "Make a new booking"
+              }
             },
             {
-              type: "postback",
-              label: "View Floorplan",
-              data: "action=customer_floorplan",
-              displayText: "View restaurant layout",
+              type: "action",
+              action: {
+                type: "postback",
+                label: "🏢 View Floorplan",
+                data: "action=customer_floorplan",
+                displayText: "View restaurant layout"
+              }
             }
-          ],
-        },
+          ]
+        }
       });
     }
 
@@ -779,98 +792,36 @@ async function handleCustomerFloorplan(event, userId, client, customer) {
   try {
     await dbConnect();
     
-    // Get restaurant floorplan
-    const floorplan = await Floorplan.findOne();
-    const restaurant = await Restaurant.findOne().select('restaurantName');
-    const restaurantId = await getRestaurantId();
+    console.log("🏢 Customer requesting floorplan layout");
     
-    if (!floorplan || !restaurant) {
+    // Get floorplan image data
+    const floorplanData = await getFloorplanImage();
+    
+    if (!floorplanData) {
       return client.replyMessage(event.replyToken, {
         type: "text",
-        text: "Sorry, floorplan is not available at the moment.",
+        text: "Sorry, no floorplan image is available at the moment.",
       });
     }
-    
-    console.log("Floorplan found:", floorplan.name || "Unnamed");
 
-    // Get table information
-    const tables = floorplan.data.objects
-      .filter(obj => obj.type === 'table' || obj.objectId.startsWith('t'))
-      .map(obj => ({
-        id: obj.objectId,
-        capacity: obj.userData?.maxCapacity || 4,
-        name: obj.userData?.name || `Table ${obj.objectId}`,
-        status: obj.userData?.bookingStatus || 'available'
-      }));
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+    const fullImageUrl = floorplanData.imageUrl.startsWith('http') 
+      ? floorplanData.imageUrl 
+      : `${baseUrl}${floorplanData.imageUrl}`;
 
-    // Create floorplan summary
-    const totalTables = tables.length;
-    const availableTables = tables.filter(table => table.status === 'available').length;
-    const bookedTables = tables.filter(table => table.status === 'booked').length;
+    console.log("📸 Sending floorplan image:", fullImageUrl);
 
-    // Create table capacity summary
-    const capacityGroups = {};
-    tables.forEach(table => {
-      const capacity = table.capacity;
-      if (!capacityGroups[capacity]) {
-        capacityGroups[capacity] = { total: 0, available: 0 };
-      }
-      capacityGroups[capacity].total++;
-      if (table.status === 'available') {
-        capacityGroups[capacity].available++;
-      }
-    });
-
-    const capacityText = Object.entries(capacityGroups)
-      .sort(([a], [b]) => parseInt(a) - parseInt(b))
-      .map(([capacity, counts]) => 
-        `${capacity} seats: ${counts.available}/${counts.total} available`
-      ).join('\n');
-
-    const floorplanText = `Restaurant Floorplan\n\n` +
-      `Table Summary:\n` +
-      `• Total Tables: ${totalTables}\n` +
-      `• Available: ${availableTables}\n` +
-      `• Booked: ${bookedTables}\n\n` +
-      `Table Capacities:\n${capacityText}\n\n` +
-      `Tip: Use "Make Booking" to see real-time availability and select your preferred table!`;
-
-    // Create LIFF URL with restaurant ID parameter
-    const liffUrl = `https://liff.line.me/2007787204-zGYZn1ZE?restaurantId=${restaurantId}`;
-    
-    console.log("🔗 User requesting floorplan with LIFF link:");
-    console.log("   LINE User ID:", userId);
-    console.log("   Customer Name:", customer?.firstName || 'Unknown');
-    console.log("   Restaurant ID:", restaurantId);
-    console.log("   LIFF URL:", liffUrl);
-
-    return client.replyMessage(event.replyToken, {
-      type: "template",
-      altText: "Restaurant Floorplan",
-      template: {
-        type: "buttons",
-        text: floorplanText,
-        actions: [
-          {
-            type: "postback",
-            label: "Make Booking",
-            data: "action=customer_book",
-            displayText: "Make a booking",
-          },
-          {
-            type: "uri",
-            label: "View Visual Floorplan",
-            uri: liffUrl
-          },
-          {
-            type: "postback",
-            label: "My Bookings",
-            data: "action=customer_bookings",
-            displayText: "View my bookings",
-          }
-        ],
+    return client.replyMessage(event.replyToken, [
+      {
+        type: "text",
+        text: `🏢 Floorplan for ${floorplanData.restaurantName}:\n\nThis is our restaurant layout showing table locations and seating arrangements.`,
       },
-    });
+      {
+        type: "image",
+        originalContentUrl: fullImageUrl,
+        previewImageUrl: fullImageUrl,
+      }
+    ]);
 
   } catch (error) {
     console.error('Error handling floorplan request:', error);
@@ -884,7 +835,7 @@ async function handleCustomerFloorplan(event, userId, client, customer) {
 async function handleCustomerInfo(event, userId, client, customer) {
   try {
     // Get restaurant information
-    const restaurant = await Restaurant.findOne().select('restaurantName address contactNumber operatingHours description');
+    const restaurant = await Restaurant.findOne().select('restaurantName location contactNumber openingHours description');
     const restaurantId = await getRestaurantId();
     
     if (!restaurant) {
@@ -894,42 +845,105 @@ async function handleCustomerInfo(event, userId, client, customer) {
       });
     }
 
+    // Format operating hours - simplified for LINE character limits
+    let hoursText = 'Hours not available';
+    if (restaurant.openingHours) {
+      // Check if all days have the same hours
+      const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+      const firstDayHours = restaurant.openingHours[days[0]];
+      const allSameHours = days.every(day => {
+        const dayHours = restaurant.openingHours[day];
+        return dayHours && dayHours.open === firstDayHours?.open && dayHours.close === firstDayHours?.close;
+      });
+      
+      if (allSameHours && firstDayHours?.open && firstDayHours?.close) {
+        hoursText = `Daily: ${firstDayHours.open} - ${firstDayHours.close}`;
+      } else {
+        // Show different hours for each day (simplified)
+        const hoursArray = [];
+        days.forEach((day, index) => {
+          const dayHours = restaurant.openingHours[day];
+          if (dayHours && dayHours.open && dayHours.close) {
+            const dayName = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][index];
+            hoursArray.push(`${dayName}: ${dayHours.open}-${dayHours.close}`);
+          }
+        });
+        if (hoursArray.length > 0) {
+          hoursText = hoursArray.join(' | ');
+        }
+      }
+    }
+
+    // Create Google Maps link from address
+    let mapsLink = 'Address not available';
+    if (restaurant.location?.address) {
+      const encodedAddress = encodeURIComponent(restaurant.location.address);
+      mapsLink = `https://maps.google.com/maps?q=${encodedAddress}`;
+    }
+
     const infoText = `ℹ️ Restaurant Information\n\n` +
       `🏪 ${restaurant.restaurantName}\n` +
-      `📍 ${restaurant.address || 'Address not available'}\n` +
+      `📍 ${restaurant.location?.address || 'Address not available'}\n` +
+      `🗺️ ${mapsLink}\n` +
       `📞 ${restaurant.contactNumber || 'Contact not available'}\n\n` +
-      `🕒 Operating Hours:\n${restaurant.operatingHours || 'Hours not available'}\n\n` +
-      `${restaurant.description || 'Welcome to our restaurant!'}`;
+      `🕒 ${hoursText}\n\n` +
+      `${restaurant.description || 'Welcome to our restaurant!'}\n\n` +
+      `💡 Quick Actions:\n` +
+      `• Type "book" to make a reservation\n` +
+      `• Type "floorplan" to view our layout\n` +
+      `• Type "menu" to see our offerings`;
+
+    // Debug: Log the message being sent
+    console.log("Restaurant info text:", infoText);
+    console.log("Text length:", infoText.length);
+
+    // Text messages have a 5000 character limit, so we're well within limits
+    if (infoText.length > 5000) {
+      console.log("Message too long, truncating...");
+      const truncatedText = infoText.substring(0, 4997) + "...";
+      return client.replyMessage(event.replyToken, {
+        type: "text",
+        text: truncatedText
+      });
+    }
 
     // Create LIFF URL with restaurant ID parameter
     const liffUrl = `https://liff.line.me/2007787204-zGYZn1ZE?restaurantId=${restaurantId}`;
 
+    // Send as text message with quick reply buttons
     return client.replyMessage(event.replyToken, {
-      type: "template",
-      altText: "Restaurant Information",
-      template: {
-        type: "buttons",
-        text: infoText,
-        actions: [
+      type: "text",
+      text: infoText,
+      quickReply: {
+        items: [
           {
-            type: "postback",
-            label: "Make Booking",
-            data: "action=customer_book",
-            displayText: "Make a booking",
+            type: "action",
+            action: {
+              type: "postback",
+              label: "📅 Make Booking",
+              data: "action=customer_book",
+              displayText: "Make a booking"
+            }
           },
           {
-            type: "postback",
-            label: "View Floorplan",
-            data: "action=customer_floorplan",
-            displayText: "View floorplan",
+            type: "action",
+            action: {
+              type: "postback",
+              label: "🏢 View Floorplan",
+              data: "action=customer_floorplan",
+              displayText: "View floorplan"
+            }
           },
           {
-            type: "uri",
-            label: "Visit Website",
-            uri: liffUrl
+            type: "action",
+            action: {
+              type: "uri",
+              label: "🌐 Visit Website",
+              uri: liffUrl
+            }
           }
-        ],
-      },
+        ]
+      }
     });
 
   } catch (error) {
@@ -1346,27 +1360,39 @@ async function handleBookingTableSelection(event, userId, client, customer, sele
     const availableTables = await getAvailableTables(selectedDate, selectedTime, guestCount);
     
     if (availableTables.length === 0) {
+      const noTablesText = `❌ No Available Tables\n\n` +
+        `📅 ${new Date(selectedDate).toLocaleDateString("en-GB", { weekday: 'short', month: 'short', day: 'numeric' })} at ${selectedTime}\n` +
+        `👥 ${guestCount} guests\n\n` +
+        `Sorry, no tables are available for your selected time.\n\n` +
+        `💡 Quick Actions:\n` +
+        `• Type "book" to try a different date\n` +
+        `• Type "help" for more options`;
+
       return client.replyMessage(event.replyToken, {
-        type: "template",
-        altText: "No Tables Available",
-        template: {
-          type: "buttons",
-          text: `No Available Tables\n\n${new Date(selectedDate).toLocaleDateString("en-GB", { weekday: 'short', month: 'short', day: 'numeric' })} at ${selectedTime}\n${guestCount} guests\n\nSorry, no tables are available for your selected time. Please try a different time.`,
-          actions: [
+        type: "text",
+        text: noTablesText,
+        quickReply: {
+          items: [
             {
-              type: "postback",
-              label: "Try Different Time",
-              data: `action=booking_time&date=${selectedDate}`,
-              displayText: "Select different time",
+              type: "action",
+              action: {
+                type: "postback",
+                label: "⏰ Try Different Time",
+                data: `action=booking_time&date=${selectedDate}`,
+                displayText: "Select different time"
+              }
             },
             {
-              type: "postback",
-              label: "Try Different Date",
-              data: "action=customer_book",
-              displayText: "Select different date",
+              type: "action",
+              action: {
+                type: "postback",
+                label: "📅 Try Different Date",
+                data: "action=customer_book",
+                displayText: "Select different date"
+              }
             }
-          ],
-        },
+          ]
+        }
       });
     }
 
@@ -1438,8 +1464,8 @@ async function handleBookingTableSelection(event, userId, client, customer, sele
           ? floorplanData.imageUrl 
           : `${baseUrl}${floorplanData.imageUrl}`;
         
-        // Send floorplan image using reply message
-        await client.replyMessage(event.replyToken, {
+        // Send floorplan image using push message to preserve reply token
+        await client.pushMessage(userId, {
           type: "image",
           originalContentUrl: fullImageUrl,
           previewImageUrl: fullImageUrl,
@@ -1451,39 +1477,23 @@ async function handleBookingTableSelection(event, userId, client, customer, sele
           text: `📍 Restaurant Floorplan\n\nPlease refer to the floorplan above to see table locations. Select your preferred table from the options below:`,
         });
         
-        // Send table selection options
-        await client.pushMessage(userId, tableSelectionMessage);
+        // Send table selection options using reply token
+        return client.replyMessage(event.replyToken, tableSelectionMessage);
         
       } else {
         // No floorplan available - send table selection directly with reply token
-        await client.replyMessage(event.replyToken, {
+        return client.replyMessage(event.replyToken, {
           type: "text",
           text: `📋 Available Tables for ${dateStr} at ${selectedTime}\n${guestCount} guests\n\nSelect your preferred table:`,
         });
-        
-        // Send table selection options  
-        await client.pushMessage(userId, tableSelectionMessage);
       }
     } catch (floorplanError) {
       console.error('Error sending floorplan image:', floorplanError);
       // If floorplan fails, send table selection directly using reply token
-      try {
-        await client.replyMessage(event.replyToken, {
-          type: "text", 
-          text: `📋 Available Tables for ${dateStr} at ${selectedTime}\n${guestCount} guests\n\nSelect your preferred table:`,
-        });
-        
-        // Send table selection options
-        await client.pushMessage(userId, tableSelectionMessage);
-      } catch (replyError) {
-        console.error('Error with reply message, using push only:', replyError);
-        // Last resort - use push message only
-        await client.pushMessage(userId, {
-          type: "text",
-          text: `📋 Available Tables for ${dateStr} at ${selectedTime}\n${guestCount} guests\n\nSelect your preferred table:`,
-        });
-        await client.pushMessage(userId, tableSelectionMessage);
-      }
+      return client.replyMessage(event.replyToken, {
+        type: "text", 
+        text: `📋 Available Tables for ${dateStr} at ${selectedTime}\n${guestCount} guests\n\nSelect your preferred table:`,
+      });
     }
 
   } catch (error) {
@@ -2079,6 +2089,13 @@ async function handleBookingConfirmation(event, userId, client, customer, select
 
 async function handleBookingCompletion(event, userId, client, customer, selectedDate, selectedTime, guestCount, tableId, pricingData = null) {
   try {
+    console.log("🚀 handleBookingCompletion called with:", {
+      selectedDate,
+      selectedTime,
+      guestCount,
+      tableId,
+      pricingData
+    });
     await dbConnect();
     
     // Get restaurant and floorplan information
@@ -2117,9 +2134,12 @@ async function handleBookingCompletion(event, userId, client, customer, selected
     };
 
     // Use existing booking creation logic
+    console.log("📝 Creating booking with data:", JSON.stringify(bookingData, null, 2));
     const bookingResponse = await createBookingFromLine(bookingData, floorplan._id);
+    console.log("📝 Booking response:", JSON.stringify(bookingResponse, null, 2));
     
     if (bookingResponse.success) {
+      console.log("✅ Booking creation successful, sending pending confirmation message");
       const booking = bookingResponse.booking;
       const dateObj = new Date(selectedDate);
       const dateStr = dateObj.toLocaleDateString("en-GB", { 
@@ -2129,27 +2149,25 @@ async function handleBookingCompletion(event, userId, client, customer, selected
         day: 'numeric' 
       });
 
+      const bookingText = `📝 Booking Submitted!\n\n` +
+        `🔖 Ref: ${booking.bookingRef}\n` +
+        `📅 Date: ${dateStr}\n` +
+        `⏰ Time: ${selectedTime} - ${endTimeStr}\n` +
+        `👥 Guests: ${guestCount}\n` +
+        `🪑 Table: ${tableId}\n\n` +
+        `⏳ PENDING CONFIRMATION\n\n` +
+        `💡 Quick Actions:\n` +
+        `• Type "bookings" to view all your reservations\n` +
+        `• Type "book" to make another reservation\n` +
+        `• Type "help" for more options`;
+
+      console.log("📤 Sending pending booking message to LINE API");
+      console.log("Message length:", bookingText.length);
+      
+      // Send simple text message first to avoid quick reply issues
       return client.replyMessage(event.replyToken, {
-        type: "template",
-        altText: "Booking Request Submitted",
-        template: {
-          type: "buttons",
-          text: `📝 Booking Submitted!\n\nRef: ${booking.bookingRef}\n${dateStr}\n${selectedTime} - ${endTimeStr}\n${guestCount} guests, Table ${tableId}\n\n⏳ PENDING CONFIRMATION`,
-          actions: [
-            {
-              type: "postback",
-              label: "📋 My Bookings",
-              data: "action=customer_bookings",
-              displayText: "View all bookings",
-            },
-            {
-              type: "postback",
-              label: "📅 Make Another Booking",
-              data: "action=customer_book",
-              displayText: "Make another booking",
-            }
-          ],
-        },
+        type: "text",
+        text: bookingText
       });
     } else {
       return client.replyMessage(event.replyToken, {
@@ -2717,7 +2735,7 @@ async function handleEvent(event) {
           return;
         }
         throw error;
-      }
+       }
     }
   } 
   
@@ -2730,7 +2748,17 @@ async function handleEvent(event) {
 
     // Handle customer postback actions first (for non-staff users)
     if (postbackData.startsWith("action=customer_") || postbackData.startsWith("action=booking_")) {
-      return await handleCustomerPostback(event, userId, client, postbackData);
+      try {
+        return await handleCustomerPostback(event, userId, client, postbackData);
+      } catch (error) {
+        console.error("Error handling customer postback:", error);
+        // Don't try to reply again if we already failed with 400 (reply token used)
+        if (error.statusCode === 400) {
+          console.log("Reply token already used in handleCustomerPostback, skipping");
+          return;
+        }
+        throw error;
+      }
     }
 
     // For all other postback actions, check if user is authenticated staff
