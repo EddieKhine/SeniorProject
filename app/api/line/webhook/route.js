@@ -166,6 +166,7 @@ async function getRestaurantId() {
   }
 }
 
+
 async function getFloorplanImage() {
   try {
     await dbConnect();
@@ -1252,9 +1253,10 @@ async function handleBookingTimeSelection(event, userId, client, customer, selec
     
     // Get restaurant operating hours using specific restaurant ID
     const restaurantId = await getRestaurantId();
-    const restaurant = await Restaurant.findById(restaurantId).select('openingHours');
+    const restaurant = await Restaurant.findById(restaurantId).select('openingHours restaurantName');
     
     if (!restaurant) {
+      console.error(`Restaurant not found with ID: ${restaurantId}`);
       return client.replyMessage(event.replyToken, {
         type: "text",
         text: "Restaurant information not available. Please contact support.",
@@ -1262,6 +1264,7 @@ async function handleBookingTimeSelection(event, userId, client, customer, selec
     }
 
     console.log("Using restaurant operating hours for time selection");
+    console.log(`Restaurant: ${restaurant.restaurantName || 'Unknown'}`);
     console.log("Restaurant openingHours:", JSON.stringify(restaurant.openingHours, null, 2));
     
     // Parse operating hours for the selected date
@@ -2367,21 +2370,79 @@ function parseOperatingHours(restaurant, selectedDate) {
   const dayName = dayNames[dateObj.getDay()];
   
   console.log(`Looking for hours for day: ${dayName}`);
+  console.log(`Restaurant openingHours structure:`, JSON.stringify(restaurant.openingHours, null, 2));
+  
+  // Check if restaurant has opening hours data
+  if (!restaurant.openingHours) {
+    console.log(`No openingHours data found for restaurant, using default: 09:00 - 22:00`);
+    return { open: "09:00", close: "22:00" };
+  }
   
   // Get operating hours for the specific day
-  const dayHours = restaurant.openingHours?.[dayName];
+  const dayHours = restaurant.openingHours[dayName];
   console.log(`Day hours for ${dayName}:`, dayHours);
   
   if (dayHours && dayHours.open && dayHours.close) {
-    console.log(`Using specific hours for ${dayName}: ${dayHours.open} - ${dayHours.close}`);
-    return {
-      open: dayHours.open,
-      close: dayHours.close
+    // Convert 12-hour format to 24-hour format
+    const convertTo24Hour = (time12h) => {
+      const [time, modifier] = time12h.split(' ');
+      let [hours, minutes] = time.split(':');
+      if (hours === '12') {
+        hours = '00';
+      }
+      if (modifier === 'PM') {
+        hours = parseInt(hours, 10) + 12;
+      }
+      return `${hours.toString().padStart(2, '0')}:${minutes}`;
     };
+    
+    try {
+      const open24h = convertTo24Hour(dayHours.open);
+      const close24h = convertTo24Hour(dayHours.close);
+      
+      console.log(`Using specific hours for ${dayName}: ${dayHours.open} (${open24h}) - ${dayHours.close} (${close24h})`);
+      return {
+        open: open24h,
+        close: close24h
+      };
+    } catch (error) {
+      console.log(`Error converting time format for ${dayName}: ${dayHours.open} - ${dayHours.close}, using default`);
+    }
   }
   
-  // Fallback to default hours if no specific day hours
-  console.log(`No specific hours for ${dayName}, using default: 09:00 - 22:00`);
+  // Try to find any day with valid hours as fallback
+  for (const day of dayNames) {
+    const dayHours = restaurant.openingHours[day];
+    if (dayHours && dayHours.open && dayHours.close) {
+      try {
+        const convertTo24Hour = (time12h) => {
+          const [time, modifier] = time12h.split(' ');
+          let [hours, minutes] = time.split(':');
+          if (hours === '12') {
+            hours = '00';
+          }
+          if (modifier === 'PM') {
+            hours = parseInt(hours, 10) + 12;
+          }
+          return `${hours.toString().padStart(2, '0')}:${minutes}`;
+        };
+        
+        const open24h = convertTo24Hour(dayHours.open);
+        const close24h = convertTo24Hour(dayHours.close);
+        
+        console.log(`Using fallback hours from ${day}: ${dayHours.open} (${open24h}) - ${dayHours.close} (${close24h})`);
+        return {
+          open: open24h,
+          close: close24h
+        };
+      } catch (error) {
+        console.log(`Error converting fallback time format for ${day}: ${dayHours.open} - ${dayHours.close}`);
+      }
+    }
+  }
+  
+  // Final fallback to default hours if no valid day hours found
+  console.log(`No valid hours found for any day, using default: 09:00 - 22:00`);
   return { open: "09:00", close: "22:00" };
 }
 
