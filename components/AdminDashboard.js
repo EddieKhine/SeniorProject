@@ -1007,6 +1007,7 @@ export default function AdminDashboard() {
           columns={[
             { key: 'customerName', header: 'Customer' },
             { key: 'restaurantId', header: 'Restaurant', render: (value) => value?.restaurantName || 'N/A' },
+            { key: 'tableId', header: 'Table', render: (value) => value || 'N/A' },
             { key: 'date', header: 'Date', render: (value) => new Date(value).toLocaleDateString() },
             { key: 'startTime', header: 'Time' },
             { key: 'guestCount', header: 'Guests' },

@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { format, parseISO, isToday, isPast } from 'date-fns';
 import { motion } from 'framer-motion';
-import { RiCalendarLine, RiTimeLine, RiUserLine, RiPhoneLine, RiMailLine } from 'react-icons/ri';
+import { RiCalendarLine, RiTimeLine, RiUserLine, RiPhoneLine, RiMailLine, RiTableLine } from 'react-icons/ri';
 import { FaCheckCircle, FaTimesCircle, FaSpinner, FaTrash } from 'react-icons/fa';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
@@ -376,6 +376,7 @@ export default function RestaurantReservation({ restaurantId }) {
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-[#111827] uppercase tracking-wider">Customer</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-[#111827] uppercase tracking-wider">Contact</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-[#111827] uppercase tracking-wider">Table</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-[#111827] uppercase tracking-wider">Date & Time</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-[#111827] uppercase tracking-wider">Status</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-[#111827] uppercase tracking-wider">Actions</th>
@@ -412,6 +413,16 @@ export default function RestaurantReservation({ restaurantId }) {
                       <div className="flex items-center">
                         <RiMailLine className="text-[#FF4F18] mr-2" />
                         {booking.customerEmail}
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex items-center space-x-2">
+                      <div className="bg-[#FF4F18] text-white px-3 py-1 rounded-lg text-sm font-bold">
+                        {booking.tableId || 'N/A'}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        {booking.guestCount} {booking.guestCount === 1 ? 'guest' : 'guests'}
                       </div>
                     </div>
                   </td>

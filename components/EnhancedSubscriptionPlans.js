@@ -35,16 +35,43 @@ export default function EnhancedSubscriptionPlans() {
 
   const fetchSubscriptionData = async () => {
     try {
-      // Fetch current subscription
-      const subscriptionResponse = await fetch('/api/saas/subscriptions/current')
+      // Try to get owner ID from localStorage or context
+      const ownerData = localStorage.getItem('restaurantOwnerUser');
+      let ownerId = null;
+      
+      if (ownerData) {
+        try {
+          const parsed = JSON.parse(ownerData);
+          ownerId = parsed._id || parsed.id;
+        } catch (e) {
+          console.error('Failed to parse owner data:', e);
+        }
+      }
+      
+      if (!ownerId) {
+        console.warn('No owner ID found, cannot fetch subscription data');
+        return;
+      }
+      
+      // Fetch subscription using the working endpoint
+      const subscriptionResponse = await fetch(`/api/restaurant-owner/subscription?ownerId=${ownerId}`)
       const subscriptionData = await subscriptionResponse.json()
       
-      if (subscriptionData.success) {
-        setSubscription(subscriptionData.data)
+      if (subscriptionData.success && subscriptionData.data.hasSubscription) {
+        setSubscription(subscriptionData.data.subscription)
         // Handle legacy 'free' plan type as 'basic'
-        const planType = subscriptionData.data.planType === 'free' ? 'basic' : subscriptionData.data.planType
+        const planType = subscriptionData.data.subscription.planType === 'free' ? 'basic' : subscriptionData.data.subscription.planType
         setCurrentPlan(planType)
         setUsage(subscriptionData.data.usage)
+      } else {
+        // Set default basic plan
+        setCurrentPlan('basic')
+        setSubscription({
+          planType: 'basic',
+          status: 'active',
+          price: 0,
+          currency: 'THB'
+        })
       }
     } catch (error) {
       console.error('Error fetching subscription data:', error)

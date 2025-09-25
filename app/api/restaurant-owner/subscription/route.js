@@ -81,6 +81,19 @@ export async function GET(req) {
       }
     }
     
+    // Ensure subscription has usage limits based on plan type
+    if (!subscription.usage) {
+      const planLimits = Subscription.getPlanLimits(subscription.planType || 'free');
+      subscription.usage = {
+        staffLimit: planLimits.staffLimit,
+        floorPlansLimit: planLimits.floorPlansLimit,
+        tablesLimit: planLimits.tablesLimit,
+        bookingsLimit: planLimits.bookingsLimit,
+        apiCallsLimit: planLimits.apiCallsLimit,
+        storageLimit: planLimits.storageLimit
+      };
+    }
+    
     // Get current usage data
     const currentDate = new Date();
     const currentMonth = currentDate.getMonth();

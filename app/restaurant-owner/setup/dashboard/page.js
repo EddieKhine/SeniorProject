@@ -5,11 +5,10 @@ import { useRouter } from 'next/navigation'
 import RestaurantInformation from '@/components/RestaurantInformation'
 import RestaurantProfileForm from '@/components/RestaurantProfileForm'
 import SubscriptionManagement from '@/components/SubscriptionManagement'
-import { RiRestaurantLine, RiLayoutLine, RiCalendarLine, RiVipCrownLine, RiUserLine, RiMessage2Line, RiTeamLine, RiBarChartLine } from 'react-icons/ri'
+import { RiRestaurantLine, RiLayoutLine, RiCalendarLine, RiVipCrownLine, RiUserLine, RiTeamLine, RiBarChartLine } from 'react-icons/ri'
 import { motion } from 'framer-motion'
 import OwnerProfile from '@/components/OwnerProfile'
 import RestaurantFloorPlan from '@/components/RestaurantFloorPlan'
-import RestaurantOwnerChat from '@/components/RestaurantOwnerChat'
 import RestaurantBookingManager from '@/components/RestaurantBookingManager'
 import RestaurantReservation from '@/components/RestaurantReservation'
 import StaffManagement from '@/components/StaffManagement'
@@ -232,17 +231,6 @@ export default function RestaurantSetupDashboard() {
               <span className="text-sm">Staff Management</span>
             </button>
             
-            <button
-              onClick={() => setActiveSection('messages')}
-              className={`flex items-center space-x-3 w-full p-3 rounded-lg transition-all duration-200 ${
-                activeSection === 'messages'
-                  ? 'bg-[#FF4F18] text-white font-medium shadow-lg'
-                  : 'text-gray-600 hover:bg-gray-50 hover:text-[#FF4F18]'
-              }`}
-            >
-              <RiMessage2Line className="text-xl" />
-              <span className="text-sm">Messages</span>
-            </button>
             <Link
               href="/restaurant-owner"
               className="flex items-center space-x-3 w-full p-3 rounded-lg transition-all duration-200
@@ -283,7 +271,6 @@ export default function RestaurantSetupDashboard() {
               {activeSection === 'reservation' && 'Reservations'}
               {activeSection === 'subscription-management' && 'Subscription & Usage'}
               {activeSection === 'staff' && 'Staff Management'}
-              {activeSection === 'messages' && 'Messages'}
             </h1>
             <p className="text-gray-500 mt-1">
               Manage your restaurant settings and information
@@ -434,11 +421,6 @@ export default function RestaurantSetupDashboard() {
           {activeSection === 'staff' && (
             <div className="bg-white p-6 rounded-xl shadow-sm border border-[#F2F4F7]">
               <StaffManagement restaurantId={restaurant?._id} />
-            </div>
-          )}
-          {activeSection === 'messages' && (
-            <div className="bg-white p-6 rounded-xl shadow-sm border border-[#F2F4F7]">
-              <RestaurantOwnerChat restaurantId={restaurantId} />
             </div>
           )}
         </motion.div>
