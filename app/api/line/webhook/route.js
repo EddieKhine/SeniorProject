@@ -235,72 +235,23 @@ async function getFloorplanImage() {
 
     // Ensure the image URL is properly formatted
     let imageUrl = floorplan.screenshotUrl;
-    console.log('🔍 Original screenshotUrl from database:', imageUrl);
     
     // Check if this is a Firebase Storage URL or a local path
     if (imageUrl.startsWith('https://storage.googleapis.com/')) {
       // This is already a Firebase Storage URL, use it as is
-      console.log('✅ Using Firebase Storage URL:', imageUrl);
     } else if (imageUrl.startsWith('http')) {
       // This is already a full URL, use it as is
-      console.log('✅ Using existing URL:', imageUrl);
     } else {
-      // This is a local path, but since you mentioned the images are stored in Firebase,
-      // we should construct the Firebase Storage URL regardless of environment
-      console.log('🔄 Converting local path to Firebase Storage URL...');
+      // This is a local path, construct the Firebase Storage URL
       const filename = imageUrl.split('/').pop();
-      console.log('📁 Extracted filename:', filename);
-      
       if (filename) {
         imageUrl = `https://storage.googleapis.com/foodloft-450813.firebasestorage.app/floorplans/${filename}`;
-        console.log('🔗 Constructed Firebase Storage URL:', imageUrl);
-        
-        // Test if the Firebase Storage URL is accessible
-        try {
-          console.log('🧪 Testing Firebase Storage URL accessibility...');
-          const response = await fetch(imageUrl, { method: 'HEAD' });
-          if (response.ok) {
-            console.log('✅ Firebase Storage URL is accessible');
-          } else {
-            console.log('❌ Firebase Storage URL returned status:', response.status);
-            // Try alternative Firebase Storage URL format
-            const alternativeUrl = `https://firebasestorage.googleapis.com/v0/b/foodloft-450813.firebasestorage.app/o/floorplans%2F${encodeURIComponent(filename)}?alt=media`;
-            console.log('🔄 Trying alternative Firebase Storage URL:', alternativeUrl);
-            
-            // Test the alternative URL
-            try {
-              const altResponse = await fetch(alternativeUrl, { method: 'HEAD' });
-              if (altResponse.ok) {
-                console.log('✅ Alternative Firebase Storage URL is accessible');
-                imageUrl = alternativeUrl;
-              } else {
-                console.log('❌ Alternative Firebase Storage URL also failed:', altResponse.status);
-                // Try direct Firebase Storage URL without encoding
-                const directUrl = `https://storage.googleapis.com/foodloft-450813.firebasestorage.app/floorplans/${filename}`;
-                console.log('🔄 Trying direct Firebase Storage URL:', directUrl);
-                imageUrl = directUrl;
-              }
-            } catch (altError) {
-              console.log('❌ Error testing alternative URL:', altError.message);
-              // Fallback to direct URL
-              const directUrl = `https://storage.googleapis.com/foodloft-450813.firebasestorage.app/floorplans/${filename}`;
-              console.log('🔄 Fallback to direct Firebase Storage URL:', directUrl);
-              imageUrl = directUrl;
-            }
-          }
-        } catch (error) {
-          console.log('❌ Error testing Firebase Storage URL:', error.message);
-        }
       } else {
         // Fallback to local URL with base URL if filename extraction fails
-        console.log('⚠️ Filename extraction failed, using fallback...');
         const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
         imageUrl = imageUrl.startsWith('/') ? `${baseUrl}${imageUrl}` : `${baseUrl}/${imageUrl}`;
-        console.log('🔗 Using local URL with base URL (fallback):', imageUrl);
       }
     }
-    
-    console.log('🎯 Final image URL:', imageUrl);
 
     return {
       restaurantName: restaurant.restaurantName,
@@ -2767,72 +2718,23 @@ async function getFloorplanImageOptimized(restaurantId) {
 
     // Apply the same URL handling logic as getFloorplanImage
     let imageUrl = floorplan.screenshotUrl;
-    console.log('🔍 [Optimized] Original screenshotUrl from database:', imageUrl);
     
     // Check if this is a Firebase Storage URL or a local path
     if (imageUrl.startsWith('https://storage.googleapis.com/')) {
       // This is already a Firebase Storage URL, use it as is
-      console.log('✅ [Optimized] Using Firebase Storage URL:', imageUrl);
     } else if (imageUrl.startsWith('http')) {
       // This is already a full URL, use it as is
-      console.log('✅ [Optimized] Using existing URL:', imageUrl);
     } else {
-      // This is a local path, but since you mentioned the images are stored in Firebase,
-      // we should construct the Firebase Storage URL regardless of environment
-      console.log('🔄 [Optimized] Converting local path to Firebase Storage URL...');
+      // This is a local path, construct the Firebase Storage URL
       const filename = imageUrl.split('/').pop();
-      console.log('📁 [Optimized] Extracted filename:', filename);
-      
       if (filename) {
         imageUrl = `https://storage.googleapis.com/foodloft-450813.firebasestorage.app/floorplans/${filename}`;
-        console.log('🔗 [Optimized] Constructed Firebase Storage URL:', imageUrl);
-        
-        // Test if the Firebase Storage URL is accessible
-        try {
-          console.log('🧪 [Optimized] Testing Firebase Storage URL accessibility...');
-          const response = await fetch(imageUrl, { method: 'HEAD' });
-          if (response.ok) {
-            console.log('✅ [Optimized] Firebase Storage URL is accessible');
-          } else {
-            console.log('❌ [Optimized] Firebase Storage URL returned status:', response.status);
-            // Try alternative Firebase Storage URL format
-            const alternativeUrl = `https://firebasestorage.googleapis.com/v0/b/foodloft-450813.firebasestorage.app/o/floorplans%2F${encodeURIComponent(filename)}?alt=media`;
-            console.log('🔄 [Optimized] Trying alternative Firebase Storage URL:', alternativeUrl);
-            
-            // Test the alternative URL
-            try {
-              const altResponse = await fetch(alternativeUrl, { method: 'HEAD' });
-              if (altResponse.ok) {
-                console.log('✅ [Optimized] Alternative Firebase Storage URL is accessible');
-                imageUrl = alternativeUrl;
-              } else {
-                console.log('❌ [Optimized] Alternative Firebase Storage URL also failed:', altResponse.status);
-                // Try direct Firebase Storage URL without encoding
-                const directUrl = `https://storage.googleapis.com/foodloft-450813.firebasestorage.app/floorplans/${filename}`;
-                console.log('🔄 [Optimized] Trying direct Firebase Storage URL:', directUrl);
-                imageUrl = directUrl;
-              }
-            } catch (altError) {
-              console.log('❌ [Optimized] Error testing alternative URL:', altError.message);
-              // Fallback to direct URL
-              const directUrl = `https://storage.googleapis.com/foodloft-450813.firebasestorage.app/floorplans/${filename}`;
-              console.log('🔄 [Optimized] Fallback to direct Firebase Storage URL:', directUrl);
-              imageUrl = directUrl;
-            }
-          }
-        } catch (error) {
-          console.log('❌ [Optimized] Error testing Firebase Storage URL:', error.message);
-        }
       } else {
         // Fallback to local URL with base URL if filename extraction fails
-        console.log('⚠️ [Optimized] Filename extraction failed, using fallback...');
         const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
         imageUrl = imageUrl.startsWith('/') ? `${baseUrl}${imageUrl}` : `${baseUrl}/${imageUrl}`;
-        console.log('🔗 [Optimized] Using local URL with base URL (fallback):', imageUrl);
       }
     }
-    
-    console.log('🎯 [Optimized] Final image URL:', imageUrl);
 
     return {
       restaurantName: restaurant.restaurantName,
