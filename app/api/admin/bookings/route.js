@@ -13,6 +13,7 @@ export async function GET(req) {
     }
 
     await dbConnect();
+    console.log('Admin bookings - Database connected successfully');
     
     const { searchParams } = new URL(req.url);
     const page = parseInt(searchParams.get('page')) || 1;
@@ -40,19 +41,52 @@ export async function GET(req) {
       ];
     }
     
+    // Debug logging
+    console.log('Admin bookings - Filter:', filter);
+    console.log('Admin bookings - Page:', page, 'Limit:', limit, 'Skip:', skip);
+    
+    // Check total bookings in database without filter
+    const totalAllBookings = await Booking.countDocuments({});
+    console.log('Admin bookings - Total bookings in database (no filter):', totalAllBookings);
+    
     const [bookings, total] = await Promise.all([
       Booking.find(filter)
         .populate('restaurantId', 'restaurantName location')
         .populate('userId', 'firstName lastName email')
         .sort({ createdAt: -1 })
         .skip(skip)
-        .limit(limit),
+        .limit(limit)
+        .lean(), // Add lean() for better performance
       Booking.countDocuments(filter)
     ]);
     
+    console.log('Admin bookings - Found bookings:', bookings.length);
+    console.log('Admin bookings - Total count:', total);
+    
+    // Transform bookings to ensure all fields are properly serialized
+    const transformedBookings = bookings.map(booking => ({
+      _id: booking._id,
+      bookingRef: booking.bookingRef,
+      restaurantId: booking.restaurantId,
+      userId: booking.userId,
+      customerName: booking.customerName,
+      customerEmail: booking.customerEmail,
+      customerPhone: booking.customerPhone,
+      date: booking.date,
+      startTime: booking.startTime,
+      endTime: booking.endTime,
+      guestCount: booking.guestCount,
+      tableId: booking.tableId,
+      status: booking.status,
+      specialRequests: booking.specialRequests,
+      pricing: booking.pricing,
+      createdAt: booking.createdAt,
+      updatedAt: booking.updatedAt
+    }));
+    
     return NextResponse.json({
       success: true,
-      data: bookings,
+      data: transformedBookings,
       pagination: {
         page,
         limit,
@@ -63,8 +97,17 @@ export async function GET(req) {
     
   } catch (error) {
     console.error('Error fetching bookings:', error);
+    console.error('Error details:', {
+      message: error.message,
+      stack: error.stack,
+      name: error.name
+    });
     return NextResponse.json(
-      { success: false, error: 'Failed to fetch bookings' },
+      { 
+        success: false, 
+        error: 'Failed to fetch bookings',
+        details: error.message 
+      },
       { status: 500 }
     );
   }
