@@ -20,7 +20,6 @@ import {
   FaClock,
   FaUsers,
   FaTable,
-  FaTrash
 } from "react-icons/fa";
 import Image from "next/image";
 import { toast } from "react-hot-toast";
@@ -264,6 +263,95 @@ export default function CustomerProfile() {
     } finally {
       setBookingsLoading(false);
     }
+  };
+
+  // Cancel booking function
+  const cancelBooking = async (bookingId) => {
+    if (!confirm('Are you sure you want to cancel this booking? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      const token = await getAuthToken();
+      const response = await fetch('/api/bookings/customer', {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ bookingId })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to cancel booking');
+      }
+
+      toast.success('Booking cancelled successfully');
+      // Refresh bookings list
+      fetchUserBookings();
+    } catch (error) {
+      console.error('Error cancelling booking:', error);
+      toast.error(error.message || 'Failed to cancel booking');
+    }
+  };
+
+  // Check if booking can be cancelled
+  const canCancelBooking = (booking) => {
+    if (booking.status === 'cancelled' || booking.status === 'completed') {
+      return false;
+    }
+
+    // Parse booking date and time properly
+    let bookingDateTime;
+    
+    // Handle different date formats that might come from the server
+    if (typeof booking.date === 'string') {
+      // If it's a string, create a date object and ensure we're using local timezone
+      bookingDateTime = new Date(booking.date.split('T')[0] + 'T00:00:00');
+    } else {
+      // If it's already a Date object
+      bookingDateTime = new Date(booking.date);
+    }
+    
+    // Parse the time string (assuming format like "14:30" or "2:30 PM")
+    let startHour, startMinute;
+    
+    if (booking.startTime.includes('PM') || booking.startTime.includes('AM')) {
+      // Handle 12-hour format
+      const [time, period] = booking.startTime.split(' ');
+      const [hour, minute] = time.split(':').map(Number);
+      startHour = period === 'PM' && hour !== 12 ? hour + 12 : 
+                  period === 'AM' && hour === 12 ? 0 : hour;
+      startMinute = minute;
+    } else {
+      // Handle 24-hour format
+      const timeParts = booking.startTime.split(':');
+      startHour = parseInt(timeParts[0]);
+      startMinute = parseInt(timeParts[1]) || 0;
+    }
+    
+    // Set the time on the booking date
+    bookingDateTime.setHours(startHour, startMinute, 0, 0);
+    
+    // Get current time
+    const now = new Date();
+    
+    // Calculate time difference in milliseconds
+    const timeDifference = bookingDateTime.getTime() - now.getTime();
+    const hoursUntilBooking = timeDifference / (1000 * 60 * 60);
+    
+    // Debug logging to help troubleshoot
+    console.log('Booking cancellation check:', {
+      bookingDate: booking.date,
+      startTime: booking.startTime,
+      parsedDateTime: bookingDateTime,
+      currentTime: now,
+      hoursUntilBooking,
+      canCancel: hoursUntilBooking >= 2
+    });
+    
+    return hoursUntilBooking >= 2;
   };
 
   // Effect for fetching data based on active tab
@@ -641,12 +729,27 @@ export default function CustomerProfile() {
                                   {booking.status.charAt(0).toUpperCase() + booking.status.slice(1)}
                                 </span>
                               </div>
-                              <button
-                                onClick={() => router.push(`/restaurants/${booking.restaurantId}/floorplan`)}
-                                className="px-4 py-2 bg-[#FF4F18] text-white rounded-lg hover:bg-[#FF4F18]/90 transition-colors"
-                              >
-                                View Restaurant
-                              </button>
+                              <div className="flex flex-col gap-2">
+                                <button
+                                  onClick={() => router.push(`/restaurants/${booking.restaurantId}/floorplan`)}
+                                  className="px-4 py-2 bg-[#FF4F18] text-white rounded-lg hover:bg-[#FF4F18]/90 transition-colors"
+                                >
+                                  View Restaurant
+                                </button>
+                                {canCancelBooking(booking) && (
+                                  <button
+                                    onClick={() => cancelBooking(booking._id)}
+                                    className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center justify-center gap-2"
+                                  >
+                                    Cancel Booking
+                                  </button>
+                                )}
+                                {!canCancelBooking(booking) && booking.status !== 'cancelled' && booking.status !== 'completed' && (
+                                  <div className="text-xs text-gray-500 text-center">
+                                    Cannot cancel within 2 hours of booking time
+                                  </div>
+                                )}
+                              </div>
                             </div>
                           </div>
                         ))}

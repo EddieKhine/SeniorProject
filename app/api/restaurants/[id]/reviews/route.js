@@ -88,9 +88,10 @@ export async function GET(req, { params }) {
       });
     }
 
-    // Fetch all reviews for the restaurant
+    // Fetch all active reviews for the restaurant (exclude hidden/removed)
     const reviews = await Review.find({ 
-      restaurantId: new mongoose.Types.ObjectId(id) 
+      restaurantId: new mongoose.Types.ObjectId(id),
+      status: { $in: ['active', 'flagged'] } // Include flagged for admin review
     })
     .populate({
       path: 'userId',

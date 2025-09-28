@@ -23,18 +23,33 @@ export const AuthProvider = ({ children }) => {
         }
     }
 
-    if (!currentUser) {
+    // If we have a stored user with LINE ID, try to refresh their profile from server
+    if (currentUser && currentUser.lineUserId) {
         try {
-            const response = await fetch('/api/customer/profile');
+            const lineToken = `line.${currentUser.lineUserId}`;
+            const response = await fetch('/api/customer/profile', {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${lineToken}`,
+                    'Content-Type': 'application/json',
+                },
+            });
+            
             if (response.ok) {
                 const data = await response.json();
                 if (data && data.user) {
+                    // Update stored user with fresh data
                     currentUser = data.user;
                     localStorage.setItem('customerUser', JSON.stringify(currentUser));
                 }
+            } else if (response.status === 401 || response.status === 404) {
+                // User no longer exists or token is invalid, clear stored data
+                localStorage.removeItem('customerUser');
+                currentUser = null;
             }
         } catch (error) {
-            // Silently handle session fetch errors (normal for LIFF users)
+            console.error("Error refreshing LINE user profile:", error);
+            // Keep existing user data if refresh fails
         }
     }
     
@@ -78,12 +93,28 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // Get authentication token for API calls
+  const getAuthToken = useCallback(() => {
+    if (user && user.lineUserId) {
+      return `line.${user.lineUserId}`;
+    }
+    return null;
+  }, [user]);
+
   // Add a manual refresh function
   const refreshUser = useCallback(() => {
     fetchUser();
   }, [fetchUser]);
 
-  const value = { user, loading, login, logout, refetchUser: fetchUser, refreshUser };
+  const value = { 
+    user, 
+    loading, 
+    login, 
+    logout, 
+    refetchUser: fetchUser, 
+    refreshUser, 
+    getAuthToken 
+  };
 
   return (
     <AuthContext.Provider value={value}>

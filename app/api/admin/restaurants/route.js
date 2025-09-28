@@ -2,22 +2,16 @@ import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
 import Restaurant from '@/models/Restaurants';
 import Staff from '@/models/Staff';
+import { verifyAdminAuth } from '@/lib/adminAuth';
 
 // Get all restaurants with filtering and pagination
 export async function GET(req) {
   try {
-    // Temporarily disable authentication for testing
-    // const token = req.headers.get('authorization')?.replace('Bearer ', '');
-    // if (!token) {
-    //   return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    // }
-
-    // const jwt = require('jsonwebtoken');
-    // const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    
-    // if (!decoded.adminId) {
-    //   return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
-    // }
+    // Verify admin authentication
+    const authResult = await verifyAdminAuth(req);
+    if (!authResult.success) {
+      return NextResponse.json({ error: authResult.error }, { status: 401 });
+    }
 
     await dbConnect();
     
@@ -113,16 +107,9 @@ export async function GET(req) {
 export async function POST(req) {
   try {
     // Verify admin authentication
-    const token = req.headers.get('authorization')?.replace('Bearer ', '');
-    if (!token) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const jwt = require('jsonwebtoken');
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    
-    if (!decoded.adminId) {
-      return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
+    const authResult = await verifyAdminAuth(req);
+    if (!authResult.success) {
+      return NextResponse.json({ error: authResult.error }, { status: 401 });
     }
 
     const restaurantData = await req.json();

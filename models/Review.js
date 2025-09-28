@@ -24,6 +24,24 @@ const reviewSchema = new mongoose.Schema({
   images: {
     type: [String],
     default: []
+  },
+  status: {
+    type: String,
+    enum: ['active', 'flagged', 'hidden', 'removed'],
+    default: 'active'
+  },
+  flaggedReason: {
+    type: String,
+    default: null
+  },
+  flaggedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Admin',
+    default: null
+  },
+  flaggedAt: {
+    type: Date,
+    default: null
   }
 }, { timestamps: true });
 

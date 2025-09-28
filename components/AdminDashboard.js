@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
+import ReviewsManagement from './admin/ReviewsManagement'
 import { 
   FaUsers, 
   FaChartLine, 
@@ -108,20 +109,29 @@ export default function AdminDashboard() {
       const token = localStorage.getItem('adminToken')
       if (!token) return
 
-      // Temporarily removed headers since we disabled authentication
-      // const headers = {
-      //   'Authorization': `Bearer ${token}`
-      // }
+      const headers = {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
 
       const [usersRes, restaurantsRes, bookingsRes, reviewsRes, organizationsRes, subscriptionsRes, analyticsRes] = await Promise.all([
-        fetch('/api/admin/users'),
-        fetch('/api/admin/restaurants'), // Back to main API with real data
-        fetch('/api/admin/bookings'),
-        fetch('/api/admin/reviews'),
-        fetch('/api/admin/organizations'),
-        fetch('/api/admin/subscriptions'),
-        fetch('/api/admin/analytics')
+        fetch('/api/admin/users', { headers }),
+        fetch('/api/admin/restaurants', { headers }),
+        fetch('/api/admin/bookings', { headers }),
+        fetch('/api/admin/reviews', { headers }),
+        fetch('/api/admin/organizations', { headers }),
+        fetch('/api/admin/subscriptions', { headers }),
+        fetch('/api/admin/analytics', { headers })
       ])
+
+      // Check for authentication errors
+      if (usersRes.status === 401 || restaurantsRes.status === 401 || bookingsRes.status === 401 || 
+          reviewsRes.status === 401 || organizationsRes.status === 401 || subscriptionsRes.status === 401 || 
+          analyticsRes.status === 401) {
+        localStorage.removeItem('adminToken')
+        window.location.href = '/admin/login'
+        return
+      }
 
       const [users, restaurants, bookings, reviews, organizations, subscriptions, analytics] = await Promise.all([
         usersRes.json(),
@@ -149,6 +159,11 @@ export default function AdminDashboard() {
       })
     } catch (error) {
       console.error('Error fetching dashboard data:', error)
+      // If it's an authentication error, redirect to login
+      if (error.message?.includes('401') || error.message?.includes('Unauthorized')) {
+        localStorage.removeItem('adminToken')
+        window.location.href = '/admin/login'
+      }
     } finally {
       setLoading(false)
     }
@@ -1145,7 +1160,7 @@ export default function AdminDashboard() {
         {activeTab === 'users' && <UsersTab />}
         {activeTab === 'restaurants' && <RestaurantsTab />}
         {activeTab === 'bookings' && <BookingsTab />}
-        {activeTab === 'reviews' && <div>Reviews Tab - Coming Soon</div>}
+        {activeTab === 'reviews' && <ReviewsManagement />}
         {activeTab === 'organizations' && <div>Organizations Tab - Coming Soon</div>}
         {activeTab === 'subscriptions' && <div>Subscriptions Tab - Coming Soon</div>}
         {activeTab === 'analytics' && <div>Analytics Tab - Coming Soon</div>}
