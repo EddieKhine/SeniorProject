@@ -20,6 +20,7 @@ import { useFirebaseAuth } from '@/contexts/FirebaseAuthContext';
 import { useAuth } from '@/context/AuthContext';
 import { auth } from "@/lib/firebase-config";
 import '@/css/loading.css';
+import PaymentDialog from './PaymentDialog';
 
 // New Booking Confirmation Dialog Component
 function BookingConfirmationDialog({ bookingDetails, onClose, onConfirm }) {
@@ -44,23 +45,23 @@ function BookingConfirmationDialog({ bookingDetails, onClose, onConfirm }) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-4 overflow-y-auto">
       <motion.div 
         initial={{ opacity: 0, scale: 0.9, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.9, y: 20 }}
-        className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-auto overflow-hidden"
+        className="bg-white rounded-xl sm:rounded-2xl shadow-2xl w-full max-w-[95vw] sm:max-w-md mx-auto overflow-hidden max-h-[95vh] sm:max-h-[90vh] flex flex-col my-auto"
       >
-        {/* Header */}
-        <div className="bg-gradient-to-r from-[#FF4F18] to-[#FF6B35] p-6 text-white">
+        {/* Header - Sticky */}
+        <div className="bg-gradient-to-r from-[#FF4F18] to-[#FF6B35] p-4 sm:p-6 text-white flex-shrink-0">
           <div className="flex justify-between items-center">
             <div>
-              <h3 className="text-2xl font-bold">Confirm Booking</h3>
-              <p className="text-orange-100 text-sm mt-1">Review your reservation details</p>
+              <h3 className="text-lg sm:text-2xl font-bold">Confirm Booking</h3>
+              <p className="text-orange-100 text-xs sm:text-sm mt-1">Review your reservation details</p>
             </div>
             <button 
               onClick={onClose}
-              className="text-white/80 hover:text-white transition-colors text-2xl font-light"
+              className="text-white/80 hover:text-white transition-colors text-xl sm:text-2xl font-light p-1 rounded-full hover:bg-white/10 min-w-[32px] min-h-[32px] flex items-center justify-center"
               disabled={isLoading}
             >
               ×
@@ -68,55 +69,55 @@ function BookingConfirmationDialog({ bookingDetails, onClose, onConfirm }) {
           </div>
         </div>
 
-        {/* Content */}
-        <div className="p-6">
+        {/* Content - Scrollable */}
+        <div className="p-4 sm:p-6 overflow-y-auto flex-1">
           {/* Booking Summary */}
-          <div className="space-y-4 mb-6">
-            <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
-              <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center">
-                  <span className="text-orange-600 font-semibold">📅</span>
+          <div className="space-y-3 sm:space-y-4 mb-4 sm:mb-6">
+            <div className="flex items-center p-3 sm:p-4 bg-gray-50 rounded-lg sm:rounded-xl">
+              <div className="flex items-center space-x-3 w-full">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 bg-orange-100 rounded-full flex items-center justify-center flex-shrink-0">
+                  <span className="text-orange-600 font-semibold text-sm sm:text-base">📅</span>
                 </div>
-                <div>
-                  <p className="text-sm text-gray-500">Date</p>
-                  <p className="font-semibold text-gray-800">{formatDate(bookingDetails.date)}</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
-              <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                  <span className="text-blue-600 font-semibold">🕐</span>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">Time</p>
-                  <p className="font-semibold text-gray-800">{bookingDetails.time}</p>
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs sm:text-sm text-gray-500">Date</p>
+                  <p className="font-semibold text-gray-800 text-sm sm:text-base truncate">{formatDate(bookingDetails.date)}</p>
                 </div>
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
-                <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-                    <span className="text-green-600 font-semibold">🪑</span>
+            <div className="flex items-center p-3 sm:p-4 bg-gray-50 rounded-lg sm:rounded-xl">
+              <div className="flex items-center space-x-3 w-full">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                  <span className="text-blue-600 font-semibold text-sm sm:text-base">🕐</span>
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs sm:text-sm text-gray-500">Time</p>
+                  <p className="font-semibold text-gray-800 text-sm sm:text-base truncate">{bookingDetails.time}</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="flex items-center p-3 sm:p-4 bg-gray-50 rounded-lg sm:rounded-xl">
+                <div className="flex items-center space-x-3 w-full">
+                  <div className="w-8 h-8 sm:w-10 sm:h-10 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+                    <span className="text-green-600 font-semibold text-sm sm:text-base">🪑</span>
                   </div>
-                  <div>
-                    <p className="text-sm text-gray-500">Table</p>
-                    <p className="font-semibold text-gray-800">{bookingDetails.tableId}</p>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs sm:text-sm text-gray-500">Table</p>
+                    <p className="font-semibold text-gray-800 text-sm sm:text-base">{bookingDetails.tableId}</p>
                   </div>
                 </div>
               </div>
 
-              <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
-                <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
-                    <span className="text-purple-600 font-semibold">👥</span>
+              <div className="flex items-center p-3 sm:p-4 bg-gray-50 rounded-lg sm:rounded-xl">
+                <div className="flex items-center space-x-3 w-full">
+                  <div className="w-8 h-8 sm:w-10 sm:h-10 bg-purple-100 rounded-full flex items-center justify-center flex-shrink-0">
+                    <span className="text-purple-600 font-semibold text-sm sm:text-base">👥</span>
                   </div>
-                  <div>
-                    <p className="text-sm text-gray-500">Guests</p>
-                    <p className="font-semibold text-gray-800">{bookingDetails.guestCount}</p>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs sm:text-sm text-gray-500">Guests</p>
+                    <p className="font-semibold text-gray-800 text-sm sm:text-base">{bookingDetails.guestCount}</p>
                   </div>
                 </div>
               </div>
@@ -124,41 +125,43 @@ function BookingConfirmationDialog({ bookingDetails, onClose, onConfirm }) {
           </div>
 
           {/* Info Note */}
-          <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6">
+          <div className="bg-blue-50 border border-blue-200 rounded-lg sm:rounded-xl p-3 sm:p-4 mb-4 sm:mb-6">
             <div className="flex items-start space-x-3">
-              <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                <span className="text-blue-600 text-sm">ℹ️</span>
+              <div className="w-5 h-5 sm:w-6 sm:h-6 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                <span className="text-blue-600 text-xs sm:text-sm">ℹ️</span>
               </div>
-              <div>
-                <p className="text-blue-800 font-medium text-sm">Booking Confirmation</p>
-                <p className="text-blue-700 text-sm mt-1">Your booking will be submitted and is pending restaurant confirmation. You'll receive a notification once approved.</p>
+              <div className="min-w-0 flex-1">
+                <p className="text-blue-800 font-medium text-xs sm:text-sm">Booking Confirmation</p>
+                <p className="text-blue-700 text-xs sm:text-sm mt-1 leading-relaxed">Your booking will be submitted and is pending restaurant confirmation. You'll receive a notification once approved.</p>
               </div>
             </div>
           </div>
+        </div>
 
-          {/* Action Buttons */}
-          <div className="flex space-x-3">
+        {/* Action Buttons - Sticky */}
+        <div className="p-4 sm:p-6 border-t border-gray-100 bg-white flex-shrink-0">
+          <div className="flex flex-col-reverse sm:flex-row gap-3">
             <button
               onClick={onClose}
               disabled={isLoading}
-              className="flex-1 px-6 py-3 border border-gray-300 text-gray-700 rounded-xl font-medium hover:bg-gray-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 px-4 sm:px-6 py-3 sm:py-3 border border-gray-300 text-gray-700 rounded-lg sm:rounded-xl font-medium hover:bg-gray-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base min-h-[44px] touch-manipulation"
             >
               Cancel
             </button>
             <button
               onClick={handleConfirm}
               disabled={isLoading}
-              className="flex-1 px-6 py-3 bg-gradient-to-r from-[#FF4F18] to-[#FF6B35] text-white rounded-xl font-medium hover:from-[#FF4F18]/90 hover:to-[#FF6B35]/90 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
+              className="flex-1 px-4 sm:px-6 py-3 sm:py-3 bg-gradient-to-r from-[#FF4F18] to-[#FF6B35] text-white rounded-lg sm:rounded-xl font-medium hover:from-[#FF4F18]/90 hover:to-[#FF6B35]/90 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2 text-sm sm:text-base min-h-[44px] touch-manipulation"
             >
               {isLoading ? (
                 <>
-                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                  <div className="w-3 h-3 sm:w-4 sm:h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
                   <span>Confirming...</span>
                 </>
               ) : (
                 <>
                   <span>Confirm Booking</span>
-                  <span>✨</span>
+                  <span className="hidden sm:inline">✨</span>
                 </>
               )}
             </button>
@@ -1099,16 +1102,36 @@ export default function PublicFloorPlan({ floorplanData, floorplanId, restaurant
             const guestCountDialog = document.createElement('div');
             guestCountDialog.className = 'booking-dialog';
             guestCountDialog.innerHTML = `
-              <div class="booking-dialog-content">
-                <h3 class="text-xl font-bold mb-4 text-[#141517]">Complete Booking</h3>
-                <div class="booking-details mb-4">
-                  <p class="text-[#141517]">Date: ${new Date(dateRef.current).toLocaleDateString()}</p>
-                  <p class="text-[#141517]">Time: ${timeRef.current}</p>
-                  <p class="text-[#141517]">Table ID: ${tableId}</p>
-                  <p class="text-[#141517]">Maximum Capacity: ${table.userData.maxCapacity || 4} guests</p>
+              <div class="booking-dialog-content max-h-[90vh] overflow-y-auto">
+                <div class="sticky top-0 bg-white pb-4 border-b border-gray-200 mb-4">
+                  <h3 class="text-xl sm:text-2xl font-bold text-[#141517]">Complete Booking</h3>
                 </div>
-                <div class="form-group">
-                  <label for="guest-count" class="text-[#141517] font-medium block mb-2">
+                
+                <div class="booking-details mb-6 space-y-3">
+                  <div class="bg-gray-50 p-3 sm:p-4 rounded-lg">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4 text-sm sm:text-base">
+                      <div class="flex items-center">
+                        <span class="font-medium text-gray-600 mr-2">📅</span>
+                        <span class="text-[#141517]">${new Date(dateRef.current).toLocaleDateString()}</span>
+                      </div>
+                      <div class="flex items-center">
+                        <span class="font-medium text-gray-600 mr-2">🕐</span>
+                        <span class="text-[#141517]">${timeRef.current}</span>
+                      </div>
+                      <div class="flex items-center">
+                        <span class="font-medium text-gray-600 mr-2">🪑</span>
+                        <span class="text-[#141517]">Table ${tableId}</span>
+                      </div>
+                      <div class="flex items-center">
+                        <span class="font-medium text-gray-600 mr-2">👥</span>
+                        <span class="text-[#141517]">Max: ${table.userData.maxCapacity || 4} guests</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div class="form-group mb-6">
+                  <label for="guest-count" class="text-[#141517] font-medium block mb-3 text-base sm:text-lg">
                     Number of Guests (Max: ${table.userData.maxCapacity || 4})
                   </label>
                   <input 
@@ -1117,13 +1140,17 @@ export default function PublicFloorPlan({ floorplanData, floorplanId, restaurant
                     min="1" 
                     max="${table.userData.maxCapacity || 4}" 
                     required
-                    class="w-full p-2 border rounded focus:ring-2 focus:ring-[#FF4F18] focus:border-transparent text-[#141517] font-medium text-lg"
+                    class="w-full p-3 sm:p-4 border-2 rounded-lg focus:ring-2 focus:ring-[#FF4F18] focus:border-[#FF4F18] text-[#141517] font-medium text-lg sm:text-xl"
+                    placeholder="Enter number of guests"
                   >
-                  <p class="text-sm text-gray-500 mt-1">Please enter a number between 1 and ${table.userData.maxCapacity || 4}</p>
+                  <p class="text-xs sm:text-sm text-gray-500 mt-2">Please enter a number between 1 and ${table.userData.maxCapacity || 4}</p>
                 </div>
-                <div class="dialog-buttons mt-6 flex justify-end gap-3">
-                  <button type="button" id="cancel-booking" class="px-4 py-2 bg-gray-200 text-[#141517] rounded hover:bg-gray-300 transition-all font-medium">Cancel</button>
-                  <button type="button" id="confirm-booking" class="px-4 py-2 bg-[#FF4F18] text-white rounded hover:bg-[#FF4F18]/90 transition-all font-medium">Confirm Booking</button>
+                
+                <div class="sticky bottom-0 bg-white pt-4 border-t border-gray-200 mt-6">
+                  <div class="dialog-buttons flex flex-col-reverse sm:flex-row justify-end gap-3">
+                    <button type="button" id="cancel-booking" class="w-full sm:w-auto px-4 sm:px-6 py-3 bg-gray-200 text-[#141517] rounded-lg hover:bg-gray-300 transition-all font-medium text-base min-h-[44px] touch-manipulation">Cancel</button>
+                    <button type="button" id="confirm-booking" class="w-full sm:w-auto px-4 sm:px-6 py-3 bg-[#FF4F18] text-white rounded-lg hover:bg-[#FF4F18]/90 transition-all font-medium text-base min-h-[44px] touch-manipulation">Confirm Booking</button>
+                  </div>
                 </div>
               </div>
             `;
@@ -1403,7 +1430,43 @@ export default function PublicFloorPlan({ floorplanData, floorplanId, restaurant
         throw new Error('This table has just been booked by someone else');
     }
 
-    // Show elegant booking confirmation dialog
+    // Step 1: Show Payment Dialog first
+    const paymentResult = await new Promise((resolve) => {
+      const paymentDialog = document.createElement('div');
+      paymentDialog.id = 'payment-dialog-container';
+      document.body.appendChild(paymentDialog);
+
+      const paymentRoot = createRoot(paymentDialog);
+      paymentRoot.render(
+        <PaymentDialog
+          bookingDetails={{
+            restaurantId,
+            date: dateRef.current,
+            time: timeRef.current,
+            tableId,
+            guestCount: bookingDetails.guestCount,
+            tableCapacity: table.userData?.capacity || (bookingDetails.guestCount <= 2 ? 2 : bookingDetails.guestCount <= 4 ? 4 : 6),
+            tableLocation: table.userData?.location || 'center'
+          }}
+          onClose={() => {
+            paymentRoot.unmount();
+            document.body.removeChild(paymentDialog);
+            resolve(false);
+          }}
+          onSuccess={() => {
+            paymentRoot.unmount();
+            document.body.removeChild(paymentDialog);
+            resolve(true);
+          }}
+        />
+      );
+    });
+
+    if (!paymentResult) {
+      throw new Error('Payment cancelled');
+    }
+
+    // Step 2: After payment success, show booking confirmation dialog
     const confirmationResult = await new Promise((resolve) => {
       const confirmationDialog = document.createElement('div');
       confirmationDialog.id = 'booking-confirmation-container';
@@ -1436,7 +1499,7 @@ export default function PublicFloorPlan({ floorplanData, floorplanId, restaurant
     });
 
     if (!confirmationResult) {
-      throw new Error('Booking cancelled');
+      throw new Error('Booking cancelled after payment');
     }
 
     // Proceed with booking API call

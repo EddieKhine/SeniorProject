@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import { FaCreditCard, FaPaypal, FaSpinner } from 'react-icons/fa';
+import { FaCreditCard, FaPaypal, FaSpinner, FaQrcode } from 'react-icons/fa';
 import { toast } from 'react-hot-toast';
+import Image from 'next/image';
 
 export default function PaymentDialog({ bookingDetails, onClose, onSuccess }) {
-  const [paymentMethod, setPaymentMethod] = useState('credit-card');
+  const [paymentMethod, setPaymentMethod] = useState('promtpay');
   const [isProcessing, setIsProcessing] = useState(false);
   const [pricing, setPricing] = useState(null);
   const [isLoadingPrice, setIsLoadingPrice] = useState(true);
@@ -163,7 +164,11 @@ export default function PaymentDialog({ bookingDetails, onClose, onSuccess }) {
       await new Promise(resolve => setTimeout(resolve, 2000));
       
       // Show success message
-      toast.success('Payment successful! Your booking has been submitted and is pending restaurant confirmation.', {
+      const toastMessage = paymentMethod === 'promtpay' 
+        ? 'Payment confirmed! Your booking has been submitted and is pending restaurant confirmation.'
+        : 'Payment successful! Your booking has been submitted and is pending restaurant confirmation.';
+      
+      toast.success(toastMessage, {
         duration: 6000,
         icon: '⏳'
       });
@@ -175,7 +180,7 @@ export default function PaymentDialog({ bookingDetails, onClose, onSuccess }) {
         <div class="bg-white rounded-xl shadow-xl p-6 max-w-md mx-4 text-center animate-fade-up">
           <div class="text-[#FF4F18] text-5xl mb-4">⏳</div>
           <h3 class="text-xl font-bold text-gray-800 mb-2">Booking Submitted!</h3>
-          <p class="text-gray-600 mb-4">Your booking has been submitted successfully and is pending restaurant confirmation. You will receive a confirmation once approved.</p>
+          <p class="text-gray-600 mb-4">Your ${paymentMethod === 'promtpay' ? 'Promtpay payment has been confirmed and ' : ''}booking has been submitted successfully and is pending restaurant confirmation. You will receive a confirmation once approved.</p>
           <button class="px-6 py-2 bg-[#FF4F18] text-white rounded-lg hover:bg-[#FF4F18]/90 transition-all">
             OK
           </button>
@@ -205,23 +210,25 @@ export default function PaymentDialog({ bookingDetails, onClose, onSuccess }) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-md mx-4 animate-fade-up">
-        <div className="border-b border-gray-100 p-4 flex justify-between items-center">
-          <h3 className="text-xl font-bold text-gray-800">Complete Payment</h3>
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-4 overflow-y-auto">
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-[95vw] sm:max-w-md mx-auto animate-fade-up max-h-[95vh] sm:max-h-[90vh] overflow-hidden flex flex-col my-auto">
+        {/* Header - Sticky */}
+        <div className="border-b border-gray-100 p-3 sm:p-4 flex justify-between items-center flex-shrink-0 bg-white">
+          <h3 className="text-lg sm:text-xl font-bold text-gray-800">Complete Payment</h3>
           <button 
             onClick={onClose}
-            className="text-gray-500 hover:text-gray-700 transition-colors"
+            className="text-gray-500 hover:text-gray-700 transition-colors text-xl sm:text-2xl font-light p-1 rounded-full hover:bg-gray-100 min-w-[32px] min-h-[32px] flex items-center justify-center"
           >
             ×
           </button>
         </div>
 
-        <div className="p-4">
+        {/* Content - Scrollable */}
+        <div className="p-3 sm:p-4 overflow-y-auto flex-1">
           {/* Booking Summary */}
-          <div className="bg-gray-50 rounded-lg p-4 mb-6">
-            <h4 className="font-medium text-gray-800 mb-2">Booking Summary</h4>
-            <div className="space-y-1 text-sm text-gray-600">
+          <div className="bg-gray-50 rounded-lg p-3 sm:p-4 mb-4 sm:mb-6">
+            <h4 className="font-medium text-gray-800 mb-2 text-sm sm:text-base">Booking Summary</h4>
+            <div className="space-y-1 text-xs sm:text-sm text-gray-600">
               <p>Date: {new Date(bookingDetails.date).toLocaleDateString()}</p>
               <p>Time: {bookingDetails.time}</p>
               <p>Table: {bookingDetails.tableId}</p>
@@ -231,8 +238,8 @@ export default function PaymentDialog({ bookingDetails, onClose, onSuccess }) {
               {isLoadingPrice ? (
                 <div className="mt-2 pt-2 border-t border-gray-200">
                   <div className="flex items-center space-x-2">
-                    <FaSpinner className="animate-spin text-[#FF4F18]" />
-                    <p className="text-sm text-gray-500">Calculating price...</p>
+                    <FaSpinner className="animate-spin text-[#FF4F18] text-sm" />
+                    <p className="text-xs sm:text-sm text-gray-500">Calculating price...</p>
                   </div>
                 </div>
               ) : (
@@ -369,28 +376,87 @@ export default function PaymentDialog({ bookingDetails, onClose, onSuccess }) {
           </div>
 
           {/* Payment Methods */}
-          <div className="grid grid-cols-2 gap-3 mb-6">
+          <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-4 sm:mb-6">
+            <button
+              onClick={() => setPaymentMethod('promtpay')}
+              className={`flex flex-col items-center p-2 sm:p-3 rounded-lg border-2 transition-all min-h-[80px] sm:min-h-[90px]
+                ${paymentMethod === 'promtpay' 
+                  ? 'border-[#FF4F18] bg-[#FF4F18]/5 text-[#FF4F18]' 
+                  : 'border-gray-200 text-gray-600 hover:border-[#FF4F18]/50'}`}
+            >
+              <FaQrcode className="text-lg sm:text-2xl mb-1 sm:mb-2" />
+              <span className="text-xs sm:text-sm font-medium text-center">Promtpay</span>
+            </button>
             <button
               onClick={() => setPaymentMethod('credit-card')}
-              className={`flex flex-col items-center p-4 rounded-lg border-2 transition-all
+              className={`flex flex-col items-center p-2 sm:p-3 rounded-lg border-2 transition-all min-h-[80px] sm:min-h-[90px]
                 ${paymentMethod === 'credit-card' 
                   ? 'border-[#FF4F18] bg-[#FF4F18]/5 text-[#FF4F18]' 
                   : 'border-gray-200 text-gray-600 hover:border-[#FF4F18]/50'}`}
             >
-              <FaCreditCard className="text-2xl mb-2" />
-              <span className="text-sm font-medium">Credit Card</span>
+              <FaCreditCard className="text-lg sm:text-2xl mb-1 sm:mb-2" />
+              <span className="text-xs sm:text-sm font-medium text-center">Credit Card</span>
             </button>
             <button
               onClick={() => setPaymentMethod('paypal')}
-              className={`flex flex-col items-center p-4 rounded-lg border-2 transition-all
+              className={`flex flex-col items-center p-2 sm:p-3 rounded-lg border-2 transition-all min-h-[80px] sm:min-h-[90px]
                 ${paymentMethod === 'paypal' 
                   ? 'border-[#FF4F18] bg-[#FF4F18]/5 text-[#FF4F18]' 
                   : 'border-gray-200 text-gray-600 hover:border-[#FF4F18]/50'}`}
             >
-              <FaPaypal className="text-2xl mb-2" />
-              <span className="text-sm font-medium">PayPal</span>
+              <FaPaypal className="text-lg sm:text-2xl mb-1 sm:mb-2" />
+              <span className="text-xs sm:text-sm font-medium text-center">PayPal</span>
             </button>
           </div>
+
+          {/* Promtpay QR Code */}
+          {paymentMethod === 'promtpay' && (
+            <div className="space-y-4">
+              <div className="text-center">
+                <div className="bg-white p-3 sm:p-6 rounded-lg border-2 border-dashed border-gray-200 mb-3 sm:mb-4">
+                  <div className="flex flex-col items-center space-y-2 sm:space-y-4">
+                    <div className="text-base sm:text-lg font-semibold text-gray-800 mb-1 sm:mb-2">
+                      Scan QR Code to Pay
+                    </div>
+                    <div className="bg-white p-2 sm:p-4 rounded-lg shadow-lg">
+                      <Image
+                        src="/images/FoodLoft.png"
+                        alt="Promtpay QR Code"
+                        width={160}
+                        height={160}
+                        className="mx-auto sm:w-[200px] sm:h-[200px]"
+                      />
+                    </div>
+                    <div className="text-center">
+                      <div className="text-xl sm:text-2xl font-bold text-[#FF4F18] mb-1 sm:mb-2">
+                        {tablePrice} THB
+                      </div>
+                      <div className="text-xs sm:text-sm text-gray-600 px-2">
+                        Use your mobile banking app to scan and pay
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 sm:p-4">
+                  <div className="flex items-start space-x-2 sm:space-x-3">
+                    <div className="w-4 h-4 sm:w-5 sm:h-5 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <span className="text-blue-600 text-xs">ℹ️</span>
+                    </div>
+                    <div className="text-xs sm:text-sm text-blue-800">
+                      <p className="font-medium mb-1">How to pay:</p>
+                      <ol className="list-decimal list-inside space-y-0.5 sm:space-y-1 text-blue-700 text-xs sm:text-sm">
+                        <li>Open your mobile banking app</li>
+                        <li>Select "Scan QR" or "Pay with QR"</li>
+                        <li>Scan the QR code above</li>
+                        <li>Confirm payment amount: {tablePrice} THB</li>
+                        <li>Complete the transaction</li>
+                      </ol>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Credit Card Form */}
           {paymentMethod === 'credit-card' && (
@@ -450,7 +516,11 @@ export default function PaymentDialog({ bookingDetails, onClose, onSuccess }) {
                 Processing...
               </>
             ) : (
-              `Pay ${tablePrice} THB`
+              paymentMethod === 'promtpay' ? (
+                `Confirm Payment ${tablePrice} THB`
+              ) : (
+                `Pay ${tablePrice} THB`
+              )
             )}
           </button>
         </div>
