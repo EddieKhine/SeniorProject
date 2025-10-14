@@ -14,6 +14,7 @@ export async function GET(req) {
     }
 
     await dbConnect();
+    console.log('Database connected successfully');
     
     const { searchParams } = new URL(req.url);
     const page = parseInt(searchParams.get('page')) || 1;
@@ -37,6 +38,7 @@ export async function GET(req) {
     }
     
     // Get restaurants with proper population
+    console.log('Fetching restaurants with filter:', filter);
     const restaurants = await Restaurant.find(filter)
       .populate('ownerId', 'firstName lastName email')
       .populate('subscriptionId', 'planType status price billingCycle usage')
@@ -45,6 +47,7 @@ export async function GET(req) {
       .limit(limit);
 
     const total = await Restaurant.countDocuments(filter);
+    console.log('Total restaurants in database:', total);
 
     console.log('Restaurants query successful, found:', restaurants.length);
 
@@ -58,8 +61,10 @@ export async function GET(req) {
           isActive: true 
         });
         
+        const restaurantObj = restaurant.toObject();
+        console.log('Processing restaurant:', restaurantObj.restaurantName, 'Staff count:', staffCount);
         restaurantsWithStaffCount.push({
-          ...restaurant.toObject(),
+          ...restaurantObj,
           staffCount
         });
       } catch (error) {

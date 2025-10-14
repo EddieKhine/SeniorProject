@@ -147,6 +147,8 @@ export default function AdminDashboard() {
       console.log('Users:', users);
       console.log('Restaurants:', restaurants);
       console.log('Bookings:', bookings);
+      console.log('Restaurants data length:', restaurants.data?.length);
+      console.log('Restaurants success:', restaurants.success);
 
       setData({
         users: users.data || [],
@@ -478,6 +480,9 @@ export default function AdminDashboard() {
       }
     }
 
+    console.log('RestaurantsTab - data.restaurants:', data.restaurants);
+    console.log('RestaurantsTab - data.restaurants length:', data.restaurants?.length);
+
     return (
       <div className="space-y-6">
         <div className="flex justify-between items-center">
@@ -488,10 +493,11 @@ export default function AdminDashboard() {
           </button>
         </div>
 
-        <DataTable
-          title="All Restaurants"
-          data={data.restaurants}
-          columns={[
+        {data.restaurants && data.restaurants.length > 0 ? (
+          <DataTable
+            title="All Restaurants"
+            data={data.restaurants}
+            columns={[
             { key: 'restaurantName', header: 'Name' },
             { 
               key: 'staffCount', 
@@ -555,6 +561,15 @@ export default function AdminDashboard() {
             { icon: <FaTrash className="text-red-600" />, className: "text-red-600 hover:text-red-900", onClick: (row) => console.log('Delete restaurant', row) }
           ]}
         />
+        ) : (
+          <div className="bg-white rounded-xl shadow-lg p-8 text-center">
+            <div className="text-gray-500 mb-4">
+              <FaBuilding className="text-6xl mx-auto mb-4" />
+              <h3 className="text-xl font-semibold mb-2">No Restaurants Found</h3>
+              <p className="text-gray-400">No restaurants are currently registered in the system.</p>
+            </div>
+          </div>
+        )}
 
         {/* SaaS Management Modal */}
         {showSaaSModal && selectedRestaurantForSaaS && (
