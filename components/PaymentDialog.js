@@ -9,6 +9,7 @@ import {
   useStripe,
   useElements
 } from '@stripe/react-stripe-js';
+import StripeQRPayment from './StripeQRPayment';
 
 // Check if Stripe publishable key is available
 if (!process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY) {
@@ -170,7 +171,7 @@ function StripePaymentForm({ amount, onSuccess, onError, bookingDetails }) {
 }
 
 export default function PaymentDialog({ bookingDetails, onClose, onSuccess }) {
-  const [paymentMethod, setPaymentMethod] = useState('promtpay');
+  const [paymentMethod, setPaymentMethod] = useState('stripe-qr');
   const [isProcessing, setIsProcessing] = useState(false);
   const [pricing, setPricing] = useState(null);
   const [isLoadingPrice, setIsLoadingPrice] = useState(true);
@@ -360,7 +361,8 @@ export default function PaymentDialog({ bookingDetails, onClose, onSuccess }) {
     });
     
     // Show detailed success message
-    showSuccessMessage('Credit card payment has been confirmed and ');
+    const paymentType = paymentMethod === 'stripe-qr' ? 'QR code' : 'Credit card';
+    showSuccessMessage(`${paymentType} payment has been confirmed and `);
     
     onSuccess();
   };
@@ -568,14 +570,14 @@ export default function PaymentDialog({ bookingDetails, onClose, onSuccess }) {
           {/* Payment Methods */}
           <div className="grid grid-cols-2 gap-2 sm:gap-3 mb-4 sm:mb-6">
             <button
-              onClick={() => setPaymentMethod('promtpay')}
+              onClick={() => setPaymentMethod('stripe-qr')}
               className={`flex flex-col items-center p-2 sm:p-3 rounded-lg border-2 transition-all min-h-[80px] sm:min-h-[90px]
-                ${paymentMethod === 'promtpay' 
+                ${paymentMethod === 'stripe-qr' 
                   ? 'border-[#FF4F18] bg-[#FF4F18]/5 text-[#FF4F18]' 
                   : 'border-gray-200 text-gray-600 hover:border-[#FF4F18]/50'}`}
             >
               <FaQrcode className="text-lg sm:text-2xl mb-1 sm:mb-2" />
-              <span className="text-xs sm:text-sm font-medium text-center">Promtpay</span>
+              <span className="text-xs sm:text-sm font-medium text-center">QR Payment</span>
             </button>
             <button
               onClick={() => setPaymentMethod('credit-card')}
@@ -589,52 +591,15 @@ export default function PaymentDialog({ bookingDetails, onClose, onSuccess }) {
             </button>
           </div>
 
-          {/* Promtpay QR Code */}
-          {paymentMethod === 'promtpay' && (
+          {/* Stripe QR Payment */}
+          {paymentMethod === 'stripe-qr' && (
             <div className="space-y-4">
-              <div className="text-center">
-                <div className="bg-white p-3 sm:p-6 rounded-lg border-2 border-dashed border-gray-200 mb-3 sm:mb-4">
-                  <div className="flex flex-col items-center space-y-2 sm:space-y-4">
-                    <div className="text-base sm:text-lg font-semibold text-gray-800 mb-1 sm:mb-2">
-                      Scan QR Code to Pay
-                    </div>
-                    <div className="bg-white p-2 sm:p-4 rounded-lg shadow-lg">
-                      <Image
-                        src="/images/FoodLoft.png"
-                        alt="Promtpay QR Code"
-                        width={160}
-                        height={160}
-                        className="mx-auto sm:w-[200px] sm:h-[200px]"
-                      />
-                    </div>
-                    <div className="text-center">
-                      <div className="text-xl sm:text-2xl font-bold text-[#FF4F18] mb-1 sm:mb-2">
-                        {tablePrice} THB
-                      </div>
-                      <div className="text-xs sm:text-sm text-gray-600 px-2">
-                        Use your mobile banking app to scan and pay
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 sm:p-4">
-                  <div className="flex items-start space-x-2 sm:space-x-3">
-                    <div className="w-4 h-4 sm:w-5 sm:h-5 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                      <span className="text-blue-600 text-xs">ℹ️</span>
-                    </div>
-                    <div className="text-xs sm:text-sm text-blue-800">
-                      <p className="font-medium mb-1">How to pay:</p>
-                      <ol className="list-decimal list-inside space-y-0.5 sm:space-y-1 text-blue-700 text-xs sm:text-sm">
-                        <li>Open your mobile banking app</li>
-                        <li>Select "Scan QR" or "Pay with QR"</li>
-                        <li>Scan the QR code above</li>
-                        <li>Confirm payment amount: {tablePrice} THB</li>
-                        <li>Complete the transaction</li>
-                      </ol>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              <StripeQRPayment
+                amount={tablePrice}
+                onSuccess={handleStripePaymentSuccess}
+                onError={handleStripePaymentError}
+                bookingDetails={bookingDetails}
+              />
             </div>
           )}
 
@@ -653,35 +618,8 @@ export default function PaymentDialog({ bookingDetails, onClose, onSuccess }) {
           )}
         </div>
 
-        {/* Payment buttons - only show for Promtpay, Stripe handles its own button */}
-        {paymentMethod === 'promtpay' && (
-          <div className="border-t border-gray-100 p-4 flex justify-end gap-3">
-            <button
-              onClick={onClose}
-              className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handlePromtpayPayment}
-              disabled={isProcessing}
-              className="px-6 py-2 bg-[#FF4F18] text-white rounded-lg hover:bg-[#FF4F18]/90 
-                transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-            >
-              {isProcessing ? (
-                <>
-                  <FaSpinner className="animate-spin" />
-                  Processing...
-                </>
-              ) : (
-                `Confirm Payment ${tablePrice} THB`
-              )}
-            </button>
-          </div>
-        )}
-        
-        {/* Cancel button for credit card - Stripe form has its own submit button */}
-        {paymentMethod === 'credit-card' && (
+        {/* Cancel button for QR and credit card payments - they handle their own flow */}
+        {(paymentMethod === 'stripe-qr' || paymentMethod === 'credit-card') && (
           <div className="border-t border-gray-100 p-4 flex justify-end gap-3">
             <button
               onClick={onClose}
