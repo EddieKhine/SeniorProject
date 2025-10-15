@@ -95,7 +95,14 @@ export function middleware(request) {
   // Add CSP header for additional security
   response.headers.set(
     'Content-Security-Policy',
-    "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline' https://apis.google.com https://*.googleapis.com https://*.gstatic.com; style-src 'self' 'unsafe-inline' https://*.googleapis.com; img-src 'self' data: https: blob:; font-src 'self' data: https://*.gstatic.com; connect-src 'self' https: wss:; frame-src 'self' https://*.firebaseapp.com https://*.googleapis.com;"
+    "default-src 'self'; " +
+    "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://apis.google.com https://*.googleapis.com https://*.gstatic.com https://js.stripe.com; " +
+    "style-src 'self' 'unsafe-inline' https://*.googleapis.com; " +
+    "img-src 'self' data: https: blob:; " +
+    "font-src 'self' data: https://*.gstatic.com; " +
+    "connect-src 'self' https: wss: https://api.stripe.com https://*.stripe.com; " +
+    "frame-src 'self' https://*.firebaseapp.com https://*.googleapis.com https://js.stripe.com https://*.stripe.com; " +
+    "child-src 'self' https://js.stripe.com https://*.stripe.com;"
   );
 
   return response;

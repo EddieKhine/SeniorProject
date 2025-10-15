@@ -12,6 +12,9 @@ const inter = Inter({ subsets: ["latin"] });
 export const metadata = {
   title: "FoodLoft",
   description: "A modern restaurant reservation system with an interactive 3D floorplan.",
+  other: {
+    'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline' https://apis.google.com https://*.googleapis.com https://*.gstatic.com https://static.line-scdn.net https://d.line-scdn.net https://js.stripe.com; style-src 'self' 'unsafe-inline' https://*.googleapis.com; img-src 'self' data: https: blob:; font-src 'self' data: https://*.gstatic.com; connect-src 'self' https: wss: https://api.stripe.com https://*.stripe.com; frame-src 'self' https://*.firebaseapp.com https://*.googleapis.com https://js.stripe.com https://*.stripe.com; child-src 'self' https://js.stripe.com https://*.stripe.com;"
+  }
 };
 
 export default function RootLayout({ children }) {

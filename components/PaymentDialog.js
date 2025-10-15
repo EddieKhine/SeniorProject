@@ -1,7 +1,173 @@
 import { useState, useEffect } from 'react';
-import { FaCreditCard, FaPaypal, FaSpinner, FaQrcode } from 'react-icons/fa';
+import { FaCreditCard, FaSpinner, FaQrcode } from 'react-icons/fa';
 import { toast } from 'react-hot-toast';
 import Image from 'next/image';
+import { loadStripe } from '@stripe/stripe-js';
+import {
+  Elements,
+  CardElement,
+  useStripe,
+  useElements
+} from '@stripe/react-stripe-js';
+
+// Check if Stripe publishable key is available
+if (!process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY) {
+  console.error('Missing NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY environment variable');
+}
+
+// Initialize Stripe with error handling
+const stripePromise = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY 
+  ? loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY)
+      .then(stripe => {
+        if (!stripe) {
+          console.error('Failed to load Stripe.js');
+          throw new Error('Failed to load Stripe.js');
+        }
+        console.log('Stripe.js loaded successfully');
+        return stripe;
+      })
+      .catch(error => {
+        console.error('Error loading Stripe.js:', error);
+        throw error;
+      })
+  : Promise.reject(new Error('Missing Stripe publishable key'));
+
+// Stripe Card Element styling
+const cardElementOptions = {
+  style: {
+    base: {
+      fontSize: '16px',
+      color: '#424770',
+      '::placeholder': {
+        color: '#aab7c4',
+      },
+    },
+    invalid: {
+      color: '#9e2146',
+    },
+  },
+};
+
+// Stripe Payment Form Component
+function StripePaymentForm({ amount, onSuccess, onError, bookingDetails }) {
+  const stripe = useStripe();
+  const elements = useElements();
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [clientSecret, setClientSecret] = useState('');
+
+  // Create payment intent when component mounts
+  useEffect(() => {
+    const createPaymentIntent = async () => {
+      try {
+        const response = await fetch('/api/stripe/create-payment-intent', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            amount: amount,
+            currency: 'thb',
+            metadata: {
+              restaurantId: bookingDetails.restaurantId,
+              tableId: bookingDetails.tableId,
+              date: bookingDetails.date,
+              time: bookingDetails.time,
+              guestCount: bookingDetails.guestCount,
+            },
+          }),
+        });
+
+        const data = await response.json();
+        if (data.clientSecret) {
+          setClientSecret(data.clientSecret);
+        } else {
+          throw new Error(data.error || 'Failed to create payment intent');
+        }
+      } catch (error) {
+        console.error('Error creating payment intent:', error);
+        onError('Failed to initialize payment. Please try again.');
+      }
+    };
+
+    if (amount > 0) {
+      createPaymentIntent();
+    }
+  }, [amount, bookingDetails, onError]);
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+
+    if (!stripe || !elements || !clientSecret) {
+      return;
+    }
+
+    setIsProcessing(true);
+
+    const cardElement = elements.getElement(CardElement);
+
+    try {
+      const { error, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
+        payment_method: {
+          card: cardElement,
+        },
+      });
+
+      if (error) {
+        console.error('Payment failed:', error);
+        onError(error.message || 'Payment failed. Please try again.');
+      } else if (paymentIntent.status === 'succeeded') {
+        console.log('Payment succeeded:', paymentIntent);
+        onSuccess(paymentIntent);
+      }
+    } catch (error) {
+      console.error('Payment error:', error);
+      onError('An unexpected error occurred. Please try again.');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          Card Information
+        </label>
+        <div className="p-3 border border-gray-200 rounded-lg focus-within:ring-2 focus-within:ring-[#FF4F18] focus-within:border-transparent">
+          <CardElement options={cardElementOptions} />
+        </div>
+      </div>
+      
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+        <div className="flex items-start space-x-2">
+          <div className="w-4 h-4 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+            <span className="text-blue-600 text-xs">ℹ️</span>
+          </div>
+          <div className="text-xs text-blue-800">
+            <p className="font-medium mb-1">Secure Payment:</p>
+            <p className="text-blue-700">Your card information is encrypted and processed securely by Stripe.</p>
+          </div>
+        </div>
+      </div>
+
+      <button
+        type="submit"
+        disabled={!stripe || !clientSecret || isProcessing}
+        className="w-full px-6 py-3 bg-[#FF4F18] text-white rounded-lg hover:bg-[#FF4F18]/90 
+          transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+      >
+        {isProcessing ? (
+          <>
+            <FaSpinner className="animate-spin" />
+            Processing Payment...
+          </>
+        ) : (
+          `Pay ${amount} THB`
+        )}
+      </button>
+    </form>
+  );
+}
 
 export default function PaymentDialog({ bookingDetails, onClose, onSuccess }) {
   const [paymentMethod, setPaymentMethod] = useState('promtpay');
@@ -157,49 +323,22 @@ export default function PaymentDialog({ bookingDetails, onClose, onSuccess }) {
   const tablePrice = pricing ? pricing.finalPrice : 100;
   const tableCapacity = bookingDetails.tableCapacity || (bookingDetails.guestCount <= 2 ? 2 : bookingDetails.guestCount <= 4 ? 4 : 6);
 
-  const handlePayment = async () => {
+  const handlePromtpayPayment = async () => {
     setIsProcessing(true);
     try {
-      // Simulate payment processing
+      // Simulate Promtpay payment processing
       await new Promise(resolve => setTimeout(resolve, 2000));
       
       // Show success message
-      const toastMessage = paymentMethod === 'promtpay' 
-        ? 'Payment confirmed! Your booking has been submitted and is pending restaurant confirmation.'
-        : 'Payment successful! Your booking has been submitted and is pending restaurant confirmation.';
+      const toastMessage = 'Payment confirmed! Your booking has been submitted and is pending restaurant confirmation.';
       
       toast.success(toastMessage, {
         duration: 6000,
         icon: '⏳'
       });
       
-      // Optional: Show a more detailed success message
-      const successMessage = document.createElement('div');
-      successMessage.className = 'fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50';
-      successMessage.innerHTML = `
-        <div class="bg-white rounded-xl shadow-xl p-6 max-w-md mx-4 text-center animate-fade-up">
-          <div class="text-[#FF4F18] text-5xl mb-4">⏳</div>
-          <h3 class="text-xl font-bold text-gray-800 mb-2">Booking Submitted!</h3>
-          <p class="text-gray-600 mb-4">Your ${paymentMethod === 'promtpay' ? 'Promtpay payment has been confirmed and ' : ''}booking has been submitted successfully and is pending restaurant confirmation. You will receive a confirmation once approved.</p>
-          <button class="px-6 py-2 bg-[#FF4F18] text-white rounded-lg hover:bg-[#FF4F18]/90 transition-all">
-            OK
-          </button>
-        </div>
-      `;
-      
-      document.body.appendChild(successMessage);
-      
-      // Remove success message when OK is clicked
-      successMessage.querySelector('button').addEventListener('click', () => {
-        document.body.removeChild(successMessage);
-      });
-      
-      // Auto remove after 5 seconds
-      setTimeout(() => {
-        if (document.body.contains(successMessage)) {
-          document.body.removeChild(successMessage);
-        }
-      }, 5000);
+      // Show detailed success message
+      showSuccessMessage('Promtpay payment has been confirmed and ');
       
       setIsProcessing(false);
       onSuccess();
@@ -207,6 +346,57 @@ export default function PaymentDialog({ bookingDetails, onClose, onSuccess }) {
       setIsProcessing(false);
       toast.error('Payment failed. Please try again.');
     }
+  };
+
+  const handleStripePaymentSuccess = (paymentIntent) => {
+    console.log('Stripe payment successful:', paymentIntent);
+    
+    // Show success message
+    const toastMessage = 'Payment successful! Your booking has been submitted and is pending restaurant confirmation.';
+    
+    toast.success(toastMessage, {
+      duration: 6000,
+      icon: '✅'
+    });
+    
+    // Show detailed success message
+    showSuccessMessage('Credit card payment has been confirmed and ');
+    
+    onSuccess();
+  };
+
+  const handleStripePaymentError = (error) => {
+    console.error('Stripe payment error:', error);
+    toast.error(error || 'Payment failed. Please try again.');
+  };
+
+  const showSuccessMessage = (paymentType) => {
+    const successMessage = document.createElement('div');
+    successMessage.className = 'fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50';
+    successMessage.innerHTML = `
+      <div class="bg-white rounded-xl shadow-xl p-6 max-w-md mx-4 text-center animate-fade-up">
+        <div class="text-[#FF4F18] text-5xl mb-4">⏳</div>
+        <h3 class="text-xl font-bold text-gray-800 mb-2">Booking Submitted!</h3>
+        <p class="text-gray-600 mb-4">Your ${paymentType}booking has been submitted successfully and is pending restaurant confirmation. You will receive a confirmation once approved.</p>
+        <button class="px-6 py-2 bg-[#FF4F18] text-white rounded-lg hover:bg-[#FF4F18]/90 transition-all">
+          OK
+        </button>
+      </div>
+    `;
+    
+    document.body.appendChild(successMessage);
+    
+    // Remove success message when OK is clicked
+    successMessage.querySelector('button').addEventListener('click', () => {
+      document.body.removeChild(successMessage);
+    });
+    
+    // Auto remove after 5 seconds
+    setTimeout(() => {
+      if (document.body.contains(successMessage)) {
+        document.body.removeChild(successMessage);
+      }
+    }, 5000);
   };
 
   return (
@@ -376,7 +566,7 @@ export default function PaymentDialog({ bookingDetails, onClose, onSuccess }) {
           </div>
 
           {/* Payment Methods */}
-          <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-4 sm:mb-6">
+          <div className="grid grid-cols-2 gap-2 sm:gap-3 mb-4 sm:mb-6">
             <button
               onClick={() => setPaymentMethod('promtpay')}
               className={`flex flex-col items-center p-2 sm:p-3 rounded-lg border-2 transition-all min-h-[80px] sm:min-h-[90px]
@@ -396,16 +586,6 @@ export default function PaymentDialog({ bookingDetails, onClose, onSuccess }) {
             >
               <FaCreditCard className="text-lg sm:text-2xl mb-1 sm:mb-2" />
               <span className="text-xs sm:text-sm font-medium text-center">Credit Card</span>
-            </button>
-            <button
-              onClick={() => setPaymentMethod('paypal')}
-              className={`flex flex-col items-center p-2 sm:p-3 rounded-lg border-2 transition-all min-h-[80px] sm:min-h-[90px]
-                ${paymentMethod === 'paypal' 
-                  ? 'border-[#FF4F18] bg-[#FF4F18]/5 text-[#FF4F18]' 
-                  : 'border-gray-200 text-gray-600 hover:border-[#FF4F18]/50'}`}
-            >
-              <FaPaypal className="text-lg sm:text-2xl mb-1 sm:mb-2" />
-              <span className="text-xs sm:text-sm font-medium text-center">PayPal</span>
             </button>
           </div>
 
@@ -458,72 +638,59 @@ export default function PaymentDialog({ bookingDetails, onClose, onSuccess }) {
             </div>
           )}
 
-          {/* Credit Card Form */}
+          {/* Stripe Credit Card Form */}
           {paymentMethod === 'credit-card' && (
             <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Card Number
-                </label>
-                <input
-                  type="text"
-                  placeholder="1234 5678 9012 3456"
-                  className="w-full p-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#FF4F18] focus:border-transparent"
+              <Elements stripe={stripePromise}>
+                <StripePaymentForm
+                  amount={tablePrice}
+                  onSuccess={handleStripePaymentSuccess}
+                  onError={handleStripePaymentError}
+                  bookingDetails={bookingDetails}
                 />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Expiry Date
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="MM/YY"
-                    className="w-full p-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#FF4F18] focus:border-transparent"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    CVV
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="123"
-                    className="w-full p-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#FF4F18] focus:border-transparent"
-                  />
-                </div>
-              </div>
+              </Elements>
             </div>
           )}
         </div>
 
-        <div className="border-t border-gray-100 p-4 flex justify-end gap-3">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handlePayment}
-            disabled={isProcessing}
-            className="px-6 py-2 bg-[#FF4F18] text-white rounded-lg hover:bg-[#FF4F18]/90 
-              transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-          >
-            {isProcessing ? (
-              <>
-                <FaSpinner className="animate-spin" />
-                Processing...
-              </>
-            ) : (
-              paymentMethod === 'promtpay' ? (
-                `Confirm Payment ${tablePrice} THB`
+        {/* Payment buttons - only show for Promtpay, Stripe handles its own button */}
+        {paymentMethod === 'promtpay' && (
+          <div className="border-t border-gray-100 p-4 flex justify-end gap-3">
+            <button
+              onClick={onClose}
+              className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handlePromtpayPayment}
+              disabled={isProcessing}
+              className="px-6 py-2 bg-[#FF4F18] text-white rounded-lg hover:bg-[#FF4F18]/90 
+                transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            >
+              {isProcessing ? (
+                <>
+                  <FaSpinner className="animate-spin" />
+                  Processing...
+                </>
               ) : (
-                `Pay ${tablePrice} THB`
-              )
-            )}
-          </button>
-        </div>
+                `Confirm Payment ${tablePrice} THB`
+              )}
+            </button>
+          </div>
+        )}
+        
+        {/* Cancel button for credit card - Stripe form has its own submit button */}
+        {paymentMethod === 'credit-card' && (
+          <div className="border-t border-gray-100 p-4 flex justify-end gap-3">
+            <button
+              onClick={onClose}
+              className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+            >
+              Cancel
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
