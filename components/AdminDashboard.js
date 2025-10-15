@@ -18,18 +18,12 @@ import {
   FaSearch,
   FaFilter,
   FaDownload,
-  FaDatabase,
   FaBuilding,
   FaCalendarAlt,
   FaComments,
   FaStar,
   FaSignOutAlt,
   FaUser,
-  FaLock,
-  FaCogs,
-  FaFileExport,
-  FaSave,
-  FaServer,
   FaMapMarkerAlt,
   FaInfoCircle
 } from 'react-icons/fa'
@@ -42,10 +36,7 @@ export default function AdminDashboard() {
     users: [],
     restaurants: [],
     bookings: [],
-    reviews: [],
-    organizations: [],
-    subscriptions: [],
-    analytics: null
+    reviews: []
   })
   const [selectedRestaurant, setSelectedRestaurant] = useState('all')
   const [filteredBookings, setFilteredBookings] = useState([])
@@ -114,33 +105,26 @@ export default function AdminDashboard() {
         'Content-Type': 'application/json'
       }
 
-      const [usersRes, restaurantsRes, bookingsRes, reviewsRes, organizationsRes, subscriptionsRes, analyticsRes] = await Promise.all([
+      const [usersRes, restaurantsRes, bookingsRes, reviewsRes] = await Promise.all([
         fetch('/api/admin/users', { headers }),
         fetch('/api/admin/restaurants', { headers }),
         fetch('/api/admin/bookings', { headers }),
-        fetch('/api/admin/reviews', { headers }),
-        fetch('/api/admin/organizations', { headers }),
-        fetch('/api/admin/subscriptions', { headers }),
-        fetch('/api/admin/analytics', { headers })
+        fetch('/api/admin/reviews', { headers })
       ])
 
       // Check for authentication errors
       if (usersRes.status === 401 || restaurantsRes.status === 401 || bookingsRes.status === 401 || 
-          reviewsRes.status === 401 || organizationsRes.status === 401 || subscriptionsRes.status === 401 || 
-          analyticsRes.status === 401) {
+          reviewsRes.status === 401) {
         localStorage.removeItem('adminToken')
         window.location.href = '/admin/login'
         return
       }
 
-      const [users, restaurants, bookings, reviews, organizations, subscriptions, analytics] = await Promise.all([
+      const [users, restaurants, bookings, reviews] = await Promise.all([
         usersRes.json(),
         restaurantsRes.json(),
         bookingsRes.json(),
-        reviewsRes.json(),
-        organizationsRes.json(),
-        subscriptionsRes.json(),
-        analyticsRes.json()
+        reviewsRes.json()
       ])
 
       console.log('Dashboard data fetched:');
@@ -154,10 +138,7 @@ export default function AdminDashboard() {
         users: users.data || [],
         restaurants: restaurants.data || [],
         bookings: bookings.data || [],
-        reviews: reviews.data || [],
-        organizations: organizations.data || [],
-        subscriptions: subscriptions.data || [],
-        analytics: analytics.data || null
+        reviews: reviews.data || []
       })
     } catch (error) {
       console.error('Error fetching dashboard data:', error)
@@ -314,11 +295,7 @@ export default function AdminDashboard() {
     { id: 'users', label: 'Users', icon: FaUsers },
     { id: 'restaurants', label: 'Restaurants', icon: FaBuilding },
     { id: 'bookings', label: 'Bookings', icon: FaCalendarAlt },
-    { id: 'reviews', label: 'Reviews', icon: FaStar },
-    { id: 'organizations', label: 'Organizations', icon: FaLock },
-    { id: 'subscriptions', label: 'Subscriptions', icon: FaCreditCard },
-    { id: 'analytics', label: 'Analytics', icon: FaChartLine },
-    { id: 'system', label: 'System', icon: FaServer }
+    { id: 'reviews', label: 'Reviews', icon: FaStar }
   ]
 
   const OverviewTab = () => (
@@ -347,11 +324,11 @@ export default function AdminDashboard() {
           onClick={() => setActiveTab('bookings')}
         />
         <StatCard
-          title="Organizations"
-          value={data.organizations.length.toLocaleString()}
-          icon={FaLock}
+          title="Reviews"
+          value={data.reviews.length.toLocaleString()}
+          icon={FaStar}
           color="orange"
-          onClick={() => setActiveTab('organizations')}
+          onClick={() => setActiveTab('reviews')}
         />
       </div>
 
@@ -1053,58 +1030,7 @@ export default function AdminDashboard() {
     )
   }
 
-  const SystemTab = () => (
-    <div className="space-y-6">
-      <h2 className="text-2xl font-bold text-black">System Management</h2>
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <motion.div
-          whileHover={{ y: -4 }}
-          className="bg-white rounded-xl p-6 shadow-lg cursor-pointer hover:shadow-xl transition-shadow"
-        >
-          <div className="flex items-center justify-between mb-4">
-            <FaDatabase className="text-blue-600 text-2xl" />
-            <span className="text-sm text-black">Database</span>
-          </div>
-          <h3 className="text-lg font-semibold text-black mb-2">Database Management</h3>
-          <p className="text-black text-sm mb-4">Manage database collections, indexes, and maintenance</p>
-          <button className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700">
-            Manage Database
-          </button>
-        </motion.div>
 
-        <motion.div
-          whileHover={{ y: -4 }}
-          className="bg-white rounded-xl p-6 shadow-lg cursor-pointer hover:shadow-xl transition-shadow"
-        >
-          <div className="flex items-center justify-between mb-4">
-            <FaFileExport className="text-green-600 text-2xl" />
-            <span className="text-sm text-black">Export</span>
-          </div>
-          <h3 className="text-lg font-semibold text-black mb-2">Data Export</h3>
-          <p className="text-black text-sm mb-4">Export data in various formats (CSV, JSON, Excel)</p>
-          <button className="w-full bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700">
-            Export Data
-          </button>
-        </motion.div>
-
-        <motion.div
-          whileHover={{ y: -4 }}
-          className="bg-white rounded-xl p-6 shadow-lg cursor-pointer hover:shadow-xl transition-shadow"
-        >
-          <div className="flex items-center justify-between mb-4">
-            <FaSave className="text-purple-600 text-2xl" />
-            <span className="text-sm text-black">Backup</span>
-          </div>
-          <h3 className="text-lg font-semibold text-black mb-2">Backup & Restore</h3>
-          <p className="text-black text-sm mb-4">Create backups and restore system data</p>
-          <button className="w-full bg-purple-600 text-white py-2 px-4 rounded-lg hover:bg-purple-700">
-            Backup System
-          </button>
-        </motion.div>
-      </div>
-    </div>
-  )
 
   if (loading) {
     return (
@@ -1176,10 +1102,6 @@ export default function AdminDashboard() {
         {activeTab === 'restaurants' && <RestaurantsTab />}
         {activeTab === 'bookings' && <BookingsTab />}
         {activeTab === 'reviews' && <ReviewsManagement />}
-        {activeTab === 'organizations' && <div>Organizations Tab - Coming Soon</div>}
-        {activeTab === 'subscriptions' && <div>Subscriptions Tab - Coming Soon</div>}
-        {activeTab === 'analytics' && <div>Analytics Tab - Coming Soon</div>}
-        {activeTab === 'system' && <SystemTab />}
       </div>
     </div>
   )
