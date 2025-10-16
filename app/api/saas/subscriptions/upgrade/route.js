@@ -126,7 +126,7 @@ export async function POST(req) {
 
       // CRITICAL FIX: Update restaurant limits to match subscription for all restaurants owned by organization members
       const Restaurant = await import('@/models/Restaurants').then(mod => mod.default);
-      const planLimits = Subscription.getPlanLimits(planType);
+      // planLimits is already available from the above if/else block
       
       // Get all member user IDs from the organization
       const memberIds = organization.members.map(member => member.userId);
