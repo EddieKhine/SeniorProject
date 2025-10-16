@@ -72,6 +72,34 @@ export async function PUT(req, { params }) {
       subscription.price = pricing.price;
       subscription.currency = pricing.currency;
       
+      // CRITICAL FIX: Update restaurant limits to match subscription
+      const Restaurant = await import('@/models/Restaurants').then(mod => mod.default);
+      const Organization = await import('@/models/Organization').then(mod => mod.default);
+      
+      // Get organization and its members
+      const organization = await Organization.findById(subscription.organizationId);
+      if (organization) {
+        const memberIds = organization.members.map(member => member.userId);
+        
+        // Update all restaurants owned by organization members
+        await Restaurant.updateMany(
+          { ownerId: { $in: memberIds } },
+          {
+            $set: {
+              'limits.floorPlansLimit': newPlanLimits.floorPlansLimit,
+              'limits.tablesLimit': newPlanLimits.tablesLimit,
+              'limits.staffLimit': newPlanLimits.staffLimit,
+              'limits.bookingsLimit': newPlanLimits.bookingsLimit,
+              'limits.apiCallsLimit': newPlanLimits.apiCallsLimit,
+              'limits.storageLimit': newPlanLimits.storageLimit,
+              'features': newPlanLimits.features
+            }
+          }
+        );
+
+        console.log(`Updated restaurant limits for organization ${organization._id} to match ${updateData.planType} plan:`, newPlanLimits);
+      }
+
       // Track the plan change
       await UsageAnalytics.trackEvent({
         organizationId: subscription.organizationId,

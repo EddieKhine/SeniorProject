@@ -89,29 +89,41 @@ export async function POST(request, { params }) {
     }
 
     // Check SaaS booking limits
-    if (restaurant.subscriptionId) {
-      const currentMonth = new Date().getMonth();
-      const currentYear = new Date().getFullYear();
-      const monthlyBookings = await Booking.countDocuments({
-        restaurantId,
-        createdAt: {
-          $gte: new Date(currentYear, currentMonth, 1),
-          $lt: new Date(currentYear, currentMonth + 1, 1)
-        }
-      });
-      
-      const limit = restaurant.subscriptionId.usage.bookingsLimit;
-      
-      if (monthlyBookings >= limit && limit !== -1) { // -1 means unlimited
-        return NextResponse.json({ 
-          error: 'Monthly booking limit reached',
-          message: `You have reached your monthly limit of ${limit} bookings. Please upgrade your plan to accept more bookings.`,
-          currentPlan: restaurant.subscriptionId.planType,
-          upgradeRequired: true,
-          currentUsage: monthlyBookings,
-          limit: limit
-        }, { status: 403 });
+    const currentMonth = new Date().getMonth();
+    const currentYear = new Date().getFullYear();
+    const monthlyBookings = await Booking.countDocuments({
+      restaurantId,
+      createdAt: {
+        $gte: new Date(currentYear, currentMonth, 1),
+        $lt: new Date(currentYear, currentMonth + 1, 1)
       }
+    });
+    
+    // Get limit from restaurant.limits (current structure) or fallback to subscription
+    let limit = restaurant.limits?.bookingsLimit;
+    let currentPlan = 'free'; // default
+    
+    if (!limit && restaurant.subscriptionId) {
+      limit = restaurant.subscriptionId.usage?.bookingsLimit;
+      currentPlan = restaurant.subscriptionId.planType;
+    }
+    
+    // Default to 1000 for free plan if no limit is set
+    if (limit === undefined || limit === null) {
+      limit = 1000;
+    }
+    
+    console.log(`Booking limit check (scene-book): current=${monthlyBookings}, limit=${limit}, restaurantId=${restaurantId}`);
+    
+    if (monthlyBookings >= limit && limit !== -1) { // -1 means unlimited
+      return NextResponse.json({ 
+        error: 'Monthly booking limit reached',
+        message: `You have reached your monthly limit of ${limit} bookings. Please upgrade your plan to accept more bookings.`,
+        currentPlan: currentPlan,
+        upgradeRequired: true,
+        currentUsage: monthlyBookings,
+        limit: limit
+      }, { status: 403 });
     }
 
     // Get the scene and find the table

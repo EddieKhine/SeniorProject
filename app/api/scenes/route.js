@@ -59,20 +59,33 @@ export async function POST(request) {
       }
 
       // Check SaaS floorplan limit
-      if (restaurant.subscriptionId) {
-        const currentFloorPlans = await Floorplan.countDocuments({ restaurantId: data.restaurantId });
-        const limit = restaurant.subscriptionId.usage.floorPlansLimit;
-        
-        if (currentFloorPlans >= limit && limit !== -1) { // -1 means unlimited
-          return NextResponse.json({ 
-            error: 'Floor plan limit reached',
-            message: `You have reached your limit of ${limit} floor plans. Please upgrade your plan to add more.`,
-            currentPlan: restaurant.subscriptionId.planType,
-            upgradeRequired: true,
-            currentUsage: currentFloorPlans,
-            limit: limit
-          }, { status: 403 });
-        }
+      const currentFloorPlans = await Floorplan.countDocuments({ restaurantId: data.restaurantId });
+      
+      // Get limit from restaurant.limits (current structure) or fallback to subscription
+      let limit = restaurant.limits?.floorPlansLimit;
+      let currentPlan = 'free'; // default
+      
+      if (!limit && restaurant.subscriptionId) {
+        limit = restaurant.subscriptionId.usage?.floorPlansLimit;
+        currentPlan = restaurant.subscriptionId.planType;
+      }
+      
+      // Default to 1 for free plan if no limit is set
+      if (limit === undefined || limit === null) {
+        limit = 1;
+      }
+      
+      console.log(`Floorplan limit check (scenes): current=${currentFloorPlans}, limit=${limit}, restaurantId=${data.restaurantId}`);
+      
+      if (currentFloorPlans >= limit && limit !== -1) { // -1 means unlimited
+        return NextResponse.json({ 
+          error: 'Floor plan limit reached',
+          message: `You have reached your limit of ${limit} floor plans. Please upgrade your plan to add more.`,
+          currentPlan: currentPlan,
+          upgradeRequired: true,
+          currentUsage: currentFloorPlans,
+          limit: limit
+        }, { status: 403 });
       }
 
       // Create floorplan with minimal required data

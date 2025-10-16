@@ -306,7 +306,7 @@ export default function FloorplanManager({ restaurantId, token, onFloorplanSelec
                   value={newFloorplanName}
                   onChange={(e) => setNewFloorplanName(e.target.value)}
                   placeholder="e.g., Main Dining Area, Private Room, Patio..."
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FF4F18] focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FF4F18] focus:border-transparent text-black placeholder-gray-400"
                   maxLength={50}
                 />
               </div>

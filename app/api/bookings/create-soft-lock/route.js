@@ -30,7 +30,7 @@ export async function POST(request) {
 
         // Check SaaS booking limits
         const restaurant = await Restaurant.findById(restaurantId).populate('subscriptionId');
-        if (restaurant && restaurant.subscriptionId) {
+        if (restaurant) {
             const currentMonth = new Date().getMonth();
             const currentYear = new Date().getFullYear();
             const monthlyBookings = await Booking.countDocuments({
@@ -41,13 +41,27 @@ export async function POST(request) {
                 }
             });
             
-            const limit = restaurant.subscriptionId.usage.bookingsLimit;
+            // Get limit from restaurant.limits (current structure) or fallback to subscription
+            let limit = restaurant.limits?.bookingsLimit;
+            let currentPlan = 'free'; // default
+            
+            if (!limit && restaurant.subscriptionId) {
+                limit = restaurant.subscriptionId.usage?.bookingsLimit;
+                currentPlan = restaurant.subscriptionId.planType;
+            }
+            
+            // Default to 1000 for free plan if no limit is set
+            if (limit === undefined || limit === null) {
+                limit = 1000;
+            }
+            
+            console.log(`Booking limit check (soft-lock): current=${monthlyBookings}, limit=${limit}, restaurantId=${restaurantId}`);
             
             if (monthlyBookings >= limit && limit !== -1) { // -1 means unlimited
                 return NextResponse.json({ 
                     error: 'Monthly booking limit reached',
                     message: `You have reached your monthly limit of ${limit} bookings. Please upgrade your plan to accept more bookings.`,
-                    currentPlan: restaurant.subscriptionId.planType,
+                    currentPlan: currentPlan,
                     upgradeRequired: true,
                     currentUsage: monthlyBookings,
                     limit: limit

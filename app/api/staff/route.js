@@ -77,23 +77,36 @@ export async function POST(request) {
     }
 
     // Check SaaS staff limit
-    if (restaurant.subscriptionId) {
-      const currentStaff = await Staff.countDocuments({ 
-        restaurantId, 
-        isActive: true 
-      });
-      const limit = restaurant.subscriptionId.usage.staffLimit;
-      
-      if (currentStaff >= limit && limit !== -1) { // -1 means unlimited
-        return NextResponse.json({ 
-          error: 'Staff limit reached',
-          message: `You have reached your limit of ${limit} staff members. Please upgrade your plan to add more staff.`,
-          currentPlan: restaurant.subscriptionId.planType,
-          upgradeRequired: true,
-          currentUsage: currentStaff,
-          limit: limit
-        }, { status: 403 });
-      }
+    const currentStaff = await Staff.countDocuments({ 
+      restaurantId, 
+      isActive: true 
+    });
+    
+    // Get limit from restaurant.limits (current structure) or fallback to subscription
+    let limit = restaurant.limits?.staffLimit;
+    let currentPlan = 'free'; // default
+    
+    if (!limit && restaurant.subscriptionId) {
+      limit = restaurant.subscriptionId.usage?.staffLimit;
+      currentPlan = restaurant.subscriptionId.planType;
+    }
+    
+    // Default to 5 for free plan if no limit is set
+    if (limit === undefined || limit === null) {
+      limit = 5;
+    }
+    
+    console.log(`Staff limit check: current=${currentStaff}, limit=${limit}, restaurantId=${restaurantId}`);
+    
+    if (currentStaff >= limit && limit !== -1) { // -1 means unlimited
+      return NextResponse.json({ 
+        error: 'Staff limit reached',
+        message: `You have reached your limit of ${limit} staff members. Please upgrade your plan to add more staff.`,
+        currentPlan: currentPlan,
+        upgradeRequired: true,
+        currentUsage: currentStaff,
+        limit: limit
+      }, { status: 403 });
     }
 
     // Check if staff member with this Line ID already exists

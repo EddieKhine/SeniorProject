@@ -77,6 +77,27 @@ export async function POST(request) {
       subscriptionPlan: newPlanType.charAt(0).toUpperCase() + newPlanType.slice(1)
     });
 
+    // CRITICAL FIX: Update restaurant limits to match subscription
+    const Restaurant = await import('@/models/Restaurants').then(mod => mod.default);
+    const planLimits = Subscription.getPlanLimits(newPlanType);
+    
+    await Restaurant.updateMany(
+      { ownerId },
+      {
+        $set: {
+          'limits.floorPlansLimit': planLimits.floorPlansLimit,
+          'limits.tablesLimit': planLimits.tablesLimit,
+          'limits.staffLimit': planLimits.staffLimit,
+          'limits.bookingsLimit': planLimits.bookingsLimit,
+          'limits.apiCallsLimit': planLimits.apiCallsLimit,
+          'limits.storageLimit': planLimits.storageLimit,
+          'features': planLimits.features
+        }
+      }
+    );
+
+    console.log(`Updated restaurant limits for owner ${ownerId} to match ${newPlanType} plan:`, planLimits);
+
     return NextResponse.json({
       success: true,
       message: `Successfully upgraded to ${newPlanType} plan`,

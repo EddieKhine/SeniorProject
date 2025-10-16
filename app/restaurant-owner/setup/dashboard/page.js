@@ -9,7 +9,6 @@ import { RiRestaurantLine, RiLayoutLine, RiCalendarLine, RiVipCrownLine, RiUserL
 import { motion } from 'framer-motion'
 import OwnerProfile from '@/components/OwnerProfile'
 import RestaurantFloorPlan from '@/components/RestaurantFloorPlan'
-import RestaurantBookingManager from '@/components/RestaurantBookingManager'
 import RestaurantReservation from '@/components/RestaurantReservation'
 import StaffManagement from '@/components/StaffManagement'
 import Link from 'next/link'
@@ -47,8 +46,6 @@ export default function RestaurantSetupDashboard() {
   const [floorplan, setFloorplan] = useState(null)
   const [token, setToken] = useState(null)
   const [restaurantId, setRestaurantId] = useState(null)
-  const [activeTab, setActiveTab] = useState('list')
-  const [isFloorplanLoading, setIsFloorplanLoading] = useState(false)
 
   const fetchRestaurantProfile = async () => {
     try {
@@ -106,17 +103,17 @@ export default function RestaurantSetupDashboard() {
     } catch (error) {
       console.error("Error fetching floorplan:", error);
     } finally {
-      setIsFloorplanLoading(false);
+      // Floorplan loading complete
     }
   };
 
   useEffect(() => {
     if (restaurant?.floorplanId) {
-      if (activeSection === 'floorplan' || (activeSection === 'reservation' && activeTab === 'book')) {
+      if (activeSection === 'floorplan') {
         fetchFloorplan();
       }
     }
-  }, [restaurant, activeSection, token, activeTab]);
+  }, [restaurant, activeSection, token]);
 
   const handleLogout = () => {
     try {
@@ -129,12 +126,6 @@ export default function RestaurantSetupDashboard() {
     }
   };
 
-  const handleTabChange = (tab) => {
-    setActiveTab(tab);
-    if (tab === 'book' && !floorplan && restaurant?.floorplanId) {
-      fetchFloorplan();
-    }
-  };
 
   return (
     <div className="flex min-h-screen bg-gradient-to-b from-gray-50 to-white">
@@ -357,48 +348,9 @@ export default function RestaurantSetupDashboard() {
             <div className="bg-white rounded-xl shadow-sm border border-[#F2F4F7] h-[calc(100vh-120px)]">
               {restaurant ? (
                 <div className="h-full flex flex-col">
-                  {/* Tab Navigation */}
-                  <div className="border-b border-[#F2F4F7]">
-                    <div className="flex space-x-4 px-6 py-4">
-                      <button
-                        onClick={() => handleTabChange('list')}
-                        className={`px-4 py-2 rounded-lg transition-all duration-200 ${
-                          activeTab === 'list'
-                            ? 'bg-[#FF4F18] text-white font-medium'
-                            : 'text-gray-600 hover:bg-gray-50 hover:text-[#FF4F18]'
-                        }`}
-                      >
-                        Reservation List
-                      </button>
-                      <button
-                        onClick={() => handleTabChange('book')}
-                        className={`px-4 py-2 rounded-lg transition-all duration-200 ${
-                          activeTab === 'book'
-                            ? 'bg-[#FF4F18] text-white font-medium'
-                            : 'text-gray-600 hover:bg-gray-50 hover:text-[#FF4F18]'
-                        }`}
-                      >
-                        Booking Manager
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Tab Content */}
+                  {/* Single Tab Content - Only Reservation List */}
                   <div className="flex-1 overflow-hidden">
-                    {activeTab === 'list' ? (
-                      <RestaurantReservation restaurantId={restaurant._id} />
-                    ) : isFloorplanLoading ? (
-                      <div className="flex items-center justify-center h-full">
-                        <div className="animate-spin rounded-full h-10 w-10 border-4 border-[#FF4F18] border-t-transparent"></div>
-                        <p className="ml-3 text-gray-600">Loading floorplan...</p>
-                      </div>
-                    ) : (
-                      <RestaurantBookingManager 
-                        restaurantId={restaurant._id} 
-                        floorplanData={floorplan}
-                        floorplanId={restaurant.floorplanId}
-                      />
-                    )}
+                    <RestaurantReservation restaurantId={restaurant._id} />
                   </div>
                 </div>
               ) : (

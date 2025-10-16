@@ -124,6 +124,31 @@ export async function POST(req) {
       
       await subscription.save();
 
+      // CRITICAL FIX: Update restaurant limits to match subscription for all restaurants owned by organization members
+      const Restaurant = await import('@/models/Restaurants').then(mod => mod.default);
+      const planLimits = Subscription.getPlanLimits(planType);
+      
+      // Get all member user IDs from the organization
+      const memberIds = organization.members.map(member => member.userId);
+      
+      // Update all restaurants owned by organization members
+      await Restaurant.updateMany(
+        { ownerId: { $in: memberIds } },
+        {
+          $set: {
+            'limits.floorPlansLimit': planLimits.floorPlansLimit,
+            'limits.tablesLimit': planLimits.tablesLimit,
+            'limits.staffLimit': planLimits.staffLimit,
+            'limits.bookingsLimit': planLimits.bookingsLimit,
+            'limits.apiCallsLimit': planLimits.apiCallsLimit,
+            'limits.storageLimit': planLimits.storageLimit,
+            'features': planLimits.features
+          }
+        }
+      );
+
+      console.log(`Updated restaurant limits for organization ${organization._id} to match ${planType} plan:`, planLimits);
+
       // Track subscription update
       await UsageAnalytics.trackEvent({
         organizationId: organization._id,
