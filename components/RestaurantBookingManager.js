@@ -1146,7 +1146,7 @@ export default function RestaurantBookingManager({ floorplanData, floorplanId, r
         }
       }
     });
-    
+      
     if (process.env.NODE_ENV === 'development') {
       console.log('=== TABLE COLOR UPDATE SUMMARY ===');
       console.log('Total tables processed:', tableCount);
